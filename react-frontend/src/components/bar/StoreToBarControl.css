@@ -1,0 +1,35 @@
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.filter-controls input,
+.filter-controls button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+
+.table-wrapper {
+  max-height: 460px;      /* Adjust to the height you want */
+  overflow-y: auto;       /* Vertical scrollbar */
+  overflow-x: auto;       /* Horizontal scrollbar if needed */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+
+.bar-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bar-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+  border-bottom: 2px solid #ccc;
+}

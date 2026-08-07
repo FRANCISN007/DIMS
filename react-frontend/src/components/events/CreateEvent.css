@@ -1,0 +1,83 @@
+/* src/components/event/CreateEvent.css */
+
+.event-form-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 25px;
+  background-color: #f7f7f7;
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.forme-title {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+}
+
+.form-message {
+  text-align: center;
+  color: green;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.event-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-rows {
+  display: flex;
+  gap: 15px;
+}
+
+.form-rows input,
+.form-rows select {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.submit-btn {
+  background-color: #3367d6;
+  color: white;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  align-self: center;
+  margin-top: 0.2rem;
+}
+
+.submit-btn:hover {
+  background-color: #354195;
+}

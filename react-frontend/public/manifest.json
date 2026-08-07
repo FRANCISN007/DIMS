@@ -1,0 +1,28 @@
+{
+  "short_name": "HEMS Hotel",
+  "name": "HEMS Hotel Management Software",
+  "icons": [
+    {
+      "src": "images/hems-logo1.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "images/hemslogo.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "images/hemslogo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0b4a8b",
+  "background_color": "#ffffff"
+}
+
+

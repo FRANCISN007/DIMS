@@ -1,0 +1,160 @@
+.void-payment-container {
+  padding: 0.5rem;
+  background-color: #e8ecf0;
+  font-family: Arial, sans-serif;
+  font-size: 0.9rem;
+}
+
+.void-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #003366;
+  margin-bottom: 1rem;
+}
+
+.payment-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  background-color: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-radius: 7px;
+}
+
+.payment-table th,
+.payment-table td {
+  padding: 0px 2px;
+  border: 1px solid #e0e6ed;
+  text-align: left;
+}
+
+.payment-table th {
+  background-color: #003366;
+  color: white;
+}
+
+.payment-table tr:nth-child(even) {
+  background-color: #f4f7fa;
+}
+
+.void-btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #ada4a3;
+  color: rgb(17, 15, 15);
+  transition: background-color 0.2s ease-in-out;
+}
+
+.void-btn:hover {
+  background-color: #d62121;
+}
+
+.error {
+  color: red;
+  font-weight: 500;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-bar label {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #003366;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+
+
+.filter-row input[type="date"] {
+  height: 25px;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  border: 1px solid #cec3c3;
+  border-radius: 6px;
+}
+
+.fetch-button {
+  height: 25px;
+  padding: 6px 14px;
+  background-color: #006699;
+  color: white;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.fetch-button:hover {
+  background-color: #004466;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(10, 10, 10, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  background-color: white;
+  padding: 1.4rem;
+  border-radius: 6px;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.modal-buttons {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.modal-buttons button {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal-buttons button:first-child {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.modal-buttons button:last-child {
+  background-color: #ccc;
+}
+
+
+.voided-payment {
+  background-color: #ffe6e6 !important;
+  color: red;
+  font-weight: bold;
+}

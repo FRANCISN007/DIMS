@@ -1,0 +1,197 @@
+/* VoidEventPayment.css */
+
+.void-payment-container {
+  font-family: Arial, sans-serif;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 12px;
+}
+
+.void-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.filter-row input[type="date"] {
+  padding: 2px;
+  font-size: 14x;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+}
+
+.fetch-button {
+  padding: 8px 16px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.fetch-button:hover {
+  background-color: #1e40af;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.payment-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+}
+
+.payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1000px;
+  background-color: #fff;
+}
+
+.payment-table th,
+.payment-table td {
+  padding: 8x;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+}
+
+.payment-table th {
+  background-color: #374151;
+  color: white;
+  padding: 6px 12px;
+}
+
+.payment-table tr:nth-child(even) {
+  background-color: #f3f4f6;
+}
+
+.void-btn {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.void-btn:hover {
+  background-color: #b91c1c;
+}
+
+.voided-payment {
+  background-color: #fee2e2;
+  color: #991b1b;
+  font-style: italic;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  background-color: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  text-align: center;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+
+.modal-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.modal-buttons button:first-child {
+  background-color: #dc2626;
+  color: white;
+}
+
+.modal-buttons button:last-child {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+
+
+/* Voided row styling */
+.voided-payment-row {
+  background-color: #f5f5f5; /* light gray background */
+  color: #888; /* dim text */
+}
+
+.voided-status {
+  color: red;
+  font-weight: bold;
+}
+
+.void-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.void-btn:hover {
+  background-color: #c0392b;
+}
+
+/* Optional modal styling */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.modal-buttons button {
+  margin-right: 10px;
+}

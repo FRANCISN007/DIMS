@@ -1,0 +1,95 @@
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 6px;
+  padding: 3px;
+}
+
+.room-card {
+  border-radius: 12px;
+  color: white;
+  padding: 2px;
+  text-align: center;
+  font-weight: bold;
+  transition: transform 0.2s, box-shadow 0.2s;
+  user-select: none;
+}
+
+.room-card.clickable {
+  cursor: pointer;
+}
+
+.room-card.clickable:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.room-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+
+.room-summary-footer {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  background-color: #fffffff8;
+  padding: 12px;
+  border-radius: 8px;
+  flex-wrap: wrap; /* optional for mobile */
+
+}
+
+
+.room-divider {
+  margin: 20px 0;
+  border: none;
+  border-top: 2px solid #ccc;
+}
+
+.chart-container {
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+
+/* Yellow dot indicating future reservation */
+.reservation-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 12px;
+  height: 12px;
+  background-color: gold;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+/* Yellow badge showing number of future reservations */
+.reservation-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: gold;
+  color: black;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: 8px;
+  border: 1px solid white;
+}
+
+.section-box {
+  border: 2px solid #cab6b6;
+  border-radius: 12px;
+  padding: 10px;
+  background-color: #f8f4f4;
+  margin-bottom: 15px;
+}

@@ -1,0 +1,113 @@
+/* src/components/payments/CreatePayment.css */
+
+.payment-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.payment-form-container {
+  background: #e4e2e2;
+  padding: 24px;
+  border-radius: 12px;
+  width: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  position: relative;
+
+  
+}
+
+.payment-form-container h2 {
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+}
+
+.payment-form-container select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  margin-bottom: 12px; /* increased spacing */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.payment-form-container label {
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.payment-form-container input,
+.payment-form-container select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.payment-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.payment-buttons button {
+  padding: 8px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+
+/* Submit button */
+.payment-buttons button[type="submit"] {
+  background-color: #3498db;
+  color: white;
+}
+
+.payment-buttons button[type="submit"]:hover {
+  background-color: #2980b9;
+  
+}
+
+/* Cancel button using the class */
+.payment-buttons .cancel-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.payment-buttons .cancel-btn:hover {
+  background-color: #d32f2f;
+}
+
+.payment-buttons .cancel-btn:active {
+  background-color: #b71c1c;
+}
+
+.success {
+  color: green;
+  background-color: #e6f4ea;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-weight: 600;
+  text-align: center;
+}
+
+.error {
+  color: red;
+  background-color: #fdecea;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-weight: 600;
+  text-align: center;
+}

@@ -1,0 +1,151 @@
+/* Overlay background */
+.supdate-forms-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(10, 10, 10, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  padding: 0.2rem;
+  overflow: hidden;
+}
+
+/* Main form container */
+.supdate-form-container {
+  background-color: #eee9e9;
+  padding: 0.1rem 1.2rem;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 100vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(121, 69, 69, 0.08);
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Title */
+.supdate-form-container h2 {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 0rem;
+  color: #2c3e50;
+}
+
+/* Grid form layout */
+.sforms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.7rem;
+}
+
+/* Form row */
+.sform-row {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Labels */
+.sform-row label {
+  font-size: 0.78rem;
+  color: #333;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+/* Input and Select */
+.sform-row input,
+.sform-row select {
+  padding: 0.3rem 0.4rem;
+  font-size: 0.82rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+}
+
+/* Preview image */
+.attachment-preview-row img {
+  border: 1px solid #ccc;
+  padding: 4px;
+  border-radius: 5px;
+  max-width: 160px;
+  max-height: 120px;
+  margin-bottom: 6px;
+}
+
+/* Form actions */
+.sform-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin-top: 1rem;
+  grid-column: 1 / -1; /* ensures it spans full grid width */
+}
+
+.sform-actions button {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* Update Button */
+.update-btn {
+  background-color: #3367d6;
+  color: white;
+}
+
+.update-btn:hover {
+  background-color: #274bb3;
+}
+
+/* Cancel Button */
+.cancel-btn {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.cancel-btn:hover {
+  background-color: #c8c8c8;
+}
+
+/* Message */
+.supdate-message {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #c0392b;
+  margin-top: 0.2rem;
+}
+
+/* Scrollbar slim for attachment scroll */
+.supdate-form-container::-webkit-scrollbar {
+  width: 6px;
+}
+.supdate-form-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .sforms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .supdate-form-container {
+    padding: 1rem;
+    max-height: 95vh;
+  }
+
+  .sform-actions {
+    flex-direction: column;
+  }
+}

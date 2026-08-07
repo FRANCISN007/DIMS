@@ -1,0 +1,147 @@
+.checkout-guest-container {
+  padding: 1.5rem 0 1.5rem 0; /* ⬅️ Remove horizontal padding (left & right) */
+  font-family: Arial, sans-serif;
+  color: #1a202c;
+  margin: 0;         /* ⬅️ Remove all external margins */
+  padding-left: 0;   /* ⬅️ Ensure no left padding */
+  padding-right: 0;  /* Optional: ensure no right padding */
+}
+
+.checkout-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #5b6c99a8;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+/* Table */
+.checkout-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.error-message {
+  color: red;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+
+.checkout-table thead th {
+  background-color: #f0f4f8;
+  color: #63696e;
+  font-weight: bold;
+  padding: 4px 2px;
+  border-bottom: 2px solid #c4b9b9;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.checkout-table tbody td {
+  padding: 2px 4px;
+  border-bottom: 1px solid #ddd;
+  white-space: nowrap;
+}
+
+.checkout-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.checkout-table tbody tr:hover {
+  background-color: #eef6ff;
+}
+
+/* Action buttons */
+.checkout-action-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.checkout-action-buttons button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: white;
+  transition: background-color 0.2s ease;
+}
+
+.checkout-action-buttons .checkout-btn {
+  background-color: #2b6cb0;
+}
+
+.checkout-action-buttons .checkout-btn:hover {
+  background-color: #2c5282;
+}
+
+.checkout-action-buttons .cancel-btn {
+  background-color: #e53e3e;
+}
+
+.checkout-action-buttons .cancel-btn:hover {
+  background-color: #c53030;
+}
+
+/* Attachment */
+.attachment-link {
+  color: #2b6cb0;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .checkout-table {
+    font-size: 0.75rem;
+  }
+
+  .checkout-action-buttons button {
+    padding: 3px 6px;
+  }
+}
+
+.checkout-summary {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  color: #af4174;
+}
+
+
+
+.checkout-frame {
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: 100%;         /* Ensure it stretches full width */
+  margin: 0;            /* Remove any horizontal margins */
+  padding-left: 0.5rem; /* Optional: fine-tune internal spacing */
+  padding-right: 0.5rem;
+  box-sizing: border-box; /* Prevent content overflow due to padding */
+}
+
+.checkout-guest-container {
+  padding: 1.5rem 0;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: #1a202c;
+  width: 100%;
+}
+
+.table-scroll-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.checkout-table {
+  min-width: 960px;
+  width: 100%;
+}

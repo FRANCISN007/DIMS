@@ -1,0 +1,148 @@
+/* EventUpdate.css */
+
+.update-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 10, 10, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.update-form-container {
+  background-color: #ffffff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  border: 2px solid #bbb;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  width: 850px;
+  max-width: 95%;
+  max-height: 95vh;
+  overflow-y: auto;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.update-form-container h2 {
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #2b2b4b;
+  font-weight: 600;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 8px;
+}
+
+.form-frame {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 20px;
+  background-color: #f7f8fc;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 18px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 95%;
+}
+
+.form-row label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #444;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid #b49d9d;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+  width: 50%;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  border-color: #6d56c0;
+  outline: none;
+}
+
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 16px;
+  grid-column: 1 
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center; /* ⬅️ Centers the buttons */
+  gap: 14px;
+  margin-top: 16px;
+  grid-column: 1 / -1;
+}
+
+
+.form-actions button[type="submit"] {
+  background-color: #6d56c0;
+  color: white;
+}
+
+.form-actions button[type="submit"]:hover {
+  background-color: #5642a4;
+}
+
+.cancel-btn {
+  background-color: #d3d3d3;
+  color: #222;
+}
+
+.cancel-btn:hover {
+  background-color: #b3b3b3;
+}
+
+.update-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.update-message.success {
+  color: green;
+}
+
+.update-message.error {
+  color: red;
+}

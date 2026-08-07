@@ -1,0 +1,703 @@
+
+
+/* ───────────── Container ───────────── */
+
+.list-payment-container {
+  padding: 0.3rem;
+  background-color: #f7f9fc;
+  font-family: Arial, sans-serif;
+  font-size: 0.6rem;
+  border-radius: 12px;
+}
+
+/* ───────────── Header ───────────── */
+.list-payment-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.compact-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #003366;
+}
+
+/* ───────────── Filter Section ───────────── */
+.filters-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0rem;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+
+.filter-item label {
+  width: 100px;
+  font-weight: 600;
+  color: #003366;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.filter-item select,
+.filter-item input[type="text"],
+.filter-item input[type="date"],
+.filter-item button {
+  height: 20px;
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  flex: 1;
+  max-width: 150px;
+}
+
+/* ───────────── Daily Payment Button ───────────── */
+.daily-button {
+  background-color: #646e80;
+  color: white;
+  border: none;
+  cursor: pointer;
+  height: 24px;
+  font-size: 0.82rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.daily-button:hover {
+  background-color: #2359c4;
+}
+
+
+/* ───────────── Date Range Layout ───────────── */
+
+
+.date-range-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1rem; /* 👈 Add this line to shift it right */
+
+}
+
+.date-range-wrapper label {
+  width: 90px;
+  font-weight: 600;
+  color: #003366;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.date-range-wrapper input[type="date"] {
+  height: 20px;
+  font-size: 0.82rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid #beb0b0;
+  width: 110px;
+}
+
+.fetch-button {
+  padding: 8px 14px;               /* Better vertical size */
+  background-color: #646e80;
+  color: white;
+  font-size: 0.82rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  line-height: 1;                 /* Prevent text from stretching it */
+  min-width: 80px;
+}
+
+.fetch-button:hover {
+  background-color:  #2359c4;
+}
+/* ───────────── Table ───────────── */
+.payment-table-wrapper {
+  margin-top: 0.2rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.payment-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  background-color: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.payment-table th,
+.payment-table td {
+  padding: 8px 8px;
+  border: 1px solid #3d4146;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.payment-table th {
+  background-color: #293552; /* deep dark navy */
+  color: #ffffff;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border: 1px solid #bdbdbd; /* consistent border with data cells */
+  padding: 7px;
+  text-align: center;
+}
+
+.payment-table tr:nth-child(even) {
+  background-color: #f4f7fa;
+}
+
+/* ───────────── Action Buttons ───────────── */
+.payment-table .action-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.view-btn,
+.void-btn {
+  padding: 5px 9px;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.view-btn {
+  background-color:#3a8ce4;
+  color: white;
+}
+
+.view-btn:hover {
+  background-color: #217dbb;
+}
+
+.void-btn {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.void-btn:hover {
+  background-color: #c0392b;
+}
+
+/* ───────────── Summary ───────────── */
+.payment-summary,
+.payment-method-summary {
+  margin-top: 0.8rem;
+  padding: 0.6rem 1rem;
+  background-color: #eaf1f8;
+  border-left: 4px solid #003366;
+  font-size: 0.92rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  font-weight: 600;
+  color: #003366;
+}
+
+/* ───────────── Error ───────────── */
+.error {
+  color: red;
+  margin-top: 0.6rem;
+  font-weight: 500;
+}
+
+.payment-method-summary {
+  margin-top: 1rem;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+.payment-method-summary ul {
+  list-style: none;
+  padding: 0;
+}
+.payment-method-summary li {
+  margin: 5px 0;
+}
+
+.no-data {
+  margin-top: 10px;
+  padding: 10px 15px;
+  border-radius: 6px;
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.all-summary-wrapper {
+  margin-top: 30px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.summary-left,
+.summary-right {
+  width: 50%;
+  display: flex;
+  align-items: center;
+}
+
+.summary-left span,
+.summary-right span {
+  margin-left: 4px;
+}
+
+.debtor-summary-wrapper {
+  margin-top: 20px;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.summary-left {
+  display: flex;
+  gap: 6px;
+  font-size: 0.95rem;
+}
+
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.popup-content {
+  background: rgb(235, 232, 232);
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.large-popup {
+  width: 700px;
+  max-width: 95%;
+}
+
+.popup-title {
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 25px;
+}
+
+.popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.large-font {
+  font-size: 12px;
+}
+
+.popup-buttons {
+  margin-top: 30px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.print-btn,
+.close-popup-btn {
+  padding: 10px 24px;
+  border: none;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #5c6980;
+  color: white;
+}
+
+.print-btn:hover,
+.close-popup-btn:hover {
+  background-color: #3f475b;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .popup-content, .popup-content * {
+    visibility: visible;
+  }
+
+  .popup-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .print-btn,
+  .close-popup-btn {
+    display: none;
+  }
+}
+
+.voided-row {
+  background-color: #ffe6e6 !important;
+  color: red;
+  font-weight: bold;
+}
+
+
+/* 👇 Force smaller table font and tighter spacing */
+.list-payment-container table.payment-table {
+  font-size: 0.9rem !important;
+}
+
+.list-payment-container table.payment-table th,
+.list-payment-container table.payment-table td {
+  font-size: 0.9rem !important;
+  padding: 4px 8px !important;
+}
+
+
+.popup-content {
+  font-size: 1rem !important;
+}
+
+.popup-content .popup-title {
+  font-size: 1.4rem !important;
+}
+
+.popup-content .large-font {
+  font-size: 1rem !important;
+}
+
+.print-btn,
+.close-popup-btn {
+  font-size: 0.9rem !important;
+  padding: 8px 18px !important;
+}
+
+.green-paid-row {
+  background-color: #80be80;
+  color: #14532d;
+  font-weight: bold;
+}
+
+
+.status-summary-wrapper {
+  margin-top: 20px;
+  padding: 0;
+  max-width: 100%; /* let it span normally */
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.status-summary-wrapper h4 {
+  margin-bottom: 10px;
+  font-size: 1.05rem;
+  font-weight: bold;
+}
+
+.status-summary-wrapper p {
+  margin: 4px 0;
+}
+
+
+.daily-summary-wrapper {
+  margin-top: 20px;
+  background: #f8f9fa;
+  padding: 16px 20px;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  font-size: 1.1rem;
+  line-height: 1.4;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.daily-summary-wrapper h3,
+.daily-summary-wrapper h4 {
+  margin: 0;
+  font-weight: 600;
+  color: #222;
+  text-align: left;
+}
+
+.daily-summary-wrapper h3 {
+  font-size: 1.3rem;
+  margin-bottom: 5px;
+}
+
+.daily-summary-wrapper h4 {
+  font-size: 1.15rem;
+  margin-bottom: 8px;
+}
+
+.daily-summary-wrapper .summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+  font-weight: 500;
+}
+
+.daily-summary-wrapper .summary-row strong {
+  color: #222;
+  min-width: 150px; /* aligns labels */
+  display: inline-block;
+}
+
+.daily-summary-wrapper .summary-row span {
+  font-weight: 600;
+  color: #000;
+}
+
+.daily-summary-wrapper ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 4px;
+}
+
+.daily-summary-wrapper li {
+  margin: 3px 0;
+  font-size: 1.05rem;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 500;
+}
+
+.daily-summary-wrapper li strong {
+  color: #222;
+  min-width: 150px;
+  display: inline-block;
+}
+
+.daily-summary-wrapper li span {
+  font-weight: 600;
+  color: #000;
+}
+
+
+.payment-summary-container {
+  background: #ffffff;
+  padding: 15px;
+  margin-top: 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.summary-card {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.summary-card.highlight {
+  background: #fdebd0;
+  border-left: 4px solid #f39c12;
+}
+
+
+.payment-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;             /* NEW */
+  max-height: 75vh;             /* NEW: allow scrolling */
+  padding-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+/* Make table wide enough always */
+.payment-table {
+  min-width: 1500px;            /* NEW: ensures scroll works */
+}
+
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.filter-label {
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.filter-select {
+  padding: 6px;
+  min-width: 180px;
+}
+
+
+.summary-box {
+  background: #f8f8f8;
+  padding: 12px;
+  border-radius: 10px;
+  margin: 10px 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.summary-grid {
+  display: flex;
+  gap: 20px;
+}
+
+.summary-item {
+  background: #ffffff;
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+
+.daily-summary {
+  margin-top: 20px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.daily-summary .summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.daily-summary .summary-item {
+  font-size: 14px;
+  background: #fdfdfd;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+
+.compact-summary {
+  font-size: 0.75rem !important;
+  line-height: 1.1;
+  padding: 5px 8px;
+  background: #f8f8f8;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.summary-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+
+.summary-item {
+  line-height: 1.05;
+}
+
+.bank-summary {
+  margin-left: 6px;
+  padding-left: 5px;
+  border-left: 1px solid #ccc;
+}
+
+.summary-box h5 {
+  margin: 0 0 4px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.total-payment {
+  font-weight: bold;
+  color: #1a73e8;
+  border-top: 1px solid #ccc;
+  padding-top: 5px;
+  margin-top: 5px;
+}
+
+
+
+
+.payment-table-wrapper {
+    max-height: 320px;      /* adjust to your preferred height */
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+/* Keep table header visible while scrolling */
+.payment-table thead th {
+    position: sticky;
+    top: 0;
+  
+    z-index: 10;
+}
+
+/* Optional */
+.payment-table {
+    width: 100%;
+    border-collapse: collapse;
+}

@@ -1,0 +1,324 @@
+/* =========================
+   MODAL OVERLAY
+========================= */
+.modal-overlay1 {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(1px);
+}
+
+/* =========================
+   MODAL
+========================= */
+.modal {
+  background: #ffffff;
+  width: 360px;
+  max-width: 90%;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: cardIn 150ms ease-out;
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================
+   MODAL HEADER
+========================= */
+.modal-header {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+  background: #f9fafb;
+  text-align: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+/* =========================
+   MODAL BODY
+========================= */
+.modal-body {
+  padding: 4px;
+}
+
+/* =========================
+   FORM GRID
+========================= */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.form-group span {
+  font-size: 0.85rem;
+  color: #111;
+}
+
+/* =========================
+   INPUTS
+========================= */
+.input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* =========================
+   MODAL FOOTER
+========================= */
+.modal-footer {
+  padding: 10px 12px;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-footer .btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: transform 0.05s ease, box-shadow 0.2s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.edit {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn.void {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn.print {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn.delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn.delete:hover {
+  background-color: #b02a37;
+}
+
+.btn:disabled {
+  background-color: #cfcfcf !important;
+  cursor: not-allowed;
+}
+
+/* =========================
+   FILTERS
+========================= */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.filters label {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.filters select,
+.filters input {
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.filters .btn.filter {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.filters .btn.filter:hover {
+  background: #0056b3;
+}
+
+/* =========================
+   PAYMENT SUMMARY
+========================= */
+.payment-summary .outstanding {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #b22222;
+}
+
+/* =========================
+   VOID STYLES
+========================= */
+.void-text {
+  color: red;
+  font-weight: bold;
+}
+
+.void-row {
+  background-color: #ffe6e6;
+}
+
+/* =========================
+   SCROLLABLE TABLE WRAPPER
+========================= */
+.scroll-wrapper {
+  width: 100%;
+  max-width: 100%;
+  height: calc(100vh - 20px);
+
+  /* ✅ ENABLE BOTH SCROLLS */
+  overflow-x: auto;
+  overflow-y: auto;
+
+  border-radius: 8px;
+  background: #fff;
+
+  /* smoother scrolling */
+  scroll-behavior: smooth;
+}
+
+/* =========================
+   PAYMENT TABLE
+========================= */
+.payment-table {
+  width: max-content;       /* expands naturally */
+  min-width: 1400px;        /* forces horizontal scroll */
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+/* =========================
+   TABLE CELLS
+========================= */
+.payment-table th,
+.payment-table td {
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  text-align: center;
+  white-space: nowrap;      /* prevents column text wrapping */
+  font-size: 13px;
+}
+
+
+.payment-table td {
+  padding: 2px 4px;
+  border: 1px solid #ddd;
+  text-align: center;
+  white-space: nowrap;      /* prevents column text wrapping */
+  font-size: 13px;
+}
+
+
+/* =========================
+   STICKY HEADER
+========================= */
+.payment-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #1f2937;
+  color: white;
+}
+
+/* =========================
+   CUSTOM SCROLLBARS
+========================= */
+
+/* Vertical scrollbar */
+.scroll-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px; /* horizontal scrollbar */
+}
+
+/* Track */
+.scroll-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+/* Thumb */
+.scroll-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+/* Hover */
+.scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

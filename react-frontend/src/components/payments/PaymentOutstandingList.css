@@ -1,0 +1,114 @@
+
+
+.outstanding-wrapper {
+  padding: 16px;
+  background-color: #f7f9fc;
+  padding: 24px;
+  border-radius: 12px;
+  width: 1000px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  position: relative;
+
+}
+
+/* ==============================
+   Scrollable Outstanding Table
+============================== */
+
+.outstanding-table-wrapper {
+  height: 450px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 2px solid #293552;
+  border-radius: 10px;
+  background: #fff;
+  margin-top: 10px;
+}
+
+.outstanding-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.outstanding-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #293552;
+  color: #fff;
+}
+
+.outstanding-table tbody tr:nth-child(even) {
+  background: #f2f7fa;
+}
+
+.outstanding-table tbody tr:hover {
+  background: #d0ecf9;
+}
+
+
+.no-margin {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.summary-box {
+  display: flex;
+  gap: 20px;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.outstanding-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.outstanding-table th,
+.outstanding-table td {
+  border: 1px solid #ccc;
+  padding: 6px 6px; /* reduced padding */
+  text-align: left;
+}
+
+.outstanding-table th {
+  background-color: #293552; /* deep dark navy */
+  color: #ffffff;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border: 1px solid #bdbdbd; /* consistent border with data cells */
+  padding: 7px;
+  text-align: center;
+}
+
+.outstanding-table thead {
+  background-color: #004c66;
+  color: white;
+}
+
+.outstanding-table tbody tr:nth-child(even) {
+  background-color: #f2f7fa;
+}
+
+.outstanding-table tbody tr:hover {
+  background-color: #d0ecf9;
+}
+
+.pay-button {
+  background-color: #008080;
+  color: white;
+  padding: 4px 8px; /* smaller button */
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pay-button:hover {
+  background-color: #006666;
+}

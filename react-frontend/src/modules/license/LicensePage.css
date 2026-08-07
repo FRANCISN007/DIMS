@@ -1,0 +1,158 @@
+input.license-input:-webkit-autofill,
+input.license-input:-webkit-autofill:hover, 
+input.license-input:-webkit-autofill:focus, 
+input.license-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #0f172a; /* Dark background */
+}
+
+.license-container {
+  width: 300px; /* smaller frame */
+  margin: 100px auto;
+  padding: 24px 20px;
+  background-color: #1e293b;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  color: #f8fafc;
+  text-align: center;
+  position: relative;
+}
+
+/* H E M S heading on top, bigger and bold with color animation */
+.hems-header {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  text-align: left;
+}
+
+.hems-logo {
+  font-size: 48px;       /* big font */
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 8px;
+  animation: colorShift 3s infinite;
+  margin: 0;
+  line-height: 1;
+}
+
+.hems-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+@keyframes colorShift {
+  0% { color: #38bdf8; }
+  25% { color: #22d3ee; }
+  50% { color: #3b82f6; }
+  75% { color: #06b6d4; }
+  100% { color: #38bdf8; }
+}
+
+.license-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 20px;
+  letter-spacing: 0.4px;
+}
+
+.license-form-group {
+  margin-bottom: 16px;
+}
+
+.license-label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #cbd5e1;
+  text-align: left;
+  width: 75%;
+  margin: 0 auto 5px auto;
+}
+
+.license-input {
+  width: 70%;
+  margin: 0 auto;
+  display: block;
+  padding: 8px 8px;
+  font-size: 12px;
+  background-color: #000000; /* black background */
+  color: #ffffff;            /* white input text */
+  border: 1px solid #334155;
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.license-input::placeholder {
+  color: #cccccc62;            /* light gray placeholder for readability */
+}
+
+.license-input:focus {
+  border-color: #38bdf8;
+}
+
+.license-button-group {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.license-button {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  background-color: #38bdf8;
+  color: #0f172a;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.license-button:hover {
+  background-color: #0ea5e9;
+}
+
+.license-message {
+  margin-top: 16px;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+
+/* Rotate the ⏳ emoji 
+.emoji-spinner {
+  display: inline-block;
+  animation: spin 1.2s linear infinite;
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+*/

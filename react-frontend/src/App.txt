@@ -1,0 +1,31 @@
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
+import HomePage from "./pages/HomePage";
+import LicensePage from "./modules/license/LicensePage";
+import LoginPage from "./modules/auth/LoginPage"; // ✅ Correct path
+
+const isLicenseVerified = localStorage.getItem("license_verified") === "true";
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        {!isLicenseVerified ? (
+          <>
+            <Route path="/license" element={<LicensePage />} />
+            <Route path="*" element={<Navigate to="/license" replace />} />
+          </>
+        ) : (
+          <>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/license" element={<LicensePage />} />
+            <Route path="/login" element={<LoginPage />} /> {/* ✅ This must exist */}
+          </>
+        )}
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;

@@ -1,0 +1,114 @@
+.update-room-modal2 .modal-overlay2 {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000; /* bump up */
+}
+
+
+.update-room-modal2 .modal-content2 {
+  background-color: #eaecee;
+  padding: 20px 24px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-width: 510px;
+  width: 95%;
+  font-family: 'Segoe UI', sans-serif;
+  position: relative;
+}
+
+.update-room-modal2 .close-btn2 {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #555;
+  cursor: pointer;
+}
+
+.update-room-modal2 .close-btn2:hover {
+  color: #000;
+}
+
+.update-room-modal2 .update-room-form2 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.update-room-modal2 .update-room-form2 h3 {
+  margin: 0 auto 10px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  color: #222;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 6px;
+}
+
+.update-room-modal2 .update-room-form2 label {
+  font-weight: 500;
+  color: #333;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.update-room-modal2 .update-room-form2 input,
+.update-room-modal2 .update-room-form2 select {
+  padding: 7px 10px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.update-room-modal2 .update-room-form2 input:focus,
+.update-room-modal2 .update-room-form2 select:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 0 1px rgba(40, 167, 69, 0.2);
+}
+
+/* Button */
+.update-room-modal2 .action-btn {
+  background-color: #28a745;
+  color: #fff;
+  padding: 9px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 20px auto 0;
+  display: block;
+  width: fit-content;
+}
+
+.update-room-modal2 .action-btn:hover {
+  background-color: #1e7e34;
+}
+
+/* Fault Section */
+.fault-section {
+  margin-top: 10px;
+}
+
+.fault-section h4 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.fault-list {
+  padding-left: 16px;
+  font-size: 13px;
+}
+
+.fault-list li {
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+}

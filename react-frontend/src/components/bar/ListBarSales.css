@@ -1,0 +1,277 @@
+/* ================= MAIN CONTAINER ================= */
+.list-bar-sales-container1 {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 12px;
+  background: #f8f8f8;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.page-heading {
+  text-align: center;
+  margin: 0 0 15px 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #2c3e50;
+}
+
+/* ================= FILTERS ================= */
+.top-bar {
+  margin-bottom: 12px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.filters label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-right: 4px;
+}
+
+.filters select,
+.filters input[type="date"] {
+  padding: 5px 8px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  height: 30px;
+}
+
+.filters button {
+  padding: 6px 14px;
+  background: #2c3e50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.filters button:hover {
+  background: #34495e;
+}
+
+/* ================= SCROLLABLE TABLE ================= */
+.table-scroll-container {
+  max-height: 68vh;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.sales-table1 {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 0;
+}
+
+.sales-table1 thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #293552;
+}
+
+.sales-table1 th {
+  background-color: #293552;
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  padding: 10px 6px;
+  border: 1px solid #bdbdbd;
+  text-align: center;
+  position: sticky;
+  top: 0;
+}
+
+.sales-table1 td {
+  padding: 7px 6px;
+  border: 1px solid #bdbdbd;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Row Styling */
+.sales-table1 tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.sales-table1 tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.sales-table1 tr:hover {
+  background-color: #f0f7ff;
+}
+
+/* ================= MESSAGE ================= */
+.message {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-weight: 500;
+  background: #e6f7e9;
+  color: #2c662d;
+  text-align: center;
+}
+
+/* ================= MODAL STYLES ================= */
+.modal-overlay2 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal2 {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  width: 480px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.modal-title {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* Sale Item Card */
+.sale-item-card {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.sale-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sale-item-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.form-row {
+  margin-bottom: 8px;
+}
+
+.form-row label {
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.btn-add-item,
+.btn-save,
+.btn-cancel,
+.btn-remove-item {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-add-item {
+  background: #007bff;
+  color: white;
+}
+
+.btn-save {
+  background: #28a745;
+  color: white;
+}
+
+.btn-cancel {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-remove-item {
+  background: #e74c3c;
+  color: white;
+  padding: 4px 8px;
+}
+
+.total-box {
+  background: #eaf9f0;
+  border: 1px solid #c7e7d2;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 12px 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d7a46;
+}
+
+.modal-actions2 {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 992px) {
+  .table-scroll-container {
+    max-height: 55vh;
+  }
+  
+  .modal2 {
+    width: 95%;
+  }
+}

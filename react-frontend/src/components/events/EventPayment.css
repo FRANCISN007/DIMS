@@ -1,0 +1,156 @@
+.event-payment-wrapper {
+  font-family: Arial, sans-serif;
+  padding: 0.2rem;
+  background-color: #f7f9fc;
+  font-size: 0.7rem;
+  border-radius: 12px;
+}
+
+.event-payment-title {
+  font-size: 20px;
+  margin-bottom: 10px;
+  color: #343a40;
+  
+}
+
+.event-payment-loading,
+.event-payment-error {
+  font-size: 16px;
+  color: #dc3545;
+}
+
+.event-payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.event-payment-table th {
+  padding: 4px 6px;
+  border: 1px solid #799ec5;
+  text-align: left;
+  font-size: 16px;
+}
+
+.event-payment-table td {
+  padding: 4px 6px;
+  border: 1px solid #a5b3c2;
+  text-align: left;
+  font-size: 14px;
+}
+
+
+
+.event-payment-table th {
+  background-color: #003366;
+  color: #ffffff;
+}
+
+/* ✅ Zebra striping */
+.event-payment-table tbody tr:nth-child(even) {
+  background-color: #e8f1fa;
+}
+
+.event-payment-table tbody tr:hover {
+  background-color: #d3e7f6;
+}
+
+
+
+.event-payment-button {
+  background-color: #008080;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.event-payment-button:hover {
+  background-color: #218838;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-content label {
+  font-weight: bold;
+}
+
+.modal-content input, 
+.modal-content select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.form-error {
+  color: red;
+  font-size: 13px;
+}
+
+.success-message {
+  background-color: #e6ffed;
+  color: #267a3e;
+  border: 1px solid #b5e0c2;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+/* ✅ Updated summary box */
+.event-payment-summary {
+  text-align: left;
+  background-color: #f9fbff;
+  padding: 25px 35px;
+  margin-top: 30px;
+  border-radius: 10px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 700px;
+  font-size: 1.2rem;
+  line-height: 1.6rem;
+}
+
+.summary-line {
+  font-size: 1.2rem;
+  color: #1a1a1a;
+  margin: 10px 0;
+}
+
+.summary-line strong {
+  color: #004080;
+}

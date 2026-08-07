@@ -1,0 +1,148 @@
+/* ================= CONTAINER ================= */
+.stock-balance-container2 {
+  padding: 8px;
+  font-family: Arial, sans-serif;
+  max-width: 1250px;
+  width: 100%;
+  margin: 0 auto;
+  background: #fafafa;
+  border-radius: 6px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+
+/* ================= HEADER ================= */
+.stock-balance-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.stock-balance-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: #2c3e50;
+}
+
+/* ================= FILTER FRAME (Now same style as Store) ================= */
+.filter-frame2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0px 1px 4px rgba(0,0,0,0.08);
+  width: 100%;
+  align-items: center;
+}
+
+/* Each filter group */
+.filter-group2 {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.filter-group2 label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.filter-group2 input,
+.filter-group2 select {
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+  background: #fafafa;
+  width: 100%;
+}
+
+.filter-group2 input:focus,
+.filter-group2 select:focus {
+  border-color: #007bff;
+  outline: none;
+  background: #fff;
+}
+
+/* Specific width adjustments */
+.kitchen-filter { min-width: 140px; }
+.search-filter { min-width: 150px; }
+.item-filter { min-width: 130px; }
+
+/* ================= TOTAL ================= */
+.total-stock2 {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  color: #2d572c;
+  background: #e6f4ea;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 6px;
+  align-self: flex-start;
+}
+
+/* ================= SCROLLABLE TABLE ================= */
+.table-scroll-container {
+  max-height: 65vh;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.stock-balance-container2 table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  margin: 0;
+}
+
+.stock-balance-container2 thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #293552;
+}
+
+.stock-balance-container2 th,
+.stock-balance-container2 td {
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+  text-align: left;
+}
+
+.stock-balance-container2 th {
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.even-row { background-color: #f9f9f9; }
+.odd-row { background-color: #fff; }
+
+/* ================= MESSAGE ================= */
+.message {
+  background-color: #e7f5e9;
+  color: #2d572c;
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 992px) {
+  .stock-balance-container2 { width: 98%; }
+  .filter-frame2 { flex-direction: column; align-items: stretch; }
+  .table-scroll-container { max-height: 55vh; }
+}

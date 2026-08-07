@@ -1,0 +1,288 @@
+.order-to-sales {
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.order-to-sales h2 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+/* ===========================
+   Filters
+=========================== */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.filters > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.filters label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+.filters input,
+.filters select {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* ===========================
+   Orders Container
+=========================== */
+
+.orders-container {
+  height: 600px;           /* Adjust this height as needed */
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;        /* IMPORTANT */
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  background: #fff;
+}
+
+
+/* Scrollbar */
+
+.orders-container::-webkit-scrollbar {
+  width: 2px;
+}
+
+.orders-container::-webkit-scrollbar-track {
+  background: #f3f3f3;
+}
+
+.orders-container::-webkit-scrollbar-thumb {
+  background: #b5b5b5;
+  border-radius: 10px;
+}
+
+.orders-container::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+/* Firefox */
+
+.orders-container {
+  scrollbar-width: thin;
+  scrollbar-color: #b5b5b5 #f3f3f3;
+}
+
+/* ===========================
+   Sticky Totals
+=========================== */
+
+.totals {
+  flex-shrink: 0;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 12px 16px;
+
+  font-weight: bold;
+  background: #fff;
+
+  border-bottom: 1px solid #ddd;
+}
+
+
+
+
+/* ===========================
+   Orders List
+=========================== */
+
+.orders-list {
+  flex: 1;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  list-style: none;
+  margin: 0;
+  padding: 15px 15px 70px 15px;
+}
+
+/* ===========================
+   Order Card
+=========================== */
+
+.order-card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  padding: 15px;
+
+  background: #fafafa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  transition: transform 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.order-card:last-child {
+  margin-bottom: 80px;
+}
+
+.order-card.high-value {
+  border-left: 5px solid #e63946;
+  background: #fff6f6;
+}
+
+/* ===========================
+   Header
+=========================== */
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 12px;
+
+  font-size: 16px;
+  font-weight: bold;
+  color: #444;
+}
+
+/* ===========================
+   Badge
+=========================== */
+
+.badge {
+  background: #e63946;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ===========================
+   Items
+=========================== */
+
+.order-items {
+  margin-left: 10px;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 4px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+/* ===========================
+   Footer
+=========================== */
+
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-top: 15px;
+}
+
+.order-total {
+  font-weight: bold;
+  color: #222;
+}
+
+/* ===========================
+   Button
+=========================== */
+
+.create-sale-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+
+  background: #28a745;
+  color: #fff;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.create-sale-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.create-sale-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ===========================
+   Empty / Hint States
+=========================== */
+
+.no-orders,
+.hint-text {
+  color: #777;
+  font-style: italic;
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* ===========================
+   Responsive
+=========================== */
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .filters > div {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .order-header,
+  .order-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .order-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .create-sale-btn {
+    width: 100%;
+  }
+}

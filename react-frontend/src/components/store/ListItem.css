@@ -1,0 +1,217 @@
+.list-item-container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 10px; /* reduced padding */
+  background: #f1efef;
+  border-radius: 12px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  font-family: "Segoe UI", sans-serif;
+}
+
+.list-item-message {
+  padding: 8px; /* slightly smaller */
+  background-color: #f1f8e9;
+  color: #2e7d32;
+  border-left: 4px solid #66bb6a; /* thinner border */
+  margin-bottom: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.list-item-container h2,
+.list-item-container h3 {
+  margin-bottom: 2px; /* compact spacing */
+  color: #2c3e50;
+  font-size: 18px; /* smaller font */
+}
+
+.search-input {
+  width: 15%;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid #b4a9a9;
+}
+
+.create-item-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* tighter grid */
+  gap: 4px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.create-item-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #333;
+}
+
+.create-item-form input,
+.create-item-form select {
+  padding: 2px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #b4a9a9;
+  margin-top: 3px;
+}
+
+.save-btn {
+  background-color: #27ae60;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  grid-column: span 2;
+  transition: background 0.3s;
+}
+
+.save-btn:hover {
+  background-color: #1e874b;
+}
+
+.item-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+  font-size: 12px; /* compact font */
+}
+
+.item-table th,
+.item-table td {
+  padding: 4px 6px; /* reduced padding */
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.item-table th {
+  background-color: #f4f6f8;
+  color: #333;
+}
+
+.even-row {
+  background-color: #fafafa;
+}
+
+.odd-row {
+  background-color: #e7e0e0;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 4px 6px; /* smaller buttons */
+  margin: 2px;
+  font-size: 11px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.edit-btn {
+  background-color: #3498db;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #2980b9;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 15px 20px; /* smaller padding */
+  border-radius: 12px;
+  max-width: 450px; /* compact width */
+  width: 100%;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+.modal-content h3 {
+  margin-bottom: 12px;
+  color: #6b87a3;
+  font-size: 16px;
+}
+
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-content input,
+.modal-content select {
+  padding: 5px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cancel-btn {
+  background-color: #b0bec5;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.cancel-btn:hover {
+  background-color: #90a4ae;
+}
+
+
+
+/* Vertical Scroll for the item list - IMPROVED */
+.scrollable-table-container {
+  max-height: 350px;           /* Reduced a bit so scroll appears earlier */
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-top: 10px;
+  background-color: white;     /* Ensure background is visible */
+}
+
+/* Sticky table header */
+.scrollable-table-container table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f4f6f8;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: better visual separation */
+}

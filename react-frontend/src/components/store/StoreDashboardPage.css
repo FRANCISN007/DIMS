@@ -1,0 +1,331 @@
+/* =========================
+   ROOT LAYOUT CONTAINER (STORE ONLY)
+========================= */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+  background-color: #3e66a3;
+  position: relative;
+
+  overflow: hidden;
+  isolation: isolate; /* 🔥 IMPORTANT: isolates z-index world */
+}
+
+
+/* =========================
+   SIDEBAR
+========================= */
+.sidebars1 {
+  width: 165px;
+  background: #1f2937;
+  color: white;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 10px 6px;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+
+  border-radius: 0 12px 12px 0;
+
+  position: relative;
+  z-index: 10; /* keep local only */
+
+  overflow: visible;
+}
+
+.sidebar-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+
+  border-bottom: 2px solid rgba(255,255,255,0.2);
+}
+
+
+/* =========================
+   SIDEBAR BUTTONS
+========================= */
+.sidebars1-button {
+  width: 100%;
+  background: transparent;
+
+  border: none;
+  color: #d1d5db;
+
+  text-align: left;
+  font-size: 0.9rem;
+
+  padding: 8px 12px;
+  margin-bottom: 4px;
+
+  border-radius: 6px;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebars1-button:hover,
+.sidebars1-button.active {
+  background-color: #4ade80;
+  color: #111827;
+  font-weight: 600;
+}
+
+
+/* =========================
+   SIDEBAR WRAPPER
+========================= */
+.sidebar-item-wrapper {
+  position: relative;
+}
+
+
+/* =========================
+   SUBMENU (PORTAL SAFE)
+   🔥 IMPORTANT: scoped to STORE ONLY
+========================= */
+.submenu {
+  position: fixed; /* portal uses fixed */
+  min-width: 180px;
+
+  background: #ffffff;
+  border-radius: 10px;
+
+  padding: 6px 0;
+
+  box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+
+  z-index: 999999; /* always above EVERYTHING */
+
+  /* 🔥 CRITICAL: isolate interaction to this layer only */
+  pointer-events: auto;
+}
+
+
+/* =========================
+   SUBMENU ITEMS
+========================= */
+.submenu-item {
+  width: 100%;
+  padding: 8px 12px;
+
+  font-size: 0.8rem;
+  text-align: left;
+
+  border: none;
+  background: transparent;
+
+  color: #111827;
+
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.submenu-item:hover {
+  background-color: #4ade80;
+  color: #0b3d91;
+}
+
+
+/* =========================
+   MAIN CONTENT AREA
+========================= */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  height: 100vh;
+  overflow: hidden;
+
+  background-color: #c5ccd8;
+
+  padding: 10px 18px;
+  box-sizing: border-box;
+
+  position: relative;
+  z-index: 1; /* below submenu layer */
+}
+
+
+/* =========================
+   HEADER
+========================= */
+.header {
+  height: 60px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+}
+
+.header-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+
+  color: #1a45a1;
+  margin: 0;
+}
+
+
+/* =========================
+   ACTION BUTTONS
+========================= */
+.action-button1 {
+  background-color: transparent;
+  border: 1px solid #c2bfda;
+
+  color: #333;
+
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  font-size: 0.85rem;
+
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.action-button1:hover {
+  color: #3301fa;
+  border-color: #5537c4;
+}
+
+.logout-button1 {
+  background-color: #b91c1c;
+  color: white;
+
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  font-size: 0.8rem;
+  border: none;
+
+  cursor: pointer;
+}
+
+.logout-button1:hover {
+  background-color: #7f1d1d;
+}
+
+
+/* =========================
+   CONTENT AREA
+========================= */
+.content-area {
+  flex: 1;
+
+  background-color: #e2d8d8f8;
+
+  padding: 18px 25px;
+  border-radius: 14px;
+
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+
+  position: relative;
+
+  overflow: auto;
+  z-index: 1;
+}
+
+
+/* =========================
+   BACKGROUND OVERLAY
+========================= */
+.background-overlay {
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.background-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(
+    120deg,
+    rgba(240, 240, 240, 0.6),
+    rgba(10, 10, 10, 0.85)
+  );
+}
+
+.background-overlay::after {
+  content: "";
+  position: absolute;
+
+  width: 250%;
+  height: 250%;
+
+  background: radial-gradient(
+    circle,
+    rgba(255,255,255,0.25) 0%,
+    transparent 60%
+  );
+
+  animation: moveGlow 12s linear infinite;
+}
+
+
+/* =========================
+   WATERMARK
+========================= */
+.watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  font-size: 60px;
+  font-weight: 900;
+
+  letter-spacing: 4px;
+
+  color: rgba(0,0,0,0.12);
+
+  white-space: nowrap;
+
+  animation: waveMotion 6s ease-in-out infinite;
+}
+
+
+/* =========================
+   CONTENT ABOVE OVERLAY
+========================= */
+.content-inner {
+  position: relative;
+  z-index: 2;
+}
+
+
+/* =========================
+   ANIMATIONS
+========================= */
+@keyframes waveMotion {
+  0% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(10px); }
+  100% { transform: translate(-50%, -50%) translateY(0); }
+}
+
+@keyframes moveGlow {
+  0% { transform: translate(-30%, -30%); }
+  50% { transform: translate(30%, 30%); }
+  100% { transform: translate(-30%, -30%); }
+}

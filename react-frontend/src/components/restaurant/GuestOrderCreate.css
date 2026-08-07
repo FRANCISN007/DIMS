@@ -1,0 +1,294 @@
+/* Container */
+.guestorder-container {
+  max-width: 1000px;
+  margin: 2px auto;
+  padding: 30px 25px;
+  font-size: 18px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+
+.guestorder-container h2 {
+  
+  font-size: 25px;
+  font-weight: 600;
+  text-align: center;
+
+  
+}
+
+
+/* Form Inputs */
+.guestorder-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 25px;
+}
+
+.guestorder-form input,
+.guestorder-form select {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  flex: 1 1 200px;
+  min-width: 180px;
+  background: #fafafa;
+  transition: border 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.guestorder-form input:focus,
+.guestorder-form select:focus {
+  outline: none;
+  border-color: #007bff;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(0, 123, 255, 0.2);
+}
+
+/* Item Form */
+.guestorder-item-form {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.guestorder-item-form input[type="text"],
+.guestorder-item-form input[type="number"] {
+  flex: 1 1 180px;
+  min-width: 120px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+}
+
+.guestorder-item-form button {
+  padding: 2px 6px;
+  border: none;
+  background: #28a745;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.guestorder-item-form button:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+/* Suggestions Dropdown */
+.suggestions-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid #a7a2a2;
+  border-radius: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 4px 0 0 0;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.suggestions-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.suggestions-list li:hover {
+  background-color: #f0f0f0;
+}
+
+/* Table */
+.guestorder-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.guestorder-table th,
+.guestorder-table td {
+  padding: 3px 6px;
+  border: 1px solid #aca7a7;
+  text-align: center;
+}
+
+.guestorder-table th {
+  background-color: #dfe2e4;
+  font-weight: 700;
+  color: #000000;
+}
+
+.guestorder-table tr:nth-child(even) {
+  background-color: #eee9e9;
+}
+
+.guestorder-table tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* Buttons */
+.action-btn {
+  padding: 6px 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.delete {
+  background: #dc3545;
+  color: white;
+}
+
+.delete:hover {
+  background: #bb2d3b;
+}
+
+
+
+
+
+/* Create Order button */
+/* Submit button */
+.submit-container button {
+  min-width: 120px;
+  height: 30px;
+  padding: 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submit-container button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.submit-container button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+
+.submit-btn:hover {
+  background: linear-gradient(135deg, #0b5ed7, #084298);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+.submit-btn:disabled {
+  background: #bdbdbd;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+/* Message */
+.guestorder-message {
+  margin-top: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.guestorder-message.success {
+  color: #28a745;
+}
+
+.guestorder-message.error {
+  color: #dc3545;
+}
+
+
+
+/* Scrollable guest order table */
+.guestorder-table-wrapper {
+  width: 100%;
+  flex: 0 0 100%;      /* Force it onto its own row */
+  max-height: 255px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 0px;
+  border: 1px solid #aca7a7;
+  border-radius: 8px;
+}
+
+
+/* Sticky header */
+.guestorder-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #dfe2e4;
+}
+
+/* Scrollbar styling */
+.guestorder-table-wrapper::-webkit-scrollbar {
+  width: 10px;
+}
+
+.guestorder-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.guestorder-table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.guestorder-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+
+
+/* Total row below the scrollable table */
+.guestorder-total {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 45% 25%;
+  border: 1px solid #aca7a7;
+  border-top: none;
+  background: #f8f9fa;
+  box-sizing: border-box;
+}
+
+.guestorder-total-spacer {
+  border-right: 1px solid #aca7a7;
+}
+
+.guestorder-total-value {
+  padding: 0px;      /* Reduced from 10px 12px */
+  min-height: 20px;       /* Compact height */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.guestorder-total-value strong {
+  color: #0d6efd;
+  font-size: 18px;
+}

@@ -1,0 +1,163 @@
+/* Container */
+.bookings-form-container {
+  background-color: #f7f7f7;
+  padding: 0.5rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid #cfbaba;
+  max-width: 100%;
+  max-height: 100vh;
+  margin: 0.2rem auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  font-family: "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Close Button */
+.close-button {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  background: none;
+  border: none;
+  color: #d32f2f;
+  cursor: pointer;
+}
+.close-button:hover {
+  color: #a60000;
+}
+
+/* Title & Message */
+.forms-title {
+  text-align: center;
+  font-size: 1.3rem;
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+  color: #333;
+}
+.form-message {
+  text-align: center;
+  margin-bottom: 0.3rem;
+  color: #c0392b;
+  font-size: 0.75rem;
+}
+
+/* Form */
+.bookings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+/* Sections */
+.forms-section {
+  margin-bottom: 0.2rem;
+}
+.sections-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+  color: #444;
+}
+
+/* Rows */
+.forms-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Inputs */
+.forms-row input,
+.forms-row select {
+  padding: 0.35rem;
+  font-size: 0.9rem;
+  border: 1px solid #d3bbbb;
+  border-radius: 6px;
+  background-color: #fff;
+  flex: 1 1 calc(45% - 0.2rem);
+  min-width: 120px;
+}
+
+/* File input */
+input[type="file"] {
+  padding: 0.35rem;
+  font-size: 0.75rem;
+}
+
+/* Date group */
+.dates-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 calc(50% - 0.3rem);
+}
+.dates-group label {
+  font-size: 0.8rem;
+  margin-bottom: 1px;
+  color: #313030;
+}
+
+/* Search Button */
+.search-btn {
+  padding: 0.3rem 0.6rem;
+  background-color: #6c757d;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  margin-top: auto;
+}
+.search-btn:hover {
+  background-color: #007bff;
+}
+
+/* Submit Button */
+.submits-btn {
+  background-color: #3367d6;
+  color: white;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  align-self: center;
+  margin-top: 0.2rem;
+}
+.submits-btn:hover {
+  background-color: #274bb3;
+}
+
+/* Attachment label */
+.previous-attachment {
+  font-style: italic;
+  color: #555;
+  font-size: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .forms-row {
+    flex-direction: column;
+  }
+
+  .forms-row input,
+  .forms-row select,
+  .dates-group {
+    flex: 1 1 100%;
+  }
+
+  .submit-btn {
+    width: 100%;
+  }
+}
+
+/* Add spacing between stacked rows inside each form section */
+.forms-section .forms-row + .forms-row {
+  margin-top: 0.4rem;
+}

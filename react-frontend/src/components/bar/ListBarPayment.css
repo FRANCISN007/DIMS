@@ -1,0 +1,282 @@
+/* ================= MAIN CONTAINER ================= */
+.list-bar-payment-container {
+  max-width: 1350px;
+  margin: 0 auto;
+  padding: 12px;
+  background: #f5f2f2;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Header */
+.list-bar-payment-container h2 {
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+/* ================= FILTERS ================= */
+.filter-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.filter-section label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+
+
+.filter-section select,
+.filter-section input[type="date"] {
+  padding: 6px 6px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  min-width: 130px;
+}
+
+/* ================= SCROLLABLE TABLE ================= */
+.table-scroll-container {
+  max-height: 68vh;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.bar-payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Sticky Header */
+.bar-payment-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background-color: #2f3136;
+}
+
+.bar-payment-table th {
+  background-color: #2f3136;
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  padding: 3px 6px;
+  border: 1px solid #bdbdbd;
+  text-align: center;
+  position: sticky;
+  top: 0;
+}
+
+.bar-payment-table td {
+  padding: 3px 4px;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Row Styling */
+.bar-payment-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.bar-payment-table tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.bar-payment-table tr:hover {
+  background-color: #f0f7ff;
+}
+
+/* Void Row */
+.bar-payment-table tr.void-row {
+  background-color: #fff0f0 !important;
+  color: #d32f2f;
+}
+
+/* Status Badges */
+/* Status column */
+.status-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Status badge */
+.status {
+  display: inline-block;
+  min-width: 60px;
+  padding: 3px 6px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status.fully-paid {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status.part-payment {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.status.unpaid {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.status.voided-payment {
+  background: #f5f5f5;
+  color: #757575;
+  font-style: italic;
+}
+
+
+
+/* Action Buttons */
+.btn-edit, .btn-delete, .btn-void, .btn-print {
+  padding: 4px 6px;
+  margin: 2px;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-edit { background: #2e7d32; color: white; }
+.btn-delete { background: #d32f2f; color: white; }
+.btn-void { background: #f57c00; color: white; }
+.btn-print { background: #1976d2; color: white; }
+
+/* ================= SUMMARY ================= */
+.main-summary-section, .bank-summary-section {
+  margin-top: 8px;
+  padding: 4px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.main-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.summary-card {
+  background: #f8f9fa;
+  padding: 10px 14px;
+  border-radius: 8px;
+  flex: 1;
+  min-width: 160px;
+  text-align: center;
+  font-weight: 600;
+  border-left: 4px solid #1976d2;
+}
+
+.bank-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.bank-summary-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+/* ================= MODAL ================= */
+.modal-overlay3 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal3 {
+  background: #fff;
+  padding: 22px;
+  border-radius: 10px;
+  width: 420px;
+  max-width: 95%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.modal3 h3 {
+  text-align: center;
+  margin-bottom: 18px;
+  color: #2c3e50;
+}
+
+.modal3 label {
+  display: block;
+  margin: 10px 0 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.modal3 input,
+.modal3 select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13.5px;
+}
+
+.modal-actions3 {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-edit, .btn-delete {
+  flex: 1;
+  padding: 10px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-edit { background: #28a745; color: white; }
+.btn-delete { background: #dc3545; color: white; }
+
+/* Responsive */
+@media (max-width: 992px) {
+  .table-scroll-container {
+    max-height: 55vh;
+  }
+}

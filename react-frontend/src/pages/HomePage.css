@@ -1,0 +1,318 @@
+/* ================= IMPORT FONTS ================= */
+@import url("https://fonts.googleapis.com/css2?family=Audiowide&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap");
+
+/* ================= BASE ================= */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+/* ================= LAYOUT ================= */
+.home-container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f172a 0%, #1e2937 100%);
+  padding: 20px 15px;
+}
+
+/* ================= SHOOTING STARS ================= */
+.stars-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shooting-star {
+  position: absolute;
+  top: -15px;
+  width: 2px;
+  height: 18px;
+  background: linear-gradient(180deg, #a5f3fc, transparent);
+  opacity: 0.75;
+  border-radius: 50%;
+  animation: fall linear infinite;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-20px); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+
+/* ================= TOP LEFT LOGO ================= */
+.top-left-brand {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.logo-orbit-wrapper {
+  position: relative;
+  width: 65px;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-left-logo {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  z-index: 2;
+  object-fit: cover;
+}
+
+.orbit-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(103, 232, 249, 0.4);
+  animation: rotateOrbit 10s linear infinite;
+}
+
+.orbit-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #67e8f9;
+  border-radius: 50%;
+  top: 0;
+  left: 50%;
+  transform-origin: center 32px;
+  box-shadow: 0 0 10px #22d3ee, 0 0 20px #06b6d4;
+  animation: orbitMove 4s linear infinite;
+}
+
+.logo-orbit-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(103, 232, 249, 0.25), transparent 70%);
+  animation: pulseGlow 3s ease-in-out infinite;
+  z-index: 1;
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes rotateOrbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orbitMove {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+/* ================= HEMS TEXT (TOP CENTER) ================= */
+.hems-text {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 18px;
+  font-size: 3.2rem;
+  font-weight: bold;
+  font-family: 'Audiowide', cursive;
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+.hems-letter {
+  animation: pulseColor 4.5s infinite ease-in-out;
+  color: #67e8f9;
+  text-shadow: 0 0 15px #22d3ee;
+}
+
+.hems-letter:nth-child(1) { animation-delay: 0s; }
+.hems-letter:nth-child(2) { animation-delay: 0.8s; }
+.hems-letter:nth-child(3) { animation-delay: 1.6s; }
+.hems-letter:nth-child(4) { animation-delay: 2.4s; }
+
+@keyframes pulseColor {
+  0%, 100% { color: #67e8f9; text-shadow: 0 0 15px #22d3ee; }
+  50% { color: #f0f9ff; text-shadow: 0 0 25px #67e8f9; }
+}
+
+/* ================= HOME CARD ================= */
+.home-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+  max-width: 620px;
+  width: 100%;
+  z-index: 3;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+
+/* ================= TEXT ================= */
+.welcome-text {
+  color: #e2e8f0;
+  animation: fadeInUp 1.8s ease;
+}
+
+.welcome-text h1.main-title {
+  font-size: 2.25rem;
+  font-family: "Cinzel Decorative", serif;
+  color: #a5f3fc;
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+  line-height: 1.1;
+}
+
+.welcome-text h2.main-heading {
+  font-size: 1.35rem;
+  font-family: "Audiowide", sans-serif;
+  color: #cbd5e1;
+  margin-bottom: 16px;
+  line-height: 1.3;
+}
+
+.welcome-text p {
+  font-size: 1.05rem;
+  color: #94a3b8;
+  font-family: "Audiowide", sans-serif;
+  line-height: 1.5;
+}
+
+/* ================= BUTTON ================= */
+.proceed-button {
+  padding: 14px 40px;
+  font-size: 17px;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(135deg, #22d3ee, #06b6d4);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: 0.3s ease;
+  box-shadow: 0 8px 25px rgba(34, 211, 238, 0.4);
+  margin-top: 10px;
+  white-space: nowrap;           /* Prevents text wrapping */
+  min-width: 180px;              /* Ensures button doesn't collapse */
+}
+
+
+.proceed-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(34, 211, 238, 0.6);
+}
+
+/* ================= FOOTER ================= */
+.home-footer {
+  position: fixed;
+  bottom: 15px;
+  right: 20px;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-style: italic;
+  z-index: 10;
+  text-align: right;
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= RESPONSIVE FIXES ================= */
+@media (max-width: 768px) {
+  .hems-text {
+    top: 16px;        /* was 18px or 25px */
+    font-size: 2.3rem;
+    gap: 10px;
+  }
+
+
+  .proceed-button {
+    padding: 13px 35px;
+    font-size: 16px;
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-card {
+    top: 55%;                    /* Push it further down on very small screens */
+  }
+
+  .welcome-text h1.main-title {
+    font-size: 1.65rem;
+  }
+
+  .welcome-text h2.main-heading {
+    font-size: 1.05rem;
+  }
+
+  .top-left-brand {
+    top: 15px;
+    left: 15px;
+  }
+
+  .logo-orbit-wrapper {
+    width: 58px;
+    height: 58px;
+  }
+
+  .top-left-logo {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hems-text {
+    font-size: 2.1rem;
+    gap: 10px;
+  }
+
+  .welcome-text h1.main-title {
+    font-size: 1.65rem;
+  }
+
+  .welcome-text h2.main-heading {
+    font-size: 1.05rem;
+  }
+
+  .home-footer {
+    font-size: 0.78rem;
+    bottom: 12px;
+    right: 12px;
+    text-align: center;
+  }
+}

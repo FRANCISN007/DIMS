@@ -1,0 +1,130 @@
+/* Modal overlay background */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal container (very compact) */
+.modal-content {
+  background-color: #e6e6e6;
+  padding: 14px 16px;
+  border: 1px solid #c0c0c0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  max-width: 300px;
+  width: 95%;
+  position: relative;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Close button */
+.close-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: #444;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+/* Form layout */
+.add-room-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.add-room-form h3 {
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  color: #222;
+}
+
+.add-room-form label {
+  font-weight: 500;
+  color: #333;
+  font-size: 12px;
+}
+
+.add-room-form input,
+.add-room-form select {
+  padding: 6px 2px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.add-room-form input:focus,
+.add-room-form select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2);
+}
+
+/* Action button */
+.add-room-form .action-btn {
+  margin-top: 10px;
+  background-color: #007bff;
+  color: #fff;
+  padding: 7px;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-room-form .action-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Success overlay */
+.success-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #e6ffed;
+  color: #256029;
+  padding: 8px 16px;
+  border: 1px solid #b7e2c1;
+  border-radius: 6px;
+  z-index: 10;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  animation: fadeInOut 1.5s ease-in-out;
+  pointer-events: none;
+}
+
+/* Fade animation */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+}

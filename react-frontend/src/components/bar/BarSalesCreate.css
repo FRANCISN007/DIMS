@@ -1,0 +1,189 @@
+.sale-container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+  background: #f3f0f0;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: "Segoe UI", sans-serif;
+}
+
+.sale-container h2 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.sale-message {
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+.msg-success { background: #e6f4ea; color: #2e7d32; }
+.msg-warning { background: #fff3cd; color: #856404; }
+.msg-error   { background: #f8d7da; color: #721c24; }
+
+/* Bar + Date row */
+.bar-date-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px; /* large gap */
+  margin-bottom: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.form-group select,
+.form-group input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #b4a9a9;
+  font-size: 13px;
+}
+
+/* Sale Table */
+.sale-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.sale-table th,
+.sale-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+
+.sale-table td {
+  border: 1px solid #ddd;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+
+.sale-table th { background: #f4f4f4; }
+
+.sale-table input,
+.sale-table select {
+  width: 100%;
+  padding: 6px 4px;
+  font-size: 14px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.add-btn,
+.preview-btn,
+.remove-btn,
+.submit-btn {
+  padding: 6px 8px;
+  margin-top: 4px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.add-btn { background: #3498db; color: white; margin-right: 10px; }
+.remove-btn { background: #e74c3c; color: white; }
+.submit-btn { background: #2ecc71; color: white; }
+
+.buttons-row {
+  display: flex;
+  gap: 10px;
+}
+
+.grand-total-row td {
+  font-weight: bold;
+  background: #f9f9f9;
+  font-size: 17px;
+}
+
+
+
+.autocomplete {
+  position: relative; /* Important: parent for absolute dropdown */
+}
+
+.suggestions-list {
+  position: absolute;
+  top: 100%; /* right below the input */
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.suggestions-list li {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.suggestions-list li:hover {
+  background: #f0f0f0;
+}
+
+
+.preview-btn {
+  background: #9e9c9c;
+  color: #fff;
+}
+
+.preview-btn:hover {
+  background: #363636;
+}
+
+
+
+/* Scrollable table */
+.sale-table-wrapper {
+  max-height: 370px;      /* Adjust as needed */
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+/* Keep header visible while scrolling */
+.sale-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f4f4f4;
+  z-index: 10;
+}
+
+/* Nice scrollbar */
+.sale-table-wrapper::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sale-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.sale-table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.sale-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

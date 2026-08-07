@@ -1,0 +1,36 @@
+.view-event-payment-container {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+}
+
+.view-event-payment-container h2 {
+  margin-bottom: 15px;
+}
+
+.view-event-payment-container button {
+  margin-bottom: 15px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.view-event-payment-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.view-event-payment-container th,
+.view-event-payment-container td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+  vertical-align: top;
+}
+
+.view-event-payment-container th {
+  background-color: #f7f7f7;
+  width: 40%;
+}
