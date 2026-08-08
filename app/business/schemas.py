@@ -21,6 +21,7 @@ class BusinessUpdate(BaseModel):
     address: Optional[str]
     phone: Optional[str]
     email: Optional[str]
+    owner_username: Optional[str] = None
 
 
 # app/business/schemas.py

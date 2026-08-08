@@ -1,9 +1,11 @@
 
 import React, {
-  useEffect,
-  useState,
   useCallback,
+  useEffect,
+  useMemo,
+  useState,
 } from "react";
+
 import { useNavigate } from "react-router-dom";
 
 import "./UserManagement.css";
@@ -11,390 +13,208 @@ import getBaseUrl from "../../api/config";
 
 const API_BASE_URL = getBaseUrl();
 
-/* =========================================================
-   ROLE CONSTANTS
-========================================================= */
-
 const SUPER_ADMIN_ROLE = "super_admin";
 const ADMIN_ROLE = "admin";
 
-const BASE_ROLE_OPTIONS = [
-  "admin",
-  "accountant",
-  "store",
-  "ops_manager",
-  "camp_boss",
-  "caterer",
-  "procurement",
-  "driver",
-];
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const normalizeRoleCode = (value) => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "object") {
+    value =
+      value.code ??
+      value.role_code ??
+      value.name ??
+      value.role_name ??
+      "";
+  }
+
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+};
+
+const getRoleCode = (role) => {
+  if (!role) {
+    return "";
+  }
+
+  if (typeof role === "string") {
+    return normalizeRoleCode(role);
+  }
+
+  return normalizeRoleCode(
+    role.code ??
+      role.role_code ??
+      role.name ??
+      role.role_name
+  );
+};
+
+const getRoleId = (role) => {
+  if (!role) {
+    return null;
+  }
+
+  if (
+    typeof role === "number" ||
+    typeof role === "string"
+  ) {
+    const value = Number(role);
+
+    return Number.isInteger(value)
+      ? value
+      : null;
+  }
+
+  const value = Number(
+    role.id ?? role.role_id
+  );
+
+  return Number.isInteger(value)
+    ? value
+    : null;
+};
+
+const parseJsonResponse = async (response) => {
+  return response
+    .json()
+    .catch(() => ({}));
+};
 
 /* =========================================================
    USER MANAGEMENT
 ========================================================= */
 
 const UserManagement = () => {
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
+
+  const token = localStorage.getItem("token");
 
   /* =======================================================
      CURRENT USER
   ======================================================= */
 
-  let storedUserRaw = {};
+  const storedUser = useMemo(() => {
+    let rawUser = {};
 
-  try {
-    storedUserRaw = JSON.parse(
-      localStorage.getItem("user") || "{}"
-    );
-  } catch (err) {
-    console.error("Invalid stored user:", err);
-    storedUserRaw = {};
-  }
-
-  
-
-  /*
-   * Support both:
-   *
-   * 1. {
-   *    username,
-   *    roles,
-   *    business_id,
-   *    business_name
-   * }
-   *
-   * and:
-   *
-   * 2. {
-   *    user: {...},
-   *    business: {...},
-   *    license: {...}
-   * }
-   */
-
-  /* =========================================================
-    NORMALIZE CURRENT USER
-  ========================================================= */
-
-  const normalizeRole = (role) => {
-    if (role === null || role === undefined) {
-      return "";
-    }
-
-    if (typeof role === "object") {
-      role =
-        role.code ??
-        role.role_code ??
-        role.name ??
-        role.role_name ??
-        role.role ??
-        role.value ??
-        "";
-    }
-
-    return String(role)
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, "_");
-  };
-
-
-  /* =========================================================
-    READ LOCAL STORAGE
-  ========================================================= */
-
-  
-
-  /* =========================================================
-    NORMALIZE USER STRUCTURE
-  ========================================================= */
-
-  /*
-    Login response can be:
-
-    {
-        user: {
-          username,
-          role_id,
-          role_name,
-          role_code
-        },
-        business: {...},
-        license: {...}
-    }
-
-    OR localStorage may contain only:
-
-    {
-        username,
-        role_id,
-        role_name,
-        role_code,
-        business_id,
-        business_name
-    }
-  */
-
-  const nestedUser =
-    storedUserRaw?.user &&
-    typeof storedUserRaw.user === "object"
-      ? storedUserRaw.user
-      : null;
-
-  const storedUser = {
-    ...storedUserRaw,
-    ...(nestedUser || {}),
-  };
-
-
-  /* =========================================================
-    BUSINESS NORMALIZATION
-  ========================================================= */
-
-  if (
-    !storedUser.business_id &&
-    storedUserRaw?.business?.id
-  ) {
-    storedUser.business_id =
-      storedUserRaw.business.id;
-  }
-
-  if (
-    !storedUser.business_name &&
-    storedUserRaw?.business?.name
-  ) {
-    storedUser.business_name =
-      storedUserRaw.business.name;
-  }
-
-
-  /* =========================================================
-    ROLE EXTRACTION
-  ========================================================= */
-
-  const extractRoles = (source) => {
-    if (!source) {
-      return [];
-    }
-
-    const roles = [];
-
-    /*
-    * 1. role_code
-    *
-    * Example:
-    * role_code: "super_admin"
-    */
-    if (source.role_code) {
-      roles.push(source.role_code);
-    }
-
-    /*
-    * 2. role_name
-    *
-    * Example:
-    * role_name: "Super Admin"
-    */
-    if (source.role_name) {
-      roles.push(source.role_name);
-    }
-
-    /*
-    * 3. role
-    */
-    if (source.role) {
-      if (Array.isArray(source.role)) {
-        roles.push(...source.role);
-      } else {
-        roles.push(source.role);
-      }
-    }
-
-    /*
-    * 4. roles
-    */
-    if (Array.isArray(source.roles)) {
-      roles.push(...source.roles);
-    } else if (
-      typeof source.roles === "string"
-    ) {
-      roles.push(
-        ...source.roles.split(",")
+    try {
+      rawUser = JSON.parse(
+        localStorage.getItem("user") || "{}"
+      );
+    } catch (error) {
+      console.error(
+        "Invalid stored user:",
+        error
       );
     }
 
-    /*
-    * 5. user_role
-    */
-    if (source.user_role) {
-      roles.push(source.user_role);
-    }
+    const nestedUser =
+      rawUser?.user &&
+      typeof rawUser.user === "object"
+        ? rawUser.user
+        : {};
 
-    /*
-    * 6. Nested user object
-    */
+    const user = {
+      ...rawUser,
+      ...nestedUser,
+    };
+
     if (
-      source.user &&
-      typeof source.user === "object"
+      !user.business_id &&
+      rawUser?.business?.id
     ) {
-      roles.push(
-        ...extractRoles(source.user)
-      );
+      user.business_id =
+        rawUser.business.id;
     }
 
-    /*
-    * Normalize and remove duplicates
-    */
-    return [
-      ...new Set(
-        roles
-          .map(normalizeRole)
-          .filter(Boolean)
-      ),
-    ];
-  };
+    if (
+      !user.business_name &&
+      rawUser?.business?.name
+    ) {
+      user.business_name =
+        rawUser.business.name;
+    }
 
+    return user;
+  }, []);
 
-  /* =========================================================
-    CURRENT USER ROLES
-  ========================================================= */
+  /* =======================================================
+     ROLE HELPERS
+  ======================================================= */
 
-  const currentRoles =
-    extractRoles(storedUser);
+  const extractUserRoles = useCallback(
+    (user) => {
+      if (!user) {
+        return [];
+      }
 
+      const roles = [];
 
-  /* =========================================================
-    PERMISSION CHECK
-  ========================================================= */
+      if (Array.isArray(user.roles)) {
+        roles.push(...user.roles);
+      }
+
+      if (user.role) {
+        if (Array.isArray(user.role)) {
+          roles.push(...user.role);
+        } else {
+          roles.push(user.role);
+        }
+      }
+
+      if (user.role_code) {
+        roles.push(user.role_code);
+      }
+
+      if (user.role_name) {
+        roles.push(user.role_name);
+      }
+
+      return [
+        ...new Set(
+          roles
+            .map(getRoleCode)
+            .filter(Boolean)
+        ),
+      ];
+    },
+    []
+  );
+
+  const currentRoles = useMemo(
+    () =>
+      extractUserRoles(storedUser),
+    [storedUser, extractUserRoles]
+  );
 
   const isSuperAdmin =
     currentRoles.includes(
-      "super_admin"
-    );
+      SUPER_ADMIN_ROLE
+    ) ||
+    storedUser.business_id == null;
 
   const isAdmin =
     isSuperAdmin ||
     currentRoles.includes(
-      "admin"
+      ADMIN_ROLE
     );
 
-
-  /* =========================================================
-    DEBUG
-  ========================================================= */
-
-  console.log(
-    "========== USER MANAGEMENT AUTH =========="
-  );
-
-  console.log(
-    "RAW LOCAL STORAGE:",
-    storedUserRaw
-  );
-
-  console.log(
-    "NORMALIZED USER:",
-    storedUser
-  );
-
-  console.log(
-    "ROLE CODE:",
-    storedUser?.role_code
-  );
-
-  console.log(
-    "ROLE NAME:",
-    storedUser?.role_name
-  );
-
-  console.log(
-    "ROLE ID:",
-    storedUser?.role_id
-  );
-
-  console.log(
-    "BUSINESS ID:",
-    storedUser?.business_id
-  );
-
-  console.log(
-    "BUSINESS NAME:",
-    storedUser?.business_name
-  );
-
-  console.log(
-    "CURRENT ROLES:",
-    currentRoles
-  );
-
-  console.log(
-    "IS SUPER ADMIN:",
-    isSuperAdmin
-  );
-
-  console.log(
-    "IS ADMIN:",
-    isAdmin
-  );
-
-  console.log(
-    "=========================================="
-  );
-
-  /*
-   * Super Admin can assign every role,
-   * including super_admin.
-   *
-   * Normal Admin cannot assign super_admin.
-   */
-  const availableRoles = isSuperAdmin
-    ? [
-        ...BASE_ROLE_OPTIONS,
-        SUPER_ADMIN_ROLE,
-      ]
-    : BASE_ROLE_OPTIONS;
-
   /* =======================================================
-     DEBUG
+     MAIN STATE
   ======================================================= */
 
-  console.log(
-    "========== USER MANAGEMENT AUTH =========="
-  );
-  console.log(
-    "Stored user:",
-    storedUser
-  );
-  console.log(
-    "Current roles:",
-    currentRoles
-  );
-  console.log(
-    "Business ID:",
-    storedUser?.business_id
-  );
-  console.log(
-    "Business Name:",
-    storedUser?.business_name
-  );
-  console.log(
-    "Is Super Admin:",
-    isSuperAdmin
-  );
-  console.log(
-    "Is Admin:",
-    isAdmin
-  );
-  console.log(
-    "=========================================="
-  );
-
-  /* =======================================================
-     MAIN STATES
-  ======================================================= */
-
-  const [users, setUsers] =
+  const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [businesses, setBusinesses] =
+    useState([]);
+  const [locations, setLocations] =
     useState([]);
 
   const [error, setError] =
@@ -407,32 +227,41 @@ const UserManagement = () => {
     useState("list");
 
   /* =======================================================
-     USER STATES
+     CREATE USER
+  ======================================================= */
+
+  const emptyNewUser = {
+    username: "",
+    full_name: "",
+    phone: "",
+    password: "",
+    business_id: "",
+    role_id: "",
+    location_id: "",
+  };
+
+  const [newUser, setNewUser] =
+    useState(emptyNewUser);
+
+  /* =======================================================
+     EDIT USER
   ======================================================= */
 
   const [editingUser, setEditingUser] =
     useState(null);
 
-  const [editRoles, setEditRoles] =
-    useState([]);
-
-  const [newUsername, setNewUsername] =
+  const [editRoleId, setEditRoleId] =
     useState("");
 
-  const [newPassword, setNewPassword] =
+  const [editBusinessId, setEditBusinessId] =
     useState("");
 
-  const [newRoles, setNewRoles] =
-    useState(["store"]);
-
-  const [adminPassword, setAdminPassword] =
+  const [editLocationId, setEditLocationId] =
     useState("");
 
-  const [newBusinessId, setNewBusinessId] =
-    useState("");
-
-  const [userToDelete, setUserToDelete] =
-    useState(null);
+  /* =======================================================
+     RESET PASSWORD
+  ======================================================= */
 
   const [resetUser, setResetUser] =
     useState(null);
@@ -444,102 +273,64 @@ const UserManagement = () => {
     useState("");
 
   /* =======================================================
-     BUSINESS STATES
+     DELETE USER
   ======================================================= */
 
-  const [businesses, setBusinesses] =
-    useState([]);
+  const [userToDelete, setUserToDelete] =
+    useState(null);
+
+  /* =======================================================
+     BUSINESS
+  ======================================================= */
 
   const [editingBusiness, setEditingBusiness] =
     useState(null);
 
+  const emptyBusiness = {
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+    owner_username: "",
+  };
+
   const [newBusiness, setNewBusiness] =
-    useState({
-      name: "",
-      address: "",
-      phone: "",
-      email: "",
-      owner_username: "",
-    });
+    useState(emptyBusiness);
 
   const [businessToDelete, setBusinessToDelete] =
     useState(null);
 
   /* =======================================================
-     LICENSE STATES
+     LICENSE
   ======================================================= */
 
   const [licenseStatus, setLicenseStatus] =
     useState(null);
 
+  const emptyLicense = {
+    license_password: "",
+    key: "",
+    duration_days: 365,
+    business_id: "",
+  };
+
   const [newLicense, setNewLicense] =
-    useState({
-      license_password: "",
-      key: "",
-      duration_days: 365,
-      business_id: "",
-    });
+    useState(emptyLicense);
 
   /* =======================================================
      POPUP
   ======================================================= */
 
-  const showPopup = (msg) => {
-    setPopupMsg(msg);
+  const showPopup = useCallback(
+    (message) => {
+      setPopupMsg(message);
 
-    setTimeout(() => {
-      setPopupMsg("");
-    }, 3000);
-  };
-
-  /* =======================================================
-     ROLE TOGGLE
-  ======================================================= */
-
-  const toggleRole = (
-    role,
-    setter,
-    currentSelectedRoles
-  ) => {
-    const normalizedRole =
-      normalizeRole(role);
-
-    /*
-     * Normal Admin can never select
-     * super_admin.
-     */
-    if (
-      normalizedRole ===
-        SUPER_ADMIN_ROLE &&
-      !isSuperAdmin
-    ) {
-      return;
-    }
-
-    setter((previous) => {
-      const current = Array.isArray(
-        currentSelectedRoles
-      )
-        ? currentSelectedRoles
-        : previous;
-
-      if (
-        current.includes(
-          normalizedRole
-        )
-      ) {
-        return current.filter(
-          (item) =>
-            item !== normalizedRole
-        );
-      }
-
-      return [
-        ...current,
-        normalizedRole,
-      ];
-    });
-  };
+      setTimeout(() => {
+        setPopupMsg("");
+      }, 3000);
+    },
+    []
+  );
 
   /* =======================================================
      FETCH USERS
@@ -554,75 +345,47 @@ const UserManagement = () => {
       try {
         setError("");
 
-        /*
-         * Do not send business_only=true.
-         *
-         * Tenant filtering is already
-         * handled by the backend.
-         *
-         * Super Admin receives all users.
-         * Business Admin receives users
-         * belonging to their business.
-         */
-
-        const res = await fetch(
+        const response = await fetch(
           `${API_BASE_URL}/users/`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
+              Authorization:
+                `Bearer ${token}`,
+              Accept:
+                "application/json",
             },
           }
         );
 
         const data =
-          await res
-            .json()
-            .catch(() => []);
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Failed to load users"
+              "Failed to load users."
           );
         }
 
-        const userList =
-          Array.isArray(data)
-            ? data
-            : [];
+        const list = Array.isArray(
+          data
+        )
+          ? data
+          : [];
 
-        const sortedUsers = [
-          ...userList,
-        ].sort((a, b) => {
-          const businessA =
-            Number(
-              a.business_id
-            ) || 0;
-
-          const businessB =
-            Number(
-              b.business_id
-            ) || 0;
-
-          if (
-            businessA !==
-            businessB
-          ) {
-            return (
-              businessA -
-              businessB
-            );
-          }
-
-          return (
+        list.sort((a, b) =>
+          String(
             a.username || ""
           ).localeCompare(
-            b.username || ""
-          );
-        });
+            String(
+              b.username || ""
+            )
+          )
+        );
 
-        setUsers(sortedUsers);
+        setUsers(list);
       } catch (err) {
         console.error(
           "Fetch users error:",
@@ -631,7 +394,7 @@ const UserManagement = () => {
 
         setError(
           err.message ||
-            "Could not load users"
+            "Could not load users."
         );
       }
     },
@@ -639,8 +402,81 @@ const UserManagement = () => {
   );
 
   /* =======================================================
+     FETCH ROLES
+  ======================================================= */
+
+  const fetchRoles = useCallback(
+    async () => {
+      if (!token) {
+        return;
+      }
+
+      try {
+        const response =
+          await fetch(
+            `${API_BASE_URL}/roles/simple`,
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+                Accept:
+                  "application/json",
+              },
+            }
+          );
+
+        const data =
+          await parseJsonResponse(
+            response
+          );
+
+        if (!response.ok) {
+          throw new Error(
+            data.detail ||
+              "Failed to load roles."
+          );
+        }
+
+        const list = Array.isArray(
+          data
+        )
+          ? data
+          : [];
+
+        list.sort((a, b) =>
+          String(
+            a.name ||
+              a.code ||
+              ""
+          ).localeCompare(
+            String(
+              b.name ||
+                b.code ||
+                ""
+            )
+          )
+        );
+
+        setRoles(list);
+      } catch (err) {
+        console.error(
+          "Fetch roles error:",
+          err
+        );
+
+        setRoles([]);
+
+        showPopup(
+          err.message ||
+            "Could not load roles."
+        );
+      }
+    },
+    [token, showPopup]
+  );
+
+  /* =======================================================
      FETCH BUSINESSES
-     SUPER ADMIN ONLY
   ======================================================= */
 
   const fetchBusinesses =
@@ -653,25 +489,28 @@ const UserManagement = () => {
       }
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/business/`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
+        const response =
+          await fetch(
+            `${API_BASE_URL}/business/`,
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+                Accept:
+                  "application/json",
+              },
+            }
+          );
 
         const data =
-          await res
-            .json()
-            .catch(() => []);
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Failed to load businesses"
+              "Failed to load businesses."
           );
         }
 
@@ -680,33 +519,115 @@ const UserManagement = () => {
             ? data
             : data.businesses || [];
 
-        const sorted = [
-          ...list,
-        ].sort((a, b) =>
-          (
+        list.sort((a, b) =>
+          String(
             a.name || ""
           ).localeCompare(
-            b.name || ""
+            String(
+              b.name || ""
+            )
           )
         );
 
-        setBusinesses(sorted);
+        setBusinesses(list);
       } catch (err) {
         console.error(
           "Fetch businesses error:",
           err
         );
 
+        setBusinesses([]);
+
         showPopup(
           err.message ||
-            "Could not load businesses"
+            "Could not load businesses."
         );
       }
-    }, [token, isSuperAdmin]);
+    }, [
+      token,
+      isSuperAdmin,
+      showPopup,
+    ]);
+
+  /* =======================================================
+     FETCH LOCATIONS
+  ======================================================= */
+
+  const fetchLocations =
+    useCallback(
+      async (businessId) => {
+        if (!token) {
+          return;
+        }
+
+        if (!businessId) {
+          setLocations([]);
+          return;
+        }
+
+        try {
+          const response =
+            await fetch(
+              `${API_BASE_URL}/locations/?business_id=${encodeURIComponent(
+                businessId
+              )}`,
+              {
+                headers: {
+                  Authorization:
+                    `Bearer ${token}`,
+                  Accept:
+                    "application/json",
+                },
+              }
+            );
+
+          const data =
+            await parseJsonResponse(
+              response
+            );
+
+          if (!response.ok) {
+            throw new Error(
+              data.detail ||
+                "Failed to load locations."
+            );
+          }
+
+          const list =
+            Array.isArray(data)
+              ? data
+              : data.locations || [];
+
+          list.sort((a, b) =>
+            String(
+              a.name || ""
+            ).localeCompare(
+              String(
+                b.name || ""
+              )
+            )
+          );
+
+          setLocations(list);
+        } catch (err) {
+          console.error(
+            "Fetch locations error:",
+            err
+          );
+
+          setLocations([]);
+
+          showPopup(
+            err.message ||
+              "Could not load locations."
+          );
+        }
+      },
+      [token, showPopup]
+    );
 
   /* =======================================================
      FETCH LICENSE
-     SUPER ADMIN ONLY
   ======================================================= */
 
   const fetchLicenseStatus =
@@ -719,25 +640,28 @@ const UserManagement = () => {
       }
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/license/check`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
+        const response =
+          await fetch(
+            `${API_BASE_URL}/license/check`,
+            {
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+                Accept:
+                  "application/json",
+              },
+            }
+          );
 
         const data =
-          await res
-            .json()
-            .catch(() => ({}));
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Failed to load license status"
+              "Failed to load license status."
           );
         }
 
@@ -748,12 +672,18 @@ const UserManagement = () => {
           err
         );
 
+        setLicenseStatus(null);
+
         showPopup(
           err.message ||
-            "Could not load license status"
+            "Could not load license status."
         );
       }
-    }, [token, isSuperAdmin]);
+    }, [
+      token,
+      isSuperAdmin,
+      showPopup,
+    ]);
 
   /* =======================================================
      INITIAL LOAD
@@ -762,7 +692,7 @@ const UserManagement = () => {
   useEffect(() => {
     if (!token) {
       setError(
-        "You must be logged in"
+        "You must be logged in."
       );
       return;
     }
@@ -772,6 +702,7 @@ const UserManagement = () => {
     }
 
     fetchUsers();
+    fetchRoles();
 
     if (isSuperAdmin) {
       fetchBusinesses();
@@ -782,9 +713,299 @@ const UserManagement = () => {
     isAdmin,
     isSuperAdmin,
     fetchUsers,
+    fetchRoles,
     fetchBusinesses,
     fetchLicenseStatus,
   ]);
+
+  /* =======================================================
+     LOAD LOCATIONS FOR CREATE USER
+  ======================================================= */
+
+  useEffect(() => {
+    if (
+      selectedAction !== "add"
+    ) {
+      return;
+    }
+
+    if (!newUser.business_id) {
+      setLocations([]);
+      return;
+    }
+
+    fetchLocations(
+      newUser.business_id
+    );
+  }, [
+    selectedAction,
+    newUser.business_id,
+    fetchLocations,
+  ]);
+
+  /* =======================================================
+     LOAD LOCATIONS FOR EDIT USER
+  ======================================================= */
+
+  useEffect(() => {
+    if (
+      selectedAction !== "update"
+    ) {
+      return;
+    }
+
+    if (!editBusinessId) {
+      setLocations([]);
+      return;
+    }
+
+    fetchLocations(
+      editBusinessId
+    );
+  }, [
+    selectedAction,
+    editBusinessId,
+    fetchLocations,
+  ]);
+
+  /* =======================================================
+     AVAILABLE ROLES
+  ======================================================= */
+
+  const availableRoles = useMemo(() => {
+    return roles.filter((role) => {
+      const code =
+        getRoleCode(role);
+
+      if (
+        code ===
+          SUPER_ADMIN_ROLE &&
+        !isSuperAdmin
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    roles,
+    isSuperAdmin,
+  ]);
+
+  /* =======================================================
+     CREATE USER
+  ======================================================= */
+
+  const submitAddUser =
+    async (event) => {
+      event.preventDefault();
+
+      if (!isAdmin) {
+        showPopup(
+          "Insufficient permissions."
+        );
+        return;
+      }
+
+      if (
+        !newUser.username.trim()
+      ) {
+        showPopup(
+          "Username is required."
+        );
+        return;
+      }
+
+      if (
+        !newUser.full_name.trim()
+      ) {
+        showPopup(
+          "Full name is required."
+        );
+        return;
+      }
+
+      if (!newUser.password) {
+        showPopup(
+          "Password is required."
+        );
+        return;
+      }
+
+      if (!newUser.role_id) {
+        showPopup(
+          "Please select a role."
+        );
+        return;
+      }
+
+      let businessId = null;
+
+      if (isSuperAdmin) {
+        if (newUser.business_id) {
+          businessId = Number(
+            newUser.business_id
+          );
+
+          if (
+            !Number.isInteger(
+              businessId
+            ) ||
+            businessId <= 0
+          ) {
+            showPopup(
+              "Invalid business."
+            );
+            return;
+          }
+        }
+      } else {
+        businessId = Number(
+          storedUser.business_id
+        );
+
+        if (
+          !Number.isInteger(
+            businessId
+          ) ||
+          businessId <= 0
+        ) {
+          showPopup(
+            "Your account is not assigned to a valid business."
+          );
+          return;
+        }
+      }
+
+      let locationId = null;
+
+      if (newUser.location_id) {
+        locationId = Number(
+          newUser.location_id
+        );
+
+        if (
+          !Number.isInteger(
+            locationId
+          ) ||
+          locationId <= 0
+        ) {
+          showPopup(
+            "Invalid location."
+          );
+          return;
+        }
+      }
+
+      const roleId = Number(
+        newUser.role_id
+      );
+
+      if (
+        !Number.isInteger(
+          roleId
+        ) ||
+        roleId <= 0
+      ) {
+        showPopup(
+          "Invalid role."
+        );
+        return;
+      }
+
+      const payload = {
+        username:
+          newUser.username
+            .trim()
+            .toLowerCase(),
+
+        full_name:
+          newUser.full_name.trim(),
+
+        phone:
+          newUser.phone.trim() ||
+          null,
+
+        password:
+          newUser.password,
+
+        role_ids: [roleId],
+
+        business_id:
+          businessId,
+
+        location_id:
+          locationId,
+      };
+
+      try {
+        const response =
+          await fetch(
+            `${API_BASE_URL}/users/register`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
+              body:
+                JSON.stringify(
+                  payload
+                ),
+            }
+          );
+
+        const data =
+          await parseJsonResponse(
+            response
+          );
+
+        if (!response.ok) {
+          throw new Error(
+            data.detail ||
+              "User creation failed."
+          );
+        }
+
+        showPopup(
+          `User "${newUser.username}" created successfully.`
+        );
+
+        setNewUser({
+          ...emptyNewUser,
+          business_id:
+            isSuperAdmin
+              ? ""
+              : String(
+                  storedUser.business_id ||
+                    ""
+                ),
+        });
+
+        setLocations([]);
+
+        setSelectedAction(
+          "list"
+        );
+
+        await fetchUsers();
+      } catch (err) {
+        console.error(
+          "Create user error:",
+          err
+        );
+
+        showPopup(
+          err.message ||
+            "Failed to create user."
+        );
+      }
+    };
 
   /* =======================================================
      EDIT USER
@@ -793,111 +1014,260 @@ const UserManagement = () => {
   const handleEditClick = (
     user
   ) => {
-    const roles =
-      extractRoles(user);
+    let roleId = "";
 
-    setEditingUser(user);
-    setEditRoles(roles);
-    setSelectedAction("update");
+    if (
+      Array.isArray(
+        user.roles
+      ) &&
+      user.roles.length > 0
+    ) {
+      roleId =
+        getRoleId(
+          user.roles[0]
+        ) || "";
+    }
+
+    if (
+      !roleId &&
+      user.role_id
+    ) {
+      roleId = Number(
+        user.role_id
+      );
+    }
+
+    if (
+      !roleId &&
+      Array.isArray(
+        user.role_ids
+      ) &&
+      user.role_ids.length > 0
+    ) {
+      roleId = Number(
+        user.role_ids[0]
+      );
+    }
+
+    setEditingUser({
+      ...user,
+    });
+
+    setEditRoleId(
+      roleId
+        ? String(roleId)
+        : ""
+    );
+
+    setEditBusinessId(
+      user.business_id
+        ? String(
+            user.business_id
+          )
+        : ""
+    );
+
+    setEditLocationId(
+      user.location_id
+        ? String(
+            user.location_id
+          )
+        : ""
+    );
+
+    setLocations([]);
+
     setError("");
-  };
 
-  /* =======================================================
-     CANCEL EDIT
-  ======================================================= */
-
-  const cancelEdit = () => {
-    setEditingUser(null);
-    setEditRoles([]);
-    setSelectedAction("list");
+    setSelectedAction(
+      "update"
+    );
   };
 
   /* =======================================================
      UPDATE USER
   ======================================================= */
 
-  const submitUpdate = async (
-    e
-  ) => {
-    e.preventDefault();
+  const submitUpdate =
+    async (event) => {
+      event.preventDefault();
 
-    if (!editingUser) {
-      return;
-    }
-
-    if (
-      editRoles.length === 0
-    ) {
-      showPopup(
-        "Please select at least one role"
-      );
-      return;
-    }
-
-    if (
-      !isSuperAdmin &&
-      editRoles.includes(
-        SUPER_ADMIN_ROLE
-      )
-    ) {
-      showPopup(
-        "You cannot assign super_admin"
-      );
-      return;
-    }
-
-    try {
-      const payload = {
-        roles: editRoles,
-      };
-
-      const res = await fetch(
-        `${API_BASE_URL}/users/${encodeURIComponent(
-          editingUser.username
-        )}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type":
-              "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(
-            payload
-          ),
-        }
-      );
-
-      const data =
-        await res
-          .json()
-          .catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(
-          data.detail ||
-            "Update failed"
-        );
+      if (!editingUser) {
+        return;
       }
 
-      showPopup(
-        `User ${editingUser.username} updated successfully`
-      );
+      if (!editRoleId) {
+        showPopup(
+          "Please select a role."
+        );
+        return;
+      }
 
-      cancelEdit();
-      fetchUsers();
-    } catch (err) {
-      console.error(
-        "Update user error:",
-        err
-      );
+      const selectedRole =
+        roles.find(
+          (role) =>
+            Number(
+              role.id
+            ) ===
+            Number(
+              editRoleId
+            )
+        );
 
-      showPopup(
-        err.message ||
-          "Failed to update user"
-      );
-    }
-  };
+      if (
+        !isSuperAdmin &&
+        getRoleCode(
+          selectedRole
+        ) ===
+          SUPER_ADMIN_ROLE
+      ) {
+        showPopup(
+          "You cannot assign Super Admin role."
+        );
+        return;
+      }
+
+      let businessId = null;
+
+      if (isSuperAdmin) {
+        if (editBusinessId) {
+          businessId = Number(
+            editBusinessId
+          );
+
+          if (
+            !Number.isInteger(
+              businessId
+            ) ||
+            businessId <= 0
+          ) {
+            showPopup(
+              "Invalid business."
+            );
+            return;
+          }
+        }
+      } else {
+        businessId = Number(
+          storedUser.business_id
+        );
+
+        if (
+          !Number.isInteger(
+            businessId
+          ) ||
+          businessId <= 0
+        ) {
+          showPopup(
+            "Invalid business."
+          );
+          return;
+        }
+      }
+
+      let locationId = null;
+
+      if (editLocationId) {
+        locationId = Number(
+          editLocationId
+        );
+
+        if (
+          !Number.isInteger(
+            locationId
+          ) ||
+          locationId <= 0
+        ) {
+          showPopup(
+            "Invalid location."
+          );
+          return;
+        }
+      }
+
+      const payload = {
+        full_name:
+          editingUser.full_name?.trim() ||
+          "",
+
+        phone:
+          editingUser.phone?.trim() ||
+          null,
+
+        role_ids: [
+          Number(editRoleId),
+        ],
+
+        business_id:
+          businessId,
+
+        location_id:
+          locationId,
+      };
+
+      try {
+        const response =
+          await fetch(
+            `${API_BASE_URL}/users/${encodeURIComponent(
+              editingUser.username
+            )}`,
+            {
+              method: "PUT",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
+              body:
+                JSON.stringify(
+                  payload
+                ),
+            }
+          );
+
+        const data =
+          await parseJsonResponse(
+            response
+          );
+
+        if (!response.ok) {
+          throw new Error(
+            data.detail ||
+              "User update failed."
+          );
+        }
+
+        showPopup(
+          `User "${editingUser.username}" updated successfully.`
+        );
+
+        setEditingUser(null);
+        setEditRoleId("");
+        setEditBusinessId("");
+        setEditLocationId("");
+        setLocations([]);
+
+        setSelectedAction(
+          "list"
+        );
+
+        await fetchUsers();
+      } catch (err) {
+        console.error(
+          "Update user error:",
+          err
+        );
+
+        showPopup(
+          err.message ||
+            "Failed to update user."
+        );
+      }
+    };
 
   /* =======================================================
      DELETE USER
@@ -911,12 +1281,14 @@ const UserManagement = () => {
       storedUser.username
     ) {
       showPopup(
-        "You cannot delete your own account"
+        "You cannot delete your own account."
       );
       return;
     }
 
-    setUserToDelete(username);
+    setUserToDelete(
+      username
+    );
   };
 
   const handleConfirmDelete =
@@ -926,36 +1298,42 @@ const UserManagement = () => {
       }
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/users/${encodeURIComponent(
-            userToDelete
-          )}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response =
+          await fetch(
+            `${API_BASE_URL}/users/${encodeURIComponent(
+              userToDelete
+            )}`,
+            {
+              method: "DELETE",
+
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          );
 
         const data =
-          await res
-            .json()
-            .catch(() => ({}));
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Delete failed"
+              "Delete failed."
           );
         }
 
         showPopup(
-          `User ${userToDelete} deleted`
+          `User "${userToDelete}" deleted successfully.`
         );
 
-        setUserToDelete(null);
-        fetchUsers();
+        setUserToDelete(
+          null
+        );
+
+        await fetchUsers();
       } catch (err) {
         console.error(
           "Delete user error:",
@@ -964,7 +1342,7 @@ const UserManagement = () => {
 
         showPopup(
           err.message ||
-            "Failed to delete user"
+            "Failed to delete user."
         );
       }
     };
@@ -981,7 +1359,7 @@ const UserManagement = () => {
 
       if (!resetPassword) {
         showPopup(
-          "Please enter a new password"
+          "Please enter a new password."
         );
         return;
       }
@@ -991,44 +1369,50 @@ const UserManagement = () => {
         confirmPassword
       ) {
         showPopup(
-          "Passwords do not match"
+          "Passwords do not match."
         );
         return;
       }
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/users/${encodeURIComponent(
-            resetUser.username
-          )}/reset_password`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              new_password:
-                resetPassword,
-            }),
-          }
-        );
+        const response =
+          await fetch(
+            `${API_BASE_URL}/users/${encodeURIComponent(
+              resetUser.username
+            )}/reset-password`,
+            {
+              method: "PUT",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
+              body:
+                JSON.stringify({
+                  new_password:
+                    resetPassword,
+                }),
+            }
+          );
 
         const data =
-          await res
-            .json()
-            .catch(() => ({}));
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Password reset failed"
+              "Password reset failed."
           );
         }
 
         showPopup(
-          "Password reset successful"
+          "Password reset successfully."
         );
 
         setResetUser(null);
@@ -1042,289 +1426,207 @@ const UserManagement = () => {
 
         showPopup(
           err.message ||
-            "Failed to reset password"
+            "Failed to reset password."
         );
       }
     };
 
   /* =======================================================
-     ADD USER
+     ROLE DISPLAY
   ======================================================= */
 
-  const submitAddUser =
-    async (e) => {
-      e.preventDefault();
-
-      if (!isAdmin) {
-        showPopup(
-          "Insufficient permissions"
-        );
-        return;
-      }
-
-      if (
-        !newUsername.trim() ||
-        !newPassword
-      ) {
-        showPopup(
-          "Username and password are required"
-        );
-        return;
-      }
-
-      if (
-        newRoles.length === 0
-      ) {
-        showPopup(
-          "Please select at least one role"
-        );
-        return;
-      }
-
-      let businessIdPayload =
-        null;
-
-      /*
-       * Super Admin may select
-       * a business or create a
-       * global user.
-       */
-      if (isSuperAdmin) {
-        if (
-          newBusinessId.trim()
-        ) {
-          const parsed =
-            Number(
-              newBusinessId
-            );
-
-          if (
-            !Number.isInteger(
-              parsed
-            ) ||
-            parsed <= 0
-          ) {
-            showPopup(
-              "Invalid Business ID"
-            );
-            return;
-          }
-
-          businessIdPayload =
-            parsed;
-        }
-      } else {
-        /*
-         * Normal Admin automatically
-         * uses their own business.
-         */
-        const ownBusinessId =
-          Number(
-            storedUser.business_id
-          );
-
-        if (
-          !Number.isInteger(
-            ownBusinessId
-          ) ||
-          ownBusinessId <= 0
-        ) {
-          showPopup(
-            "Your account is not assigned to a valid business"
-          );
-          return;
-        }
-
-        businessIdPayload =
-          ownBusinessId;
-      }
-
-      /*
-       * Business Admin requires
-       * their own admin password.
-       */
-      if (
-        !isSuperAdmin &&
-        !adminPassword
-      ) {
-        showPopup(
-          "Your admin password is required"
-        );
-        return;
-      }
-
-      /*
-       * Normal Admin cannot create
-       * a super_admin.
-       */
-      if (
-        !isSuperAdmin &&
-        newRoles.includes(
-          SUPER_ADMIN_ROLE
+  const getRoleDisplay = (
+    user
+  ) => {
+    if (
+      Array.isArray(
+        user.roles
+      ) &&
+      user.roles.length
+    ) {
+      return user.roles
+        .map(
+          (role) =>
+            role.name ||
+            role.code ||
+            role.role_name ||
+            role.role_code ||
+            ""
         )
-      ) {
-        showPopup(
-          "You cannot create a super_admin user"
-        );
-        return;
-      }
+        .filter(Boolean)
+        .join(", ");
+    }
 
-      try {
-        const payload = {
-          username:
-            newUsername
-              .trim()
-              .toLowerCase(),
+    if (
+      Array.isArray(
+        user.role_ids
+      )
+    ) {
+      return user.role_ids
+        .map((id) => {
+          const role =
+            roles.find(
+              (item) =>
+                Number(
+                  item.id
+                ) ===
+                Number(id)
+            );
 
-          password:
-            newPassword,
+          return (
+            role?.name ||
+            role?.code ||
+            ""
+          );
+        })
+        .filter(Boolean)
+        .join(", ");
+    }
 
-          roles:
-            newRoles,
-        };
+    if (user.role_name) {
+      return user.role_name;
+    }
 
-        if (
-          businessIdPayload !==
-          null
-        ) {
-          payload.business_id =
-            businessIdPayload;
-        }
+    if (user.role_code) {
+      return user.role_code;
+    }
 
-        if (!isSuperAdmin) {
-          payload.admin_password =
-            adminPassword;
-        }
+    return "—";
+  };
 
-        const res = await fetch(
-          `${API_BASE_URL}/users/register/`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(
-              payload
-            ),
-          }
-        );
+  /* =======================================================
+     CHECK USER SUPER ADMIN
+  ======================================================= */
 
-        const data =
-          await res
-            .json()
-            .catch(() => ({}));
+  const userIsSuperAdmin = (
+    user
+  ) => {
+    if (
+      user.business_id ===
+      null
+    ) {
+      return true;
+    }
 
-        if (!res.ok) {
-          throw new Error(
-            data.detail ||
-              "User creation failed"
+    if (
+      Array.isArray(
+        user.roles
+      )
+    ) {
+      return user.roles.some(
+        (role) =>
+          getRoleCode(
+            role
+          ) ===
+          SUPER_ADMIN_ROLE
+      );
+    }
+
+    if (
+      Array.isArray(
+        user.role_ids
+      )
+    ) {
+      return user.role_ids.some(
+        (id) => {
+          const role =
+            roles.find(
+              (item) =>
+                Number(
+                  item.id
+                ) ===
+                Number(id)
+            );
+
+          return (
+            getRoleCode(
+              role
+            ) ===
+            SUPER_ADMIN_ROLE
           );
         }
+      );
+    }
 
-        showPopup(
-          `User "${newUsername}" created successfully`
-        );
-
-        setSelectedAction(
-          "list"
-        );
-
-        setNewUsername("");
-        setNewPassword("");
-        setNewRoles(["store"]);
-        setAdminPassword("");
-
-        if (isSuperAdmin) {
-          setNewBusinessId("");
-        }
-
-        fetchUsers();
-      } catch (err) {
-        console.error(
-          "Create user error:",
-          err
-        );
-
-        showPopup(
-          err.message ||
-            "Failed to create user"
-        );
-      }
-    };
+    return (
+      normalizeRoleCode(
+        user.role_code
+      ) ===
+      SUPER_ADMIN_ROLE
+    );
+  };
 
   /* =======================================================
      CREATE BUSINESS
-     SUPER ADMIN ONLY
   ======================================================= */
 
   const handleCreateBusiness =
-    async (e) => {
-      e.preventDefault();
+    async (event) => {
+      event.preventDefault();
 
       if (!isSuperAdmin) {
         showPopup(
-          "Only Super Admin can manage businesses"
+          "Only Super Admin can manage businesses."
         );
         return;
       }
 
       if (
-        !newBusiness.name.trim() ||
-        !newBusiness.owner_username.trim()
+        !newBusiness.name.trim()
       ) {
         showPopup(
-          "Business name and owner username are required"
+          "Business name is required."
         );
         return;
       }
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/business/`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(
-              newBusiness
-            ),
-          }
-        );
+        const response =
+          await fetch(
+            `${API_BASE_URL}/business/`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
+              body:
+                JSON.stringify(
+                  newBusiness
+                ),
+            }
+          );
 
         const data =
-          await res
-            .json()
-            .catch(() => ({}));
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Business creation failed"
+              "Business creation failed."
           );
         }
 
         showPopup(
-          "Business created successfully"
+          "Business created successfully."
         );
 
         setNewBusiness({
-          name: "",
-          address: "",
-          phone: "",
-          email: "",
-          owner_username: "",
+          ...emptyBusiness,
         });
 
         setSelectedAction(
           "list-businesses"
         );
 
-        fetchBusinesses();
+        await fetchBusinesses();
       } catch (err) {
         console.error(
           "Create business error:",
@@ -1333,124 +1635,215 @@ const UserManagement = () => {
 
         showPopup(
           err.message ||
-            "Failed to create business"
+            "Failed to create business."
         );
       }
     };
 
-  /* =======================================================
-     UPDATE BUSINESS
-     SUPER ADMIN ONLY
-  ======================================================= */
+  
+  
+/* =======================================================
+   UPDATE BUSINESS
+======================================================= */
 
-  const handleUpdateBusiness =
-    async (e) => {
-      e.preventDefault();
+const handleUpdateBusiness = async (event) => {
+  event.preventDefault();
 
-      if (
-        !isSuperAdmin ||
-        !editingBusiness
-      ) {
-        return;
+  if (!isSuperAdmin) {
+    showPopup(
+      "Only Super Admin can manage businesses."
+    );
+    return;
+  }
+
+  if (!editingBusiness || !editingBusiness.id) {
+    showPopup("No business selected.");
+    return;
+  }
+
+  if (!editingBusiness.name?.trim()) {
+    showPopup("Business name is required.");
+    return;
+  }
+
+  const businessId = Number(editingBusiness.id);
+
+  if (
+    !Number.isInteger(businessId) ||
+    businessId <= 0
+  ) {
+    showPopup("Invalid business ID.");
+    return;
+  }
+
+  const payload = {
+    name: editingBusiness.name.trim(),
+
+    owner_username:
+      editingBusiness.owner_username?.trim() || null,
+
+    address:
+      editingBusiness.address?.trim() || null,
+
+    phone:
+      editingBusiness.phone?.trim() || null,
+
+    email:
+      editingBusiness.email?.trim() || null,
+  };
+
+  console.log("=================================");
+  console.log("UPDATE BUSINESS");
+  console.log("Business ID:", businessId);
+  console.log("Payload:", payload);
+  console.log(
+    "URL:",
+    `${API_BASE_URL}/business/${businessId}`
+  );
+  console.log("=================================");
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/business/${businessId}`,
+      {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        body: JSON.stringify(payload),
       }
+    );
 
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/business/${editingBusiness.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(
-              editingBusiness
-            ),
-          }
-        );
+    const responseText = await response.text();
 
-        const data =
-          await res
-            .json()
-            .catch(() => ({}));
+    let data = {};
 
-        if (!res.ok) {
-          throw new Error(
-            data.detail ||
-              "Business update failed"
-          );
-        }
+    try {
+      data = responseText
+        ? JSON.parse(responseText)
+        : {};
+    } catch {
+      data = {
+        detail: responseText,
+      };
+    }
 
-        showPopup(
-          "Business updated successfully"
-        );
+    console.log(
+      "Response status:",
+      response.status
+    );
 
-        setEditingBusiness(null);
-        setSelectedAction(
-          "list-businesses"
-        );
+    console.log(
+      "Response data:",
+      data
+    );
 
-        fetchBusinesses();
-        fetchUsers();
-      } catch (err) {
-        console.error(
-          "Update business error:",
-          err
-        );
+    if (!response.ok) {
+      throw new Error(
+        data?.detail ||
+          data?.message ||
+          `Business update failed (${response.status}).`
+      );
+    }
 
-        showPopup(
-          err.message ||
-            "Failed to update business"
-        );
-      }
-    };
+    showPopup(
+      "Business updated successfully."
+    );
+
+    setEditingBusiness(null);
+    setSelectedAction(
+      "list-businesses"
+    );
+
+    await fetchBusinesses();
+    await fetchUsers();
+
+  } catch (err) {
+    console.error(
+      "UPDATE BUSINESS ERROR:",
+      err
+    );
+
+    console.error(
+      "MESSAGE:",
+      err.message
+    );
+
+    console.error(
+      "STACK:",
+      err.stack
+    );
+
+    if (err instanceof TypeError) {
+      showPopup(
+        "Failed to connect to the server. Check the API URL, backend server, and CORS."
+      );
+      return;
+    }
+
+    showPopup(
+      err.message ||
+        "Failed to update business."
+    );
+  }
+};
+
+
 
   /* =======================================================
      DELETE BUSINESS
-     SUPER ADMIN ONLY
   ======================================================= */
 
   const handleDeleteBusiness =
     async () => {
       if (
         !isSuperAdmin ||
-        businessToDelete === null
+        businessToDelete ===
+          null
       ) {
         return;
       }
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/business/${businessToDelete}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response =
+          await fetch(
+            `${API_BASE_URL}/business/${businessToDelete}`,
+            {
+              method: "DELETE",
+
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          );
 
         const data =
-          await res
-            .json()
-            .catch(() => ({}));
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Business deletion failed"
+              "Business deletion failed."
           );
         }
 
         showPopup(
-          "Business deleted successfully"
+          "Business deleted successfully."
         );
 
-        setBusinessToDelete(null);
+        setBusinessToDelete(
+          null
+        );
 
-        fetchBusinesses();
-        fetchUsers();
+        await fetchBusinesses();
+        await fetchUsers();
       } catch (err) {
         console.error(
           "Delete business error:",
@@ -1459,24 +1852,20 @@ const UserManagement = () => {
 
         showPopup(
           err.message ||
-            "Failed to delete business"
+            "Failed to delete business."
         );
       }
     };
 
   /* =======================================================
      GENERATE LICENSE
-     SUPER ADMIN ONLY
   ======================================================= */
 
   const handleGenerateLicense =
-    async (e) => {
-      e.preventDefault();
+    async (event) => {
+      event.preventDefault();
 
       if (!isSuperAdmin) {
-        showPopup(
-          "Only Super Admin can generate licenses"
-        );
         return;
       }
 
@@ -1486,7 +1875,23 @@ const UserManagement = () => {
         !newLicense.business_id
       ) {
         showPopup(
-          "License password, key and business are required"
+          "License password, key and business are required."
+        );
+        return;
+      }
+
+      const durationDays = Number(
+        newLicense.duration_days
+      );
+
+      if (
+        !Number.isInteger(
+          durationDays
+        ) ||
+        durationDays <= 0
+      ) {
+        showPopup(
+          "License duration must be greater than zero."
         );
         return;
       }
@@ -1508,7 +1913,7 @@ const UserManagement = () => {
         formData.append(
           "duration_days",
           String(
-            newLicense.duration_days
+            durationDays
           )
         );
 
@@ -1519,46 +1924,47 @@ const UserManagement = () => {
           )
         );
 
-        const res = await fetch(
-          `${API_BASE_URL}/license/generate`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          }
-        );
+        const response =
+          await fetch(
+            `${API_BASE_URL}/license/generate`,
+            {
+              method: "POST",
+
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
+              body: formData,
+            }
+          );
 
         const data =
-          await res
-            .json()
-            .catch(() => ({}));
+          await parseJsonResponse(
+            response
+          );
 
-        if (!res.ok) {
+        if (!response.ok) {
           throw new Error(
             data.detail ||
-              "License generation failed"
+              "License generation failed."
           );
         }
 
         showPopup(
-          "License generated successfully"
+          "License generated successfully."
         );
 
         setNewLicense({
-          license_password: "",
-          key: "",
-          duration_days: 365,
-          business_id: "",
+          ...emptyLicense,
         });
 
         setSelectedAction(
           "license-management"
         );
 
-        fetchLicenseStatus();
-        fetchBusinesses();
+        await fetchLicenseStatus();
+        await fetchBusinesses();
       } catch (err) {
         console.error(
           "Generate license error:",
@@ -1567,7 +1973,7 @@ const UserManagement = () => {
 
         showPopup(
           err.message ||
-            "Failed to generate license"
+            "Failed to generate license."
         );
       }
     };
@@ -1576,52 +1982,50 @@ const UserManagement = () => {
      REFRESH
   ======================================================= */
 
-  const refreshAll = () => {
-    fetchUsers();
+  const refreshAll = async () => {
+    try {
+      await fetchUsers();
+      await fetchRoles();
 
-    if (isSuperAdmin) {
-      fetchBusinesses();
-      fetchLicenseStatus();
+      if (isSuperAdmin) {
+        await fetchBusinesses();
+        await fetchLicenseStatus();
+      }
+
+      showPopup(
+        "Data refreshed successfully."
+      );
+    } catch (err) {
+      console.error(
+        "Refresh error:",
+        err
+      );
     }
-
-    showPopup(
-      "Data refreshed successfully"
-    );
   };
 
   /* =======================================================
-     ROLE DISPLAY
+     CLOSE EDIT USER
   ======================================================= */
 
-  const getRoleDisplay = (
-    roles
-  ) => {
-    const normalized = Array.isArray(
-      roles
-    )
-      ? roles
-          .map(normalizeRole)
-          .filter(Boolean)
-      : extractRoles({
-          roles,
-        });
-
-    return normalized.length
-      ? normalized.join(", ")
-      : "—";
+  const cancelEditUser = () => {
+    setEditingUser(null);
+    setEditRoleId("");
+    setEditBusinessId("");
+    setEditLocationId("");
+    setLocations([]);
+    setSelectedAction("list");
   };
 
   /* =======================================================
-     USER IS SUPER ADMIN
+     CLOSE MAIN SCREEN
   ======================================================= */
 
-  const userIsSuperAdmin = (
-    user
-  ) => {
-    return extractRoles(
-      user
-    ).includes(
-      SUPER_ADMIN_ROLE
+  const closeManagement = () => {
+    navigate(
+      "/dashboard/rooms/status",
+      {
+        replace: true,
+      }
     );
   };
 
@@ -1639,11 +2043,14 @@ const UserManagement = () => {
     >
       {!isAdmin ? (
         <div className="access-denied">
-          <h3>🚫 Access Denied</h3>
+          <h3>
+            🚫 Access Denied
+          </h3>
 
           <p>
-            You do not have permission
-            to manage users.
+            You do not have
+            permission to manage
+            users.
           </p>
         </div>
       ) : (
@@ -1653,16 +2060,10 @@ const UserManagement = () => {
           ================================================= */}
 
           <div className="user-heading-row">
-            <h2
-              className={`user-heading ${
-                isSuperAdmin
-                  ? "super-admin"
-                  : ""
-              }`}
-            >
+            <h2 className="user-heading">
               {isSuperAdmin
                 ? "Super Admin Tools"
-                : "Hotel User Management"}
+                : "User Management"}
             </h2>
 
             <div className="header-right">
@@ -1670,18 +2071,31 @@ const UserManagement = () => {
                 value={
                   selectedAction
                 }
-                onChange={(e) => {
+                onChange={(event) => {
                   const value =
-                    e.target.value;
+                    event.target
+                      .value;
 
                   setSelectedAction(
                     value
                   );
 
-                  setEditingUser(null);
+                  setEditingUser(
+                    null
+                  );
+
                   setEditingBusiness(
                     null
                   );
+
+                  if (
+                    value !==
+                      "update"
+                  ) {
+                    setLocations(
+                      []
+                    );
+                  }
                 }}
               >
                 <option value="list">
@@ -1689,7 +2103,7 @@ const UserManagement = () => {
                 </option>
 
                 <option value="add">
-                  Add User
+                  Create User
                 </option>
 
                 {isSuperAdmin && (
@@ -1709,30 +2123,23 @@ const UserManagement = () => {
                 )}
               </select>
 
-              {isSuperAdmin && (
-                <button
-                  className="btn refresh"
-                  onClick={
-                    refreshAll
-                  }
-                  type="button"
-                >
-                  🔄 Refresh
-                </button>
-              )}
+              <button
+                className="btn refresh"
+                type="button"
+                onClick={
+                  refreshAll
+                }
+              >
+                🔄 Refresh
+              </button>
 
               {selectedAction ===
                 "list" && (
                 <button
                   className="close-main-button"
                   type="button"
-                  onClick={() =>
-                    navigate(
-                      "/dashboard/rooms/status",
-                      {
-                        replace: true,
-                      }
-                    )
+                  onClick={
+                    closeManagement
                   }
                 >
                   ❌
@@ -1758,145 +2165,152 @@ const UserManagement = () => {
           )}
 
           {/* =================================================
-              LIST USERS
+              USER LIST
           ================================================= */}
 
           {selectedAction ===
             "list" && (
-            <div
-              className={`user-table compact ${
-                isSuperAdmin
-                  ? "super-admin-table"
-                  : ""
-              }`}
-            >
-              <div
-                className={`table-header ${
-                  isSuperAdmin
-                    ? "with-business"
-                    : ""
-                }`}
-              >
+            <div className="user-table compact">
+              <div className="table-header">
                 <div>ID</div>
                 <div>Username</div>
+                <div>Name</div>
                 <div>Roles</div>
-
-                {isSuperAdmin && (
-                  <div>Business</div>
-                )}
-
+                <div>Business</div>
+                <div>Location</div>
+                <div>Status</div>
                 <div>Actions</div>
               </div>
 
-              {users.length === 0 ? (
+              {users.length ===
+              0 ? (
                 <div className="no-data">
                   No users found.
                 </div>
               ) : (
-                users.map((user) => {
-                  const isSuper =
-                    userIsSuperAdmin(
-                      user
-                    );
+                users.map(
+                  (user) => {
+                    const userIsSuper =
+                      userIsSuperAdmin(
+                        user
+                      );
 
-                  return (
-                    <div
-                      className={`table-row ${
-                        isSuperAdmin
-                          ? "with-business"
-                          : ""
-                      }`}
-                      key={
-                        user.id ??
-                        user.username
-                      }
-                    >
-                      <div>
-                        {user.id}
-                      </div>
+                    const protectedUser =
+                      !isSuperAdmin &&
+                      userIsSuper;
 
-                      <div>
-                        {
+                    return (
+                      <div
+                        className="table-row"
+                        key={
+                          user.id ??
                           user.username
                         }
-                      </div>
-
-                      <div>
-                        {getRoleDisplay(
-                          user.roles
-                        )}
-                      </div>
-
-                      {isSuperAdmin && (
+                      >
                         <div>
-                          {user.business_id
-                            ? user.business_name
-                              ? `${user.business_name} (#${user.business_id})`
-                              : `Business #${user.business_id}`
-                            : "— Global —"}
+                          {
+                            user.id
+                          }
                         </div>
-                      )}
 
-                      <div className="action-buttons">
-                        <button
-                          className="btn edit"
-                          type="button"
-                          onClick={() =>
-                            handleEditClick(
-                              user
-                            )
+                        <div>
+                          {
+                            user.username
                           }
-                          disabled={
-                            !isSuperAdmin &&
-                            isSuper
-                          }
-                        >
-                          ✏️ Edit
-                        </button>
+                        </div>
 
-                        <button
-                          className="btn delete"
-                          type="button"
-                          onClick={() =>
-                            confirmDeleteUser(
-                              user.username
-                            )
+                        <div>
+                          {
+                            user.full_name ||
+                            "—"
                           }
-                          disabled={
-                            user.username ===
-                              storedUser.username ||
-                            (!isSuperAdmin &&
-                              isSuper)
-                          }
-                        >
-                          🗑️ Delete
-                        </button>
+                        </div>
 
-                        <button
-                          className="btn reset"
-                          type="button"
-                          onClick={() =>
-                            setResetUser(
-                              user
-                            )
+                        <div>
+                          {getRoleDisplay(
+                            user
+                          )}
+                        </div>
+
+                        <div>
+                          {user.business_name ||
+                            (user.business_id
+                              ? `Business #${user.business_id}`
+                              : "— Global —")}
+                        </div>
+
+                        <div>
+                          {
+                            user.location_name ||
+                            "—"
                           }
-                          disabled={
-                            !isSuperAdmin &&
-                            isSuper
+                        </div>
+
+                        <div>
+                          {
+                            user.status ||
+                            "—"
                           }
-                        >
-                          🔑 Reset PW
-                        </button>
+                        </div>
+
+                        <div className="action-buttons">
+                          <button
+                            className="btn edit"
+                            type="button"
+                            onClick={() =>
+                              handleEditClick(
+                                user
+                              )
+                            }
+                            disabled={
+                              protectedUser
+                            }
+                          >
+                            ✏️ Edit
+                          </button>
+
+                          <button
+                            className="btn delete"
+                            type="button"
+                            onClick={() =>
+                              confirmDeleteUser(
+                                user.username
+                              )
+                            }
+                            disabled={
+                              user.username ===
+                                storedUser.username ||
+                              protectedUser
+                            }
+                          >
+                            🗑️ Delete
+                          </button>
+
+                          <button
+                            className="btn reset"
+                            type="button"
+                            onClick={() =>
+                              setResetUser(
+                                user
+                              )
+                            }
+                            disabled={
+                              protectedUser
+                            }
+                          >
+                            🔑 Reset PW
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  }
+                )
               )}
             </div>
           )}
 
           {/* =================================================
-              ADD USER
+              CREATE USER
           ================================================= */}
 
           {selectedAction ===
@@ -1905,18 +2319,11 @@ const UserManagement = () => {
               onSubmit={
                 submitAddUser
               }
-              className={`edit-form compact-form ${
-                isSuperAdmin
-                  ? "super-admin-form"
-                  : ""
-              }`}
+              className="edit-form compact-form"
             >
               <div className="edit-header">
                 <h4>
-                  Add New User{" "}
-                  {isSuperAdmin
-                    ? "(Super Admin)"
-                    : "(Business Level)"}
+                  Create New User
                 </h4>
               </div>
 
@@ -1926,14 +2333,56 @@ const UserManagement = () => {
                 <input
                   type="text"
                   value={
-                    newUsername
+                    newUser.username
                   }
-                  onChange={(e) =>
-                    setNewUsername(
-                      e.target.value
-                    )
+                  onChange={(event) =>
+                    setNewUser({
+                      ...newUser,
+                      username:
+                        event.target
+                          .value,
+                    })
                   }
                   required
+                />
+              </label>
+
+              <label>
+                Full Name:
+
+                <input
+                  type="text"
+                  value={
+                    newUser.full_name
+                  }
+                  onChange={(event) =>
+                    setNewUser({
+                      ...newUser,
+                      full_name:
+                        event.target
+                          .value,
+                    })
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Phone:
+
+                <input
+                  type="text"
+                  value={
+                    newUser.phone
+                  }
+                  onChange={(event) =>
+                    setNewUser({
+                      ...newUser,
+                      phone:
+                        event.target
+                          .value,
+                    })
+                  }
                 />
               </label>
 
@@ -1943,29 +2392,40 @@ const UserManagement = () => {
                 <input
                   type="password"
                   value={
-                    newPassword
+                    newUser.password
                   }
-                  onChange={(e) =>
-                    setNewPassword(
-                      e.target.value
-                    )
+                  onChange={(event) =>
+                    setNewUser({
+                      ...newUser,
+                      password:
+                        event.target
+                          .value,
+                    })
                   }
                   required
                 />
               </label>
 
-              {isSuperAdmin ? (
-                <label>
-                  Business:
+              <label>
+                Business:
 
+                {isSuperAdmin ? (
                   <select
                     value={
-                      newBusinessId
+                      newUser.business_id
                     }
-                    onChange={(e) =>
-                      setNewBusinessId(
-                        e.target.value
-                      )
+                    onChange={(
+                      event
+                    ) =>
+                      setNewUser({
+                        ...newUser,
+                        business_id:
+                          event
+                            .target
+                            .value,
+                        location_id:
+                          "",
+                      })
                     }
                   >
                     <option value="">
@@ -1973,7 +2433,9 @@ const UserManagement = () => {
                     </option>
 
                     {businesses.map(
-                      (business) => (
+                      (
+                        business
+                      ) => (
                         <option
                           key={
                             business.id
@@ -1993,75 +2455,104 @@ const UserManagement = () => {
                       )
                     )}
                   </select>
-                </label>
-              ) : (
-                <label>
-                  Business:
-
+                ) : (
                   <input
                     type="text"
                     value={
                       storedUser.business_name ||
-                      `Business #${
-                        storedUser.business_id ||
-                        ""
-                      }`
+                      `Business #${storedUser.business_id}`
                     }
                     readOnly
                   />
-                </label>
-              )}
-
-              <label>
-                Roles:
+                )}
               </label>
 
-              <div className="roles-checkboxes">
-                {availableRoles.map(
-                  (role) => (
-                    <label
-                      key={role}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={newRoles.includes(
-                          role
-                        )}
-                        onChange={() =>
-                          toggleRole(
-                            role,
-                            setNewRoles,
-                            newRoles
-                          )
+              <label>
+                Role:
+
+                <select
+                  value={
+                    newUser.role_id
+                  }
+                  onChange={(event) =>
+                    setNewUser({
+                      ...newUser,
+                      role_id:
+                        event.target
+                          .value,
+                    })
+                  }
+                  required
+                >
+                  <option value="">
+                    Select Role
+                  </option>
+
+                  {availableRoles.map(
+                    (role) => (
+                      <option
+                        key={
+                          role.id
                         }
-                      />
+                        value={
+                          role.id
+                        }
+                      >
+                        {
+                          role.name ||
+                          role.code
+                        }
+                      </option>
+                    )
+                  )}
+                </select>
+              </label>
 
-                      {role}
-                    </label>
-                  )
-                )}
-              </div>
+              <label>
+                Location:
 
-              {!isSuperAdmin && (
-                <label>
-                  Your Admin Password
-                  (required):
+                <select
+                  value={
+                    newUser.location_id
+                  }
+                  onChange={(event) =>
+                    setNewUser({
+                      ...newUser,
+                      location_id:
+                        event.target
+                          .value,
+                    })
+                  }
+                  disabled={
+                    !newUser.business_id ||
+                    locations.length ===
+                      0
+                  }
+                >
+                  <option value="">
+                    No Location / Not Assigned
+                  </option>
 
-                  <input
-                    type="password"
-                    value={
-                      adminPassword
-                    }
-                    onChange={(e) =>
-                      setAdminPassword(
-                        e.target.value
-                      )
-                    }
-                    required
-                    placeholder="Confirm your own admin password"
-                  />
-                </label>
-              )}
+                  {locations.map(
+                    (
+                      location
+                    ) => (
+                      <option
+                        key={
+                          location.id
+                        }
+                        value={
+                          location.id
+                        }
+                      >
+                        {
+                          location.name
+                        }
+                      </option>
+                    )
+                  )}
+                </select>
+              </label>
 
               <div className="form-buttons">
                 <button type="submit">
@@ -2097,7 +2588,7 @@ const UserManagement = () => {
               >
                 <div className="edit-header">
                   <h4>
-                    Edit Roles:{" "}
+                    Edit User:{" "}
                     {
                       editingUser.username
                     }
@@ -2110,70 +2601,212 @@ const UserManagement = () => {
                   <input
                     type="text"
                     value={
-                      editingUser.username
+                      editingUser.username ||
+                      ""
                     }
                     readOnly
+                  />
+                </label>
+
+                <label>
+                  Full Name:
+
+                  <input
+                    type="text"
+                    value={
+                      editingUser.full_name ||
+                      ""
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setEditingUser({
+                        ...editingUser,
+                        full_name:
+                          event
+                            .target
+                            .value,
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Phone:
+
+                  <input
+                    type="text"
+                    value={
+                      editingUser.phone ||
+                      ""
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setEditingUser({
+                        ...editingUser,
+                        phone:
+                          event
+                            .target
+                            .value,
+                      })
+                    }
                   />
                 </label>
 
                 <label>
                   Business:
 
-                  <input
-                    type="text"
-                    value={
-                      editingUser.business_name
-                        ? `${editingUser.business_name} (#${editingUser.business_id})`
-                        : "— Global —"
-                    }
-                    readOnly
-                  />
+                  {isSuperAdmin ? (
+                    <select
+                      value={
+                        editBusinessId
+                      }
+                      onChange={(
+                        event
+                      ) => {
+                        setEditBusinessId(
+                          event
+                            .target
+                            .value
+                        );
+
+                        setEditLocationId(
+                          ""
+                        );
+                      }}
+                    >
+                      <option value="">
+                        Global / No Business
+                      </option>
+
+                      {businesses.map(
+                        (
+                          business
+                        ) => (
+                          <option
+                            key={
+                              business.id
+                            }
+                            value={
+                              business.id
+                            }
+                          >
+                            {
+                              business.name
+                            }{" "}
+                            — #
+                            {
+                              business.id
+                            }
+                          </option>
+                        )
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={
+                        editingUser.business_name ||
+                        `Business #${editingUser.business_id}`
+                      }
+                      readOnly
+                    />
+                  )}
                 </label>
 
                 <label>
-                  Roles:
+                  Role:
+
+                  <select
+                    value={
+                      editRoleId
+                    }
+                    onChange={(event) =>
+                      setEditRoleId(
+                        event.target
+                          .value
+                      )
+                    }
+                    required
+                  >
+                    <option value="">
+                      Select Role
+                    </option>
+
+                    {availableRoles.map(
+                      (role) => (
+                        <option
+                          key={
+                            role.id
+                          }
+                          value={
+                            role.id
+                          }
+                        >
+                          {
+                            role.name ||
+                            role.code
+                          }
+                        </option>
+                      )
+                    )}
+                  </select>
                 </label>
 
-                <div className="roles-checkboxes">
-                  {availableRoles.map(
-                    (role) => (
-                      <label
-                        key={role}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editRoles.includes(
-                            role
-                          )}
-                          onChange={() =>
-                            toggleRole(
-                              role,
-                              setEditRoles,
-                              editRoles
-                            )
-                          }
-                          disabled={
-                            !isSuperAdmin &&
-                            role ===
-                              SUPER_ADMIN_ROLE
-                          }
-                        />
+                <label>
+                  Location:
 
-                        {role}
-                      </label>
-                    )
-                  )}
-                </div>
+                  <select
+                    value={
+                      editLocationId
+                    }
+                    onChange={(event) =>
+                      setEditLocationId(
+                        event.target
+                          .value
+                      )
+                    }
+                    disabled={
+                      !editBusinessId ||
+                      locations.length ===
+                        0
+                    }
+                  >
+                    <option value="">
+                      No Location / Not Assigned
+                    </option>
+
+                    {locations.map(
+                      (
+                        location
+                      ) => (
+                        <option
+                          key={
+                            location.id
+                          }
+                          value={
+                            location.id
+                          }
+                        >
+                          {
+                            location.name
+                          }
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
 
                 <div className="form-buttons">
                   <button type="submit">
-                    Save Changes
+                    💾 Save Changes
                   </button>
 
                   <button
                     type="button"
                     onClick={
-                      cancelEdit
+                      cancelEditUser
                     }
                   >
                     Cancel
@@ -2187,23 +2820,86 @@ const UserManagement = () => {
           ================================================= */}
 
           {resetUser && (
-            <div className="reset-password-modal">
+            <div
+              className="modal-overlay"
+              onClick={() =>
+                setResetUser(
+                  null
+                )
+              }
+            >
               <div
-                className="modal-overlay"
-                onClick={() =>
-                  setResetUser(
-                    null
-                  )
+                className="modal-content"
+                onClick={(event) =>
+                  event.stopPropagation()
                 }
               >
-                <div
-                  className="modal-content"
-                  onClick={(e) =>
-                    e.stopPropagation()
+                <button
+                  className="close-btn"
+                  type="button"
+                  onClick={() =>
+                    setResetUser(
+                      null
+                    )
                   }
                 >
+                  ✖
+                </button>
+
+                <h3>
+                  Reset Password for{" "}
+                  {
+                    resetUser.username
+                  }
+                </h3>
+
+                <label>
+                  New Password:
+                </label>
+
+                <input
+                  type="password"
+                  value={
+                    resetPassword
+                  }
+                  onChange={(event) =>
+                    setResetPassword(
+                      event.target
+                        .value
+                    )
+                  }
+                />
+
+                <label>
+                  Confirm Password:
+                </label>
+
+                <input
+                  type="password"
+                  value={
+                    confirmPassword
+                  }
+                  onChange={(event) =>
+                    setConfirmPassword(
+                      event.target
+                        .value
+                    )
+                  }
+                />
+
+                <div className="modal-actions">
                   <button
-                    className="close-btn"
+                    className="action-btn save"
+                    type="button"
+                    onClick={
+                      submitResetPassword
+                    }
+                  >
+                    ✅ Reset Password
+                  </button>
+
+                  <button
+                    className="action-btn cancel"
                     type="button"
                     onClick={() =>
                       setResetUser(
@@ -2211,71 +2907,8 @@ const UserManagement = () => {
                       )
                     }
                   >
-                    ✖
+                    Cancel
                   </button>
-
-                  <h3>
-                    Reset Password for{" "}
-                    {
-                      resetUser.username
-                    }
-                  </h3>
-
-                  <label>
-                    New Password:
-                  </label>
-
-                  <input
-                    type="password"
-                    value={
-                      resetPassword
-                    }
-                    onChange={(e) =>
-                      setResetPassword(
-                        e.target.value
-                      )
-                    }
-                  />
-
-                  <label>
-                    Confirm Password:
-                  </label>
-
-                  <input
-                    type="password"
-                    value={
-                      confirmPassword
-                    }
-                    onChange={(e) =>
-                      setConfirmPassword(
-                        e.target.value
-                      )
-                    }
-                  />
-
-                  <div className="modal-actions">
-                    <button
-                      className="action-btn save"
-                      type="button"
-                      onClick={
-                        submitResetPassword
-                      }
-                    >
-                      ✅ Reset Password
-                    </button>
-
-                    <button
-                      className="action-btn cancel"
-                      type="button"
-                      onClick={() =>
-                        setResetUser(
-                          null
-                        )
-                      }
-                    >
-                      Cancel
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -2307,12 +2940,9 @@ const UserManagement = () => {
                   </button>
                 </div>
 
-                <div className="user-table compact super-admin-table with-business">
-                  <div className="table-header with-business">
+                <div className="user-table compact">
+                  <div className="table-header">
                     <div>ID</div>
-                    <div>
-                      Expiring Date
-                    </div>
                     <div>Name</div>
                     <div>Owner</div>
                     <div>Email</div>
@@ -2323,60 +2953,53 @@ const UserManagement = () => {
                   {businesses.length ===
                   0 ? (
                     <div className="no-data">
-                      No businesses
-                      found.
+                      No businesses found.
                     </div>
                   ) : (
                     businesses.map(
-                      (biz) => (
+                      (
+                        business
+                      ) => (
                         <div
-                          className="table-row with-business"
+                          className="table-row"
                           key={
-                            biz.id
+                            business.id
                           }
                         >
                           <div>
                             {
-                              biz.id
-                            }
-                          </div>
-
-                          <div>
-                            {biz.expiration_date
-                              ? new Date(
-                                  biz.expiration_date
-                                ).toLocaleDateString()
-                              : "—"}
-                          </div>
-
-                          <div>
-                            {
-                              biz.name
+                              business.id
                             }
                           </div>
 
                           <div>
                             {
-                              biz.owner_username ||
+                              business.name
+                            }
+                          </div>
+
+                          <div>
+                            {
+                              business.owner_username ||
                               "—"
                             }
                           </div>
 
                           <div>
                             {
-                              biz.email ||
+                              business.email ||
                               "—"
                             }
                           </div>
 
                           <div>
-                            {biz.license_active ? (
+                            {business.license_active ? (
                               <span className="status-active">
-                                Yes
+                                Active
                               </span>
                             ) : (
-                              <span className="status-expired">
-                                No
+                              <span className="status-inactive">
+                                Inactive
                               </span>
                             )}
                           </div>
@@ -2388,7 +3011,7 @@ const UserManagement = () => {
                               onClick={() => {
                                 setEditingBusiness(
                                   {
-                                    ...biz,
+                                    ...business,
                                   }
                                 );
 
@@ -2405,7 +3028,7 @@ const UserManagement = () => {
                               type="button"
                               onClick={() =>
                                 setBusinessToDelete(
-                                  biz.id
+                                  business.id
                                 )
                               }
                             >
@@ -2431,13 +3054,11 @@ const UserManagement = () => {
                 onSubmit={
                   handleCreateBusiness
                 }
-                className="edit-form compact-form super-admin-form"
+                className="edit-form compact-form"
               >
-                <div className="edit-header">
-                  <h4>
-                    Create New Business
-                  </h4>
-                </div>
+                <h3>
+                  Create New Business
+                </h3>
 
                 <label>
                   Business Name:
@@ -2447,14 +3068,13 @@ const UserManagement = () => {
                     value={
                       newBusiness.name
                     }
-                    onChange={(e) =>
-                      setNewBusiness(
-                        {
-                          ...newBusiness,
-                          name: e.target
+                    onChange={(event) =>
+                      setNewBusiness({
+                        ...newBusiness,
+                        name:
+                          event.target
                             .value,
-                        }
-                      )
+                      })
                     }
                     required
                   />
@@ -2468,17 +3088,14 @@ const UserManagement = () => {
                     value={
                       newBusiness.owner_username
                     }
-                    onChange={(e) =>
-                      setNewBusiness(
-                        {
-                          ...newBusiness,
-                          owner_username:
-                            e.target
-                              .value,
-                        }
-                      )
+                    onChange={(event) =>
+                      setNewBusiness({
+                        ...newBusiness,
+                        owner_username:
+                          event.target
+                            .value,
+                      })
                     }
-                    required
                   />
                 </label>
 
@@ -2490,15 +3107,13 @@ const UserManagement = () => {
                     value={
                       newBusiness.address
                     }
-                    onChange={(e) =>
-                      setNewBusiness(
-                        {
-                          ...newBusiness,
-                          address:
-                            e.target
-                              .value,
-                        }
-                      )
+                    onChange={(event) =>
+                      setNewBusiness({
+                        ...newBusiness,
+                        address:
+                          event.target
+                            .value,
+                      })
                     }
                   />
                 </label>
@@ -2511,14 +3126,13 @@ const UserManagement = () => {
                     value={
                       newBusiness.phone
                     }
-                    onChange={(e) =>
-                      setNewBusiness(
-                        {
-                          ...newBusiness,
-                          phone: e.target
+                    onChange={(event) =>
+                      setNewBusiness({
+                        ...newBusiness,
+                        phone:
+                          event.target
                             .value,
-                        }
-                      )
+                      })
                     }
                   />
                 </label>
@@ -2531,22 +3145,20 @@ const UserManagement = () => {
                     value={
                       newBusiness.email
                     }
-                    onChange={(e) =>
-                      setNewBusiness(
-                        {
-                          ...newBusiness,
-                          email:
-                            e.target
-                              .value,
-                        }
-                      )
+                    onChange={(event) =>
+                      setNewBusiness({
+                        ...newBusiness,
+                        email:
+                          event.target
+                            .value,
+                      })
                     }
                   />
                 </label>
 
                 <div className="form-buttons">
                   <button type="submit">
-                    Create
+                    Create Business
                   </button>
 
                   <button
@@ -2563,105 +3175,107 @@ const UserManagement = () => {
               </form>
             )}
 
-                  {/* ================================================= EDIT BUSINESS ================================================= */}
-        {isSuperAdmin &&
+          {/* =================================================
+              EDIT BUSINESS
+          ================================================= */}
+
+          {isSuperAdmin &&
           selectedAction === "edit-business" &&
           editingBusiness && (
             <form
               onSubmit={handleUpdateBusiness}
-              className="edit-form compact-form super-admin-form"
+              className="edit-form compact-form"
             >
-              <h3>
-                Edit Business (ID: {editingBusiness.id})
-              </h3>
+              <h3>Edit Business</h3>
 
-              {/* Business Name */}
               <label>
                 Business Name:
+
                 <input
                   type="text"
                   value={editingBusiness.name || ""}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setEditingBusiness({
                       ...editingBusiness,
-                      name: e.target.value,
+                      name: event.target.value,
                     })
                   }
                   required
                 />
               </label>
 
-              {/* Owner Username */}
-              <label>
-                Owner Username:
-                <input
-                  type="text"
-                  value={editingBusiness.owner_username || ""}
-                  onChange={(e) =>
-                    setEditingBusiness({
-                      ...editingBusiness,
-                      owner_username: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </label>
+              
+                <label>
+                  Owner Username:
 
-              {/* Address */}
+                  <input
+                    type="text"
+                    value={
+                      editingBusiness.owner_username || ""
+                    }
+                    onChange={(event) =>
+                      setEditingBusiness({
+                        ...editingBusiness,
+                        owner_username:
+                          event.target.value,
+                      })
+                    }
+                  />
+                </label>
+
+
+
               <label>
                 Address:
+
                 <input
                   type="text"
                   value={editingBusiness.address || ""}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setEditingBusiness({
                       ...editingBusiness,
-                      address: e.target.value,
+                      address: event.target.value,
                     })
                   }
                 />
               </label>
 
-              {/* Phone */}
               <label>
                 Phone:
+
                 <input
                   type="text"
                   value={editingBusiness.phone || ""}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setEditingBusiness({
                       ...editingBusiness,
-                      phone: e.target.value,
+                      phone: event.target.value,
                     })
                   }
                 />
               </label>
 
-              {/* Email */}
               <label>
                 Email:
+
                 <input
                   type="email"
                   value={editingBusiness.email || ""}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setEditingBusiness({
                       ...editingBusiness,
-                      email: e.target.value,
+                      email: event.target.value,
                     })
                   }
                 />
               </label>
 
-              <div className="form-actions">
-                <button
-                  className="action-btn save"
-                  type="submit"
-                >
+              <div className="form-buttons">
+                <button type="submit">
                   💾 Save Changes
                 </button>
 
                 <button
-                  className="action-btn cancel"
                   type="button"
                   onClick={() => {
                     setEditingBusiness(null);
@@ -2674,337 +3288,371 @@ const UserManagement = () => {
             </form>
           )}
 
-        {/* ================================================= DELETE BUSINESS MODAL ================================================= */}
-        {isSuperAdmin && businessToDelete !== null && (
-          <div
-            className="modal-overlay"
-            onClick={() => setBusinessToDelete(null)}
-          >
-            <div
-              className="modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="close-btn"
-                type="button"
-                onClick={() => setBusinessToDelete(null)}
-              >
-                ✖
-              </button>
+          {/* =================================================
+              LICENSE MANAGEMENT
+          ================================================= */}
 
-              <h3>Delete Business</h3>
+          {isSuperAdmin &&
+            selectedAction ===
+              "license-management" && (
+              <div className="license-management">
+                <div className="section-header">
+                  <h3>
+                    License Management
+                  </h3>
 
-              <p>
-                Are you sure you want to delete Business #
-                {businessToDelete}?
-              </p>
+                  <button
+                    className="btn create"
+                    type="button"
+                    onClick={() =>
+                      setSelectedAction(
+                        "generate-license"
+                      )
+                    }
+                  >
+                    + Generate License
+                  </button>
+                </div>
 
-              <p className="warning-text">
-                This action cannot be undone.
-              </p>
+                <div className="license-status-card">
+                  <h4>
+                    Current License Status
+                  </h4>
 
-              <div className="modal-actions">
-                <button
-                  className="action-btn delete"
-                  type="button"
-                  onClick={handleDeleteBusiness}
-                >
-                  🗑️ Delete Business
-                </button>
+                  {licenseStatus ? (
+                    <div className="license-info">
+                      <div>
+                        <strong>
+                          Status:
+                        </strong>{" "}
+                        {licenseStatus.active ||
+                        licenseStatus.license_active ? (
+                          <span className="status-active">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="status-inactive">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
 
-                <button
-                  className="action-btn cancel"
-                  type="button"
-                  onClick={() => setBusinessToDelete(null)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+                      <div>
+                        <strong>
+                          Business:
+                        </strong>{" "}
+                        {licenseStatus.business_name ||
+                          "—"}
+                      </div>
 
-        {/* ================================================= LICENSE MANAGEMENT ================================================= */}
-        {isSuperAdmin &&
-          selectedAction === "license-management" && (
-            <div className="license-management">
-              <div className="section-header">
-                <h3>License Management</h3>
+                      <div>
+                        <strong>
+                          Expiration:
+                        </strong>{" "}
+                        {licenseStatus.expiration_date
+                          ? new Date(
+                              licenseStatus.expiration_date
+                            ).toLocaleDateString()
+                          : "—"}
+                      </div>
 
-                <button
-                  className="btn create"
-                  type="button"
-                  onClick={() =>
-                    setSelectedAction("generate-license")
-                  }
-                >
-                  + Generate License
-                </button>
-              </div>
-
-              {/* Current License Status */}
-              <div className="license-status-card">
-                <h4>Current License Status</h4>
-
-                {licenseStatus ? (
-                  <div className="license-info">
-                    <div>
-                      <strong>Status:</strong>{" "}
-                      {licenseStatus.active ||
-                      licenseStatus.license_active ? (
-                        <span className="status-active">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="status-inactive">
-                          Inactive
-                        </span>
+                      {licenseStatus.days_remaining !==
+                        undefined && (
+                        <div>
+                          <strong>
+                            Days Remaining:
+                          </strong>{" "}
+                          {
+                            licenseStatus.days_remaining
+                          }
+                        </div>
                       )}
                     </div>
-
-                    <div>
-                      <strong>Business:</strong>{" "}
-                      {licenseStatus.business_name ||
-                        (licenseStatus.business_id
-                          ? `Business #${licenseStatus.business_id}`
-                          : "—")}
-                    </div>
-
-                    <div>
-                      <strong>Expiration:</strong>{" "}
-                      {licenseStatus.expiration_date
-                        ? new Date(
-                            licenseStatus.expiration_date
-                          ).toLocaleDateString()
-                        : "—"}
-                    </div>
-
-                    {licenseStatus.days_remaining !==
-                      undefined && (
-                      <div>
-                        <strong>Days Remaining:</strong>{" "}
-                        {licenseStatus.days_remaining}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p>No license information available.</p>
-                )}
-              </div>
-
-              {/* Businesses / License Overview */}
-              <div className="table-wrapper">
-                <div className="user-table compact super-admin-table">
-                  <div className="table-header with-business">
-                    <div>ID</div>
-                    <div>Business</div>
-                    <div>Expiration</div>
-                    <div>Status</div>
-                  </div>
-
-                  {businesses.length === 0 ? (
-                    <div className="no-data">
-                      No businesses found.
-                    </div>
                   ) : (
-                    businesses.map((business) => (
-                      <div
-                        className="table-row with-business"
-                        key={business.id}
-                      >
-                        <div>{business.id}</div>
-
-                        <div>
-                          {business.name || "—"}
-                        </div>
-
-                        <div>
-                          {business.expiration_date
-                            ? new Date(
-                                business.expiration_date
-                              ).toLocaleDateString()
-                            : "—"}
-                        </div>
-
-                        <div>
-                          {business.license_active ? (
-                            <span className="status-active">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="status-inactive">
-                              Inactive
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
+                    <p>
+                      No license information available.
+                    </p>
                   )}
+                </div>
+              </div>
+            )}
+
+          {/* =================================================
+              GENERATE LICENSE
+          ================================================= */}
+
+          {isSuperAdmin &&
+            selectedAction ===
+              "generate-license" && (
+              <form
+                onSubmit={
+                  handleGenerateLicense
+                }
+                className="edit-form compact-form"
+              >
+                <h3>
+                  Generate New License
+                </h3>
+
+                <label>
+                  License Password:
+
+                  <input
+                    type="password"
+                    value={
+                      newLicense.license_password
+                    }
+                    onChange={(event) =>
+                      setNewLicense({
+                        ...newLicense,
+                        license_password:
+                          event.target
+                            .value,
+                      })
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  License Key:
+
+                  <input
+                    type="text"
+                    value={
+                      newLicense.key
+                    }
+                    onChange={(event) =>
+                      setNewLicense({
+                        ...newLicense,
+                        key:
+                          event.target
+                            .value,
+                      })
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  Duration:
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={
+                      newLicense.duration_days
+                    }
+                    onChange={(event) =>
+                      setNewLicense({
+                        ...newLicense,
+                        duration_days:
+                          event.target
+                            .value,
+                      })
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  Business:
+
+                  <select
+                    value={
+                      newLicense.business_id
+                    }
+                    onChange={(event) =>
+                      setNewLicense({
+                        ...newLicense,
+                        business_id:
+                          event.target
+                            .value,
+                      })
+                    }
+                    required
+                  >
+                    <option value="">
+                      Select Business
+                    </option>
+
+                    {businesses.map(
+                      (
+                        business
+                      ) => (
+                        <option
+                          key={
+                            business.id
+                          }
+                          value={
+                            business.id
+                          }
+                        >
+                          {
+                            business.name
+                          }
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+
+                <div className="form-buttons">
+                  <button type="submit">
+                    🔑 Generate License
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedAction(
+                        "license-management"
+                      )
+                    }
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+          {/* =================================================
+              DELETE USER MODAL
+          ================================================= */}
+
+          {userToDelete && (
+            <div
+              className="modal-overlay"
+              onClick={() =>
+                setUserToDelete(
+                  null
+                )
+              }
+            >
+              <div
+                className="modal-content"
+                onClick={(event) =>
+                  event.stopPropagation()
+                }
+              >
+                <h3>
+                  Delete User
+                </h3>
+
+                <p>
+                  Are you sure you
+                  want to delete user{" "}
+                  <strong>
+                    {
+                      userToDelete
+                    }
+                  </strong>
+                  ?
+                </p>
+
+                <p className="warning-text">
+                  This action cannot
+                  be undone.
+                </p>
+
+                <div className="modal-actions">
+                  <button
+                    className="action-btn delete"
+                    type="button"
+                    onClick={
+                      handleConfirmDelete
+                    }
+                  >
+                    🗑️ Delete User
+                  </button>
+
+                  <button
+                    className="action-btn cancel"
+                    type="button"
+                    onClick={() =>
+                      setUserToDelete(
+                        null
+                      )
+                    }
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             </div>
           )}
 
-        {/* ================================================= GENERATE LICENSE ================================================= */}
-        {isSuperAdmin &&
-          selectedAction === "generate-license" && (
-            <form
-              onSubmit={handleGenerateLicense}
-              className="edit-form compact-form super-admin-form"
-            >
-              <h3>Generate New License</h3>
+          {/* =================================================
+              DELETE BUSINESS MODAL
+          ================================================= */}
 
-              {/* License Password */}
-              <label>
-                License Password:
-                <input
-                  type="password"
-                  value={newLicense.license_password}
-                  onChange={(e) =>
-                    setNewLicense({
-                      ...newLicense,
-                      license_password: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </label>
-
-              {/* License Key */}
-              <label>
-                License Key:
-                <input
-                  type="text"
-                  value={newLicense.key}
-                  onChange={(e) =>
-                    setNewLicense({
-                      ...newLicense,
-                      key: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </label>
-
-              {/* Duration */}
-              <label>
-                Duration (Days):
-                <input
-                  type="number"
-                  min="1"
-                  value={newLicense.duration_days}
-                  onChange={(e) =>
-                    setNewLicense({
-                      ...newLicense,
-                      duration_days: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </label>
-
-              {/* Business */}
-              <label>
-                Business:
-                <select
-                  value={newLicense.business_id}
-                  onChange={(e) =>
-                    setNewLicense({
-                      ...newLicense,
-                      business_id: e.target.value,
-                    })
-                  }
-                  required
-                >
-                  <option value="">
-                    Select Business
-                  </option>
-
-                  {businesses.map((business) => (
-                    <option
-                      key={business.id}
-                      value={business.id}
-                    >
-                      {business.name} — #{business.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="form-actions">
-                <button
-                  className="action-btn save"
-                  type="submit"
-                >
-                  🔑 Generate License
-                </button>
-
-                <button
-                  className="action-btn cancel"
-                  type="button"
-                  onClick={() =>
-                    setSelectedAction("license-management")
-                  }
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-
-        {/* ================================================= DELETE USER MODAL ================================================= */}
-        {userToDelete && (
-          <div
-            className="modal-overlay"
-            onClick={() => setUserToDelete(null)}
-          >
-            <div
-              className="modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="close-btn"
-                type="button"
-                onClick={() => setUserToDelete(null)}
+          {isSuperAdmin &&
+            businessToDelete !==
+              null && (
+              <div
+                className="modal-overlay"
+                onClick={() =>
+                  setBusinessToDelete(
+                    null
+                  )
+                }
               >
-                ✖
-              </button>
-
-              <h3>Delete User</h3>
-
-              <p>
-                Are you sure you want to delete user{" "}
-                <strong>{userToDelete}</strong>?
-              </p>
-
-              <p className="warning-text">
-                This action cannot be undone.
-              </p>
-
-              <div className="modal-actions">
-                <button
-                  className="action-btn delete"
-                  type="button"
-                  onClick={handleConfirmDelete}
+                <div
+                  className="modal-content"
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
                 >
-                  🗑️ Delete User
-                </button>
+                  <h3>
+                    Delete Business
+                  </h3>
 
-                <button
-                  className="action-btn cancel"
-                  type="button"
-                  onClick={() => setUserToDelete(null)}
-                >
-                  Cancel
-                </button>
+                  <p>
+                    Are you sure you
+                    want to delete
+                    Business #
+                    {
+                      businessToDelete
+                    }
+                    ?
+                  </p>
+
+                  <p className="warning-text">
+                    This action cannot
+                    be undone.
+                  </p>
+
+                  <div className="modal-actions">
+                    <button
+                      className="action-btn delete"
+                      type="button"
+                      onClick={
+                        handleDeleteBusiness
+                      }
+                    >
+                      🗑️ Delete Business
+                    </button>
+
+                    <button
+                      className="action-btn cancel"
+                      type="button"
+                      onClick={() =>
+                        setBusinessToDelete(
+                          null
+                        )
+                      }
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
-      </>
-    )}
+            )}
+        </>
+      )}
     </div>
   );
 };
 
 export default UserManagement;
+

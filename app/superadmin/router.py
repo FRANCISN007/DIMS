@@ -1,26 +1,49 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.hash import argon2
 import os
 
-from app.users.schemas import SuperAdminUpdate 
 from app.database import get_db
 from app.users import models
-from app.users.schemas import SuperAdminCreate
+from app.users.schemas import (
+    SuperAdminCreate,
+    SuperAdminUpdate,
+)
 from app.users.auth import get_password_hash
+
 
 router = APIRouter()
 
 
-def verify_admin_license_password(plain_password: str) -> bool:
-    stored_hash = os.getenv("ADMIN_LICENSE_PASSWORD_HASH")
+# ==========================================================
+# VERIFY ADMIN LICENSE PASSWORD
+# ==========================================================
+
+def verify_admin_license_password(
+    plain_password: str,
+) -> bool:
+
+    stored_hash = os.getenv(
+        "ADMIN_LICENSE_PASSWORD_HASH"
+    )
+
     if not stored_hash:
         return False
+
     try:
-        return argon2.verify(plain_password, stored_hash)
+        return argon2.verify(
+            plain_password,
+            stored_hash,
+        )
+
     except Exception:
         return False
 
+
+# ==========================================================
+# BOOTSTRAP SUPER ADMIN
+# ==========================================================
 
 @router.post("/bootstrap-super-admin")
 def bootstrap_super_admin(
@@ -29,12 +52,24 @@ def bootstrap_super_admin(
 ):
     """
     Create the FIRST Super Admin.
+
+    Super Admin:
+        - Has no business
+        - Has no location
+        - Does not require a database role
+        - Is identified by business_id = NULL
+        - Can access the entire system
     """
 
-    # Only one Super Admin is allowed
+    # ======================================================
+    # 1. CHECK WHETHER SUPER ADMIN ALREADY EXISTS
+    # ======================================================
+
     existing_super_admin = (
         db.query(models.User)
-        .filter(models.User.business_id.is_(None))
+        .filter(
+            models.User.business_id.is_(None)
+        )
         .first()
     )
 
@@ -44,6 +79,10 @@ def bootstrap_super_admin(
             detail="Super Admin already exists.",
         )
 
+    # ======================================================
+    # 2. VERIFY ADMIN LICENSE PASSWORD
+    # ======================================================
+
     if not verify_admin_license_password(
         data.admin_license_password
     ):
@@ -52,37 +91,111 @@ def bootstrap_super_admin(
             detail="Invalid Admin License password.",
         )
 
+    # ======================================================
+    # 3. NORMALIZE USERNAME
+    # ======================================================
+
+    username = (
+        data.username
+        .strip()
+        .lower()
+    )
+
+    if not username:
+        raise HTTPException(
+            status_code=400,
+            detail="Username is required.",
+        )
+
+    # ======================================================
+    # 4. CHECK USERNAME
+    # ======================================================
+
+    existing_username = (
+        db.query(models.User)
+        .filter(
+            models.User.username == username
+        )
+        .first()
+    )
+
+    if existing_username:
+        raise HTTPException(
+            status_code=409,
+            detail="Username already exists.",
+        )
+
+    # ======================================================
+    # 5. CREATE SUPER ADMIN
+    # ======================================================
+
     user = models.User(
-        username=data.username.strip().lower(),
-        full_name="System Administrator",
+        username=username,
+
+        full_name=(
+            data.full_name.strip()
+            if data.full_name
+            else "System Administrator"
+        ),
+
         phone=None,
-        hashed_password=get_password_hash(data.password),
+
+        hashed_password=get_password_hash(
+            data.password
+        ),
+
+        # --------------------------------------------------
+        # SUPER ADMIN HAS NO BUSINESS
+        # --------------------------------------------------
+
         business_id=None,
-        role_id=None,
+
+        # --------------------------------------------------
+        # SUPER ADMIN HAS NO LOCATION
+        # --------------------------------------------------
+
         location_id=None,
+
         status="active",
     )
 
+    # ======================================================
+    # 6. NO ROLE ASSIGNMENT
+    # ======================================================
+    #
+    # Super Admin does NOT need:
+    #
+    #     role_id
+    #
+    # or:
+    #
+    #     user_roles
+    #
+    # Super Admin is identified by:
+    #
+    #     business_id = NULL
+    #
+    # Your authentication layer should translate this into:
+    #
+    #     SUPER_ADMIN
+    #
+    # ======================================================
+
     db.add(user)
+
     db.commit()
+
     db.refresh(user)
 
     return {
-        "message": "Super Admin created successfully."
+        "message": "Super Admin created successfully.",
+        "username": user.username,
     }
 
 
-
-
-def verify_admin_license_password(plain_password: str) -> bool:
-    stored_hash = os.getenv("ADMIN_LICENSE_PASSWORD_HASH")
-    if not stored_hash:
-        return False
-    try:
-        return argon2.verify(plain_password, stored_hash)
-    except Exception:
-        return False
-
+# ==========================================================
+# UPDATE SUPER ADMIN PASSWORD
+# ==========================================================
 
 @router.put("/update-super-admin-password")
 def update_super_admin_password(
@@ -91,7 +204,14 @@ def update_super_admin_password(
 ):
     """
     Update Super Admin password.
+
+    The Admin License password is required before
+    the password can be changed.
     """
+
+    # ======================================================
+    # 1. VERIFY ADMIN LICENSE PASSWORD
+    # ======================================================
 
     if not verify_admin_license_password(
         data.admin_license_password
@@ -101,10 +221,24 @@ def update_super_admin_password(
             detail="Invalid Admin License password.",
         )
 
+    # ======================================================
+    # 2. NORMALIZE USERNAME
+    # ======================================================
+
+    username = (
+        data.username
+        .strip()
+        .lower()
+    )
+
+    # ======================================================
+    # 3. FIND SUPER ADMIN
+    # ======================================================
+
     super_admin = (
         db.query(models.User)
         .filter(
-            models.User.username == data.username.strip().lower(),
+            models.User.username == username,
             models.User.business_id.is_(None),
         )
         .first()
@@ -116,8 +250,14 @@ def update_super_admin_password(
             detail="Super Admin not found.",
         )
 
-    super_admin.hashed_password = get_password_hash(
-        data.new_password
+    # ======================================================
+    # 4. UPDATE PASSWORD
+    # ======================================================
+
+    super_admin.hashed_password = (
+        get_password_hash(
+            data.new_password
+        )
     )
 
     db.commit()
@@ -125,3 +265,4 @@ def update_super_admin_password(
     return {
         "message": "Password updated successfully."
     }
+

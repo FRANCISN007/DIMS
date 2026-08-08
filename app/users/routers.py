@@ -48,6 +48,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Store your admin password securely (e.g., environment variable)
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "supersecret")
 
+
 @router.post(
     "/register",
     response_model=schemas.UserDisplaySchema,
@@ -60,37 +61,68 @@ def register_user(
         role_required(USER_MANAGEMENT_ROLES)
     ),
 ):
-    """
-    Create a new user.
-    - Super Admin can create users for any business.
-    - Admin can only create users within their own business.
-    """
+    # ==========================================================
+    # 1. NORMALIZE USERNAME
+    # ==========================================================
 
-    # --------------------------------------------------
-    # Normalize Username
-    # --------------------------------------------------
-    user.username = user.username.strip().lower()
+    username = user.username.strip().lower()
 
-    # --------------------------------------------------
-    # Determine Business
-    # --------------------------------------------------
-    if current_user.role_code == SUPER_ADMIN:
-        business_id = user.business_id
-    else:
-        business_id = current_user.business_id
-
-    if business_id is None:
+    if not username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Business is required.",
+            detail="Username is required.",
         )
 
-    # --------------------------------------------------
-    # Validate Business
-    # --------------------------------------------------
+    # ==========================================================
+    # 2. DETERMINE CURRENT USER TYPE
+    # ==========================================================
+
+    is_super_admin = (
+        current_user.role_code == SUPER_ADMIN
+        or current_user.business_id is None
+    )
+
+    # ==========================================================
+    # 3. DETERMINE BUSINESS
+    # ==========================================================
+
+    if is_super_admin:
+        # ------------------------------------------------------
+        # Super Admin must select the business for the new user.
+        # ------------------------------------------------------
+
+        if user.business_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business is required.",
+            )
+
+        business_id = user.business_id
+
+    else:
+        # ------------------------------------------------------
+        # Normal Admin automatically uses their own business.
+        # ------------------------------------------------------
+
+        if current_user.business_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Your account is not assigned to a business."
+                ),
+            )
+
+        business_id = current_user.business_id
+
+    # ==========================================================
+    # 4. LOAD BUSINESS
+    # ==========================================================
+
     business = (
         db.query(Business)
-        .filter(Business.id == business_id)
+        .filter(
+            Business.id == business_id
+        )
         .first()
     )
 
@@ -100,20 +132,27 @@ def register_user(
             detail="Business not found.",
         )
 
+    # ==========================================================
+    # 5. CHECK BUSINESS LICENSE
+    # ==========================================================
+
     if not business.is_license_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Business license is inactive.",
         )
 
-    # --------------------------------------------------
-    # Check Duplicate Username
-    # --------------------------------------------------
+    # ==========================================================
+    # 6. CHECK DUPLICATE USERNAME
+    # ==========================================================
+
     existing_user = (
         db.query(user_models.User)
         .filter(
             user_models.User.business_id == business_id,
-            func.lower(user_models.User.username) == user.username,
+            func.lower(
+                user_models.User.username
+            ) == username,
         )
         .first()
     )
@@ -124,22 +163,95 @@ def register_user(
             detail="Username already exists.",
         )
 
-    
-    role = (
-        db.query(Role)
-        .filter(
-            Role.id == user.role_id,
-            Role.business_id == business_id,
-            Role.status == "active",
+    # ==========================================================
+    # 7. VALIDATE ROLE IDS
+    # ==========================================================
+
+    if not user.role_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one role is required.",
         )
-        .first()
+
+    # ----------------------------------------------------------
+    # Remove duplicate role IDs while preserving order.
+    # ----------------------------------------------------------
+
+    role_ids = list(
+        dict.fromkeys(
+            int(role_id)
+            for role_id in user.role_ids
+        )
     )
 
-    print("Matched role:", role)
+    # ==========================================================
+    # 8. LOAD ROLES
+    # ==========================================================
 
-    # --------------------------------------------------
-    # Validate Location (Optional)
-    # --------------------------------------------------
+    roles = (
+        db.query(Role)
+        .filter(
+            Role.id.in_(role_ids),
+            Role.status == "active",
+        )
+        .order_by(Role.id)
+        .all()
+    )
+
+    # ----------------------------------------------------------
+    # Make sure every submitted role exists.
+    # ----------------------------------------------------------
+
+    found_role_ids = {
+        role.id
+        for role in roles
+    }
+
+    missing_role_ids = [
+        role_id
+        for role_id in role_ids
+        if role_id not in found_role_ids
+    ]
+
+    if missing_role_ids:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "One or more selected roles are invalid "
+                "or inactive."
+            ),
+        )
+
+    # ==========================================================
+    # 9. VALIDATE ROLE BUSINESS
+    # ==========================================================
+
+    for role in roles:
+
+        # ------------------------------------------------------
+        # If roles belong to businesses, make sure the role
+        # belongs to the selected business.
+        #
+        # If your Role table is global, this condition should
+        # be removed.
+        # ------------------------------------------------------
+
+        if role.business_id is not None:
+            if role.business_id != business_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Role '{role.name}' does not belong "
+                        f"to the selected business."
+                    ),
+                )
+
+    # ==========================================================
+    # 10. VALIDATE LOCATION
+    # ==========================================================
+
+    location = None
+
     if user.location_id is not None:
 
         location = (
@@ -155,17 +267,31 @@ def register_user(
         if not location:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Selected location not found.",
+                detail=(
+                    "Selected location was not found, "
+                    "is inactive, or does not belong "
+                    "to the selected business."
+                ),
             )
 
-    # --------------------------------------------------
-    # Hash Password
-    # --------------------------------------------------
-    hashed_password = pwd_context.hash(user.password)
+    # ==========================================================
+    # 11. HASH PASSWORD
+    # ==========================================================
 
-    # --------------------------------------------------
-    # Create User
-    # --------------------------------------------------
+    hashed_password = pwd_context.hash(
+        user.password
+    )
+
+    # ==========================================================
+    # 12. PREPARE USER DATA
+    # ==========================================================
+
+    user.username = username
+
+    # ==========================================================
+    # 13. CREATE USER
+    # ==========================================================
+
     new_user = user_crud.create_user(
         db=db,
         user=user,
@@ -173,23 +299,126 @@ def register_user(
         business_id=business_id,
     )
 
-    return schemas.UserDisplaySchema(
-        id=new_user.id,
-        username=new_user.username,
-        full_name=new_user.full_name,
-        phone=new_user.phone,
-        business_id=new_user.business_id,
-        business_name=business.name,
-        role_id=new_user.role_id,
-        role_name=role.name,
-        role_code=role.code,
-        location_id=new_user.location_id,
-        location_name=location.name if new_user.location_id else None,
-        status=new_user.status,
-        created_at=new_user.created_at,
-        updated_at=new_user.updated_at,
+    # ==========================================================
+    # 14. ASSIGN ROLES
+    # ==========================================================
+
+    new_user.roles = roles
+
+    # ==========================================================
+    # 15. ASSIGN LOCATION
+    # ==========================================================
+
+    new_user.location_id = (
+        location.id
+        if location
+        else None
     )
 
+    # ==========================================================
+    # 16. SAVE
+    # ==========================================================
+
+    db.commit()
+
+    db.refresh(new_user)
+
+    # ==========================================================
+    # 17. PRIMARY ROLE
+    # ==========================================================
+
+    primary_role = (
+        new_user.roles[0]
+        if new_user.roles
+        else None
+    )
+
+    # ==========================================================
+    # 18. RETURN USER
+    # ==========================================================
+
+    return schemas.UserDisplaySchema(
+        id=new_user.id,
+
+        username=new_user.username,
+
+        full_name=new_user.full_name,
+
+        phone=new_user.phone,
+
+        # ------------------------------------------------------
+        # Business
+        # ------------------------------------------------------
+
+        business_id=new_user.business_id,
+
+        business_name=business.name,
+
+        # ------------------------------------------------------
+        # Multiple roles
+        # ------------------------------------------------------
+
+        roles=[
+            {
+                "id": role.id,
+                "name": role.name,
+                "code": role.code,
+            }
+            for role in new_user.roles
+        ],
+
+        # ------------------------------------------------------
+        # Backward compatibility
+        # ------------------------------------------------------
+
+        role_id=(
+            primary_role.id
+            if primary_role
+            else None
+        ),
+
+        role_name=(
+            primary_role.name
+            if primary_role
+            else None
+        ),
+
+        role_code=(
+            primary_role.code
+            if primary_role
+            else None
+        ),
+
+        # ------------------------------------------------------
+        # Location
+        # ------------------------------------------------------
+
+        location_id=(
+            location.id
+            if location
+            else None
+        ),
+
+        location_name=(
+            location.name
+            if location
+            else None
+        ),
+
+        # ------------------------------------------------------
+        # Status
+        # ------------------------------------------------------
+
+        status=new_user.status,
+
+        # ------------------------------------------------------
+        # Dates
+        # ------------------------------------------------------
+
+        created_at=new_user.created_at,
+
+        updated_at=new_user.updated_at,
+    )
 
 
 
@@ -216,7 +445,17 @@ def login(
 ):
     """
     Authenticate user and return JWT token.
+
+    Supports:
+    - Super Admin
+    - Business users
+    - Multiple roles per user
+    - Optional user location
     """
+
+    # ======================================================
+    # USERNAME / PASSWORD
+    # ======================================================
 
     username = (
         form_data.username
@@ -273,8 +512,12 @@ def login(
     # RELATIONSHIPS
     # ======================================================
 
-    role = user.role
+    # IMPORTANT:
+    # User now has MULTIPLE roles.
+    roles = user.roles or []
+
     business = user.business
+
     location = user.location
 
     # ======================================================
@@ -286,6 +529,7 @@ def login(
     )
 
     business_id = None
+
     license_key = None
 
     # ======================================================
@@ -294,16 +538,24 @@ def login(
 
     if not is_super_admin:
 
+        # --------------------------------------------------
+        # BUSINESS MUST EXIST
+        # --------------------------------------------------
+
         if business is None:
 
             logger.error(
                 f"User {username} has business_id "
-                f"{user.business_id} but business was not found."
+                f"{user.business_id} but business "
+                f"was not found."
             )
 
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="User is not assigned to a valid business.",
+                detail=(
+                    "User is not assigned to "
+                    "a valid business."
+                ),
             )
 
         # --------------------------------------------------
@@ -346,10 +598,7 @@ def login(
         # LICENSE EXPIRATION
         # --------------------------------------------------
 
-        if (
-            license_key.expiration_date
-            is not None
-        ):
+        if license_key.expiration_date is not None:
 
             if (
                 to_wat(
@@ -360,41 +609,149 @@ def login(
 
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Business license has expired.",
+                    detail=(
+                        "Business license has expired."
+                    ),
                 )
 
         business_id = business.id
+
+    # ======================================================
+    # ROLES
+    # ======================================================
+
+    if is_super_admin:
+
+        # --------------------------------------------------
+        # SUPER ADMIN
+        # --------------------------------------------------
+
+        role_id = None
+
+        role_name = "Super Administrator"
+
+        role_code = SUPER_ADMIN
+
+        role_list = []
+
+        role_ids = []
+
+        role_codes = [
+            SUPER_ADMIN
+        ]
+
+    else:
+
+        # --------------------------------------------------
+        # BUSINESS USER
+        # --------------------------------------------------
+
+        role_list = [
+            {
+                "id": role.id,
+                "name": role.name,
+                "code": role.code,
+            }
+            for role in roles
+        ]
+
+        role_ids = [
+            role.id
+            for role in roles
+        ]
+
+        role_codes = [
+            role.code
+            for role in roles
+        ]
+
+        # --------------------------------------------------
+        # PRIMARY ROLE
+        # --------------------------------------------------
+        #
+        # This is temporary backward compatibility.
+        #
+        # Existing code using:
+        #
+        # current_user.role_code
+        #
+        # will still work.
+        #
+        # Later we can change authorization to check
+        # current_user.roles instead.
+        # --------------------------------------------------
+
+        primary_role = (
+            roles[0]
+            if roles
+            else None
+        )
+
+        role_id = (
+            primary_role.id
+            if primary_role
+            else None
+        )
+
+        role_name = (
+            primary_role.name
+            if primary_role
+            else None
+        )
+
+        role_code = (
+            primary_role.code
+            if primary_role
+            else None
+        )
+
+    # ======================================================
+    # LOCATION
+    # ======================================================
+
+    location_id = (
+        location.id
+        if location
+        else None
+    )
+
+    location_name = (
+        location.name
+        if location
+        else None
+    )
 
     # ======================================================
     # JWT PAYLOAD
     # ======================================================
 
     token_data = {
+
         "sub": user.username,
 
         "business_id": business_id,
 
-        "role_id": (
-            role.id
-            if role
-            else None
-        ),
+        # --------------------------------------------------
+        # Multiple roles
+        # --------------------------------------------------
 
-        "role_code": (
-            SUPER_ADMIN
-            if is_super_admin
-            else (
-                role.code
-                if role
-                else None
-            )
-        ),
+        "role_ids": role_ids,
 
-        "location_id": (
-            location.id
-            if location
-            else None
-        ),
+        "role_codes": role_codes,
+
+        # --------------------------------------------------
+        # Backward compatibility
+        # --------------------------------------------------
+
+        "role_id": role_id,
+
+        "role_code": role_code,
+
+        # --------------------------------------------------
+        # Location
+        # --------------------------------------------------
+
+        "location_id": location_id,
     }
 
     logger.info(
@@ -423,6 +780,10 @@ def login(
 
         "token_type": "bearer",
 
+        # ==================================================
+        # USER
+        # ==================================================
+
         "user": {
 
             "id": user.id,
@@ -435,6 +796,10 @@ def login(
 
             "status": user.status,
 
+            # ----------------------------------------------
+            # BUSINESS
+            # ----------------------------------------------
+
             "business_id": user.business_id,
 
             "business_name": (
@@ -443,44 +808,34 @@ def login(
                 else None
             ),
 
-            "role_id": (
-                role.id
-                if role
-                else None
-            ),
+            # ----------------------------------------------
+            # MULTIPLE ROLES
+            # ----------------------------------------------
 
-            "role_name": (
-                "Super Administrator"
-                if is_super_admin
-                else (
-                    role.name
-                    if role
-                    else None
-                )
-            ),
+            "roles": role_list,
 
-            "role_code": (
-                SUPER_ADMIN
-                if is_super_admin
-                else (
-                    role.code
-                    if role
-                    else None
-                )
-            ),
+            # ----------------------------------------------
+            # BACKWARD COMPATIBILITY
+            # ----------------------------------------------
 
-            "location_id": (
-                location.id
-                if location
-                else None
-            ),
+            "role_id": role_id,
 
-            "location_name": (
-                location.name
-                if location
-                else None
-            ),
+            "role_name": role_name,
+
+            "role_code": role_code,
+
+            # ----------------------------------------------
+            # LOCATION
+            # ----------------------------------------------
+
+            "location_id": location_id,
+
+            "location_name": location_name,
         },
+
+        # ==================================================
+        # BUSINESS
+        # ==================================================
 
         "business": {
 
@@ -515,6 +870,10 @@ def login(
             ),
         },
 
+        # ==================================================
+        # LICENSE
+        # ==================================================
+
         "license": {
 
             "is_active": (
@@ -536,6 +895,7 @@ def login(
 # ==========================================================
 # LIST USERS
 # ==========================================================
+
 @router.get(
     "/",
     response_model=list[schemas.UserDisplaySchema],
@@ -546,14 +906,195 @@ def list_users(
         role_required(USER_MANAGEMENT_ROLES)
     ),
 ):
+    # ==========================================================
+    # 1. DETERMINE CURRENT USER TYPE
+    # ==========================================================
 
-    if current_user.role_code == SUPER_ADMIN:
-        return user_crud.get_all_users(db)
-
-    return user_crud.get_users_by_business(
-        db=db,
-        business_id=current_user.business_id,
+    is_super_admin = (
+        current_user.role_code == SUPER_ADMIN
+        or current_user.business_id is None
     )
+
+    # ==========================================================
+    # 2. LOAD USERS
+    # ==========================================================
+
+    if is_super_admin:
+
+        users = (
+            db.query(user_models.User)
+            .order_by(
+                user_models.User.id.desc()
+            )
+            .all()
+        )
+
+    else:
+
+        if current_user.business_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Your account is not assigned "
+                    "to a business."
+                ),
+            )
+
+        users = (
+            db.query(user_models.User)
+            .filter(
+                user_models.User.business_id
+                == current_user.business_id
+            )
+            .order_by(
+                user_models.User.id.desc()
+            )
+            .all()
+        )
+
+    # ==========================================================
+    # 3. BUILD RESPONSE
+    # ==========================================================
+
+    result = []
+
+    for user in users:
+
+        # ======================================================
+        # BUSINESS
+        # ======================================================
+
+        business = user.business
+
+        # ======================================================
+        # LOCATION
+        # ======================================================
+
+        location = user.location
+
+        # ======================================================
+        # ROLES
+        # ======================================================
+
+        roles = user.roles or []
+
+        # ======================================================
+        # PRIMARY ROLE
+        # ======================================================
+
+        primary_role = (
+            roles[0]
+            if roles
+            else None
+        )
+
+        # ======================================================
+        # CREATE USER DISPLAY RESPONSE
+        # ======================================================
+
+        result.append(
+            schemas.UserDisplaySchema(
+
+                # ------------------------------------------------
+                # Basic information
+                # ------------------------------------------------
+
+                id=user.id,
+
+                username=user.username,
+
+                full_name=user.full_name,
+
+                phone=user.phone,
+
+                # ------------------------------------------------
+                # Business
+                # ------------------------------------------------
+
+                business_id=(
+                    user.business_id
+                ),
+
+                business_name=(
+                    business.name
+                    if business
+                    else None
+                ),
+
+                # ------------------------------------------------
+                # Multiple roles
+                # ------------------------------------------------
+
+                roles=[
+                    {
+                        "id": role.id,
+                        "name": role.name,
+                        "code": role.code,
+                    }
+                    for role in roles
+                ],
+
+                # ------------------------------------------------
+                # Backward compatibility
+                # ------------------------------------------------
+
+                role_id=(
+                    primary_role.id
+                    if primary_role
+                    else None
+                ),
+
+                role_name=(
+                    primary_role.name
+                    if primary_role
+                    else None
+                ),
+
+                role_code=(
+                    primary_role.code
+                    if primary_role
+                    else None
+                ),
+
+                # ------------------------------------------------
+                # Location
+                # ------------------------------------------------
+
+                location_id=(
+                    location.id
+                    if location
+                    else None
+                ),
+
+                location_name=(
+                    location.name
+                    if location
+                    else None
+                ),
+
+                # ------------------------------------------------
+                # Status
+                # ------------------------------------------------
+
+                status=user.status,
+
+                # ------------------------------------------------
+                # Dates
+                # ------------------------------------------------
+
+                created_at=user.created_at,
+
+                updated_at=user.updated_at,
+            )
+        )
+
+    # ==========================================================
+    # 4. RETURN USERS
+    # ==========================================================
+
+    return result
+
+
 
 
 # ==========================================================
@@ -618,9 +1159,11 @@ def get_current_user_info(
     return current_user
 
 
+
 # ==========================================================
 # UPDATE USER
 # ==========================================================
+
 @router.put(
     "/{username}",
     response_model=schemas.UserDisplaySchema,
@@ -633,6 +1176,21 @@ def update_user(
         role_required(USER_MANAGEMENT_ROLES)
     ),
 ):
+    # ==========================================================
+    # 1. NORMALIZE USERNAME
+    # ==========================================================
+
+    username = username.strip().lower()
+
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is required.",
+        )
+
+    # ==========================================================
+    # 2. LOAD USER
+    # ==========================================================
 
     user = user_crud.get_user_by_username(
         db,
@@ -645,40 +1203,178 @@ def update_user(
             detail="User not found.",
         )
 
-    if (
-        current_user.role_code != SUPER_ADMIN
-        and user.business_id != current_user.business_id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update users within your business.",
-        )
+    # ==========================================================
+    # 3. DETERMINE CURRENT USER TYPE
+    # ==========================================================
 
-    # -----------------------------
-    # Validate Role
-    # -----------------------------
-    if updated_user.role_id is not None:
+    is_super_admin = (
+        current_user.role_code == SUPER_ADMIN
+        or current_user.business_id is None
+    )
 
-        role = (
-            db.query(Role)
+    # ==========================================================
+    # 4. CHECK BUSINESS ACCESS
+    # ==========================================================
+
+    if not is_super_admin:
+
+        if current_user.business_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Your account is not assigned "
+                    "to a business."
+                ),
+            )
+
+        if user.business_id != current_user.business_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "You can only update users "
+                    "within your business."
+                ),
+            )
+
+    # ==========================================================
+    # 5. LOAD USER BUSINESS
+    # ==========================================================
+
+    business = None
+
+    if user.business_id is not None:
+
+        business = (
+            db.query(Business)
             .filter(
-                Role.id == updated_user.role_id,
-                Role.business_id == user.business_id,
-                Role.status == "active",
+                Business.id == user.business_id
             )
             .first()
         )
 
-        if not role:
+        if not business:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Selected role not found.",
+                detail="Business not found.",
             )
 
-    # -----------------------------
-    # Validate Location
-    # -----------------------------
+        # ------------------------------------------------------
+        # Check business license
+        # ------------------------------------------------------
+
+        if not business.is_license_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Business license is inactive.",
+            )
+
+    # ==========================================================
+    # 6. VALIDATE ROLES
+    # ==========================================================
+
+    roles = None
+
+    if updated_user.role_ids is not None:
+
+        if not updated_user.role_ids:
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one role is required.",
+            )
+
+        # ------------------------------------------------------
+        # Remove duplicate role IDs while preserving order
+        # ------------------------------------------------------
+
+        role_ids = list(
+            dict.fromkeys(
+                int(role_id)
+                for role_id in updated_user.role_ids
+            )
+        )
+
+        # ------------------------------------------------------
+        # Load active roles
+        # ------------------------------------------------------
+
+        roles = (
+            db.query(Role)
+            .filter(
+                Role.id.in_(role_ids),
+                Role.status == "active",
+            )
+            .order_by(Role.id)
+            .all()
+        )
+
+        # ------------------------------------------------------
+        # Make sure every submitted role was found
+        # ------------------------------------------------------
+
+        found_role_ids = {
+            role.id
+            for role in roles
+        }
+
+        missing_role_ids = [
+            role_id
+            for role_id in role_ids
+            if role_id not in found_role_ids
+        ]
+
+        if missing_role_ids:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "One or more selected roles are "
+                    "invalid or inactive."
+                ),
+            )
+
+        # ------------------------------------------------------
+        # Validate role business
+        # ------------------------------------------------------
+
+        if user.business_id is not None:
+
+            for role in roles:
+
+                # ------------------------------------------------
+                # Global roles are allowed.
+                #
+                # Business-specific roles must belong to
+                # the user's business.
+                # ------------------------------------------------
+
+                if role.business_id is not None:
+
+                    if role.business_id != user.business_id:
+
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=(
+                                f"Role '{role.name}' does not "
+                                f"belong to this business."
+                            ),
+                        )
+
+    # ==========================================================
+    # 7. VALIDATE LOCATION
+    # ==========================================================
+
+    location = None
+
     if updated_user.location_id is not None:
+
+        if user.business_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "A location cannot be assigned "
+                    "to a user without a business."
+                ),
+            )
 
         location = (
             db.query(Location)
@@ -693,15 +1389,28 @@ def update_user(
         if not location:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Selected location not found.",
+                detail=(
+                    "Selected location was not found, "
+                    "is inactive, or does not belong "
+                    "to this business."
+                ),
             )
+
+    # ==========================================================
+    # 8. HASH PASSWORD
+    # ==========================================================
 
     hashed_password = None
 
     if updated_user.password:
+
         hashed_password = pwd_context.hash(
             updated_user.password
         )
+
+    # ==========================================================
+    # 9. UPDATE BASIC USER INFORMATION
+    # ==========================================================
 
     updated = user_crud.update_user(
         db=db,
@@ -710,7 +1419,185 @@ def update_user(
         hashed_password=hashed_password,
     )
 
-    return updated
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User could not be updated.",
+        )
+
+    # ==========================================================
+    # 10. UPDATE ROLES
+    # ==========================================================
+
+    if roles is not None:
+        updated.roles = roles
+
+    # ==========================================================
+    # 11. UPDATE LOCATION
+    # ==========================================================
+
+    if updated_user.location_id is not None:
+
+        updated.location_id = location.id
+
+    # ----------------------------------------------------------
+    # If the caller explicitly wants to remove the location,
+    # UserUpdate.location_id should support None as an explicit
+    # value. Since Pydantic currently defaults None, this section
+    # only changes the location when a location ID is supplied.
+    # ----------------------------------------------------------
+
+    # ==========================================================
+    # 12. SAVE CHANGES
+    # ==========================================================
+
+    db.commit()
+
+    db.refresh(updated)
+
+    # ==========================================================
+    # 13. LOAD BUSINESS AGAIN
+    # ==========================================================
+
+    business = None
+
+    if updated.business_id is not None:
+
+        business = (
+            db.query(Business)
+            .filter(
+                Business.id == updated.business_id
+            )
+            .first()
+        )
+
+    # ==========================================================
+    # 14. LOAD LOCATION
+    # ==========================================================
+
+    location = None
+
+    if updated.location_id is not None:
+
+        location = (
+            db.query(Location)
+            .filter(
+                Location.id == updated.location_id
+            )
+            .first()
+        )
+
+    # ==========================================================
+    # 15. LOAD ROLES
+    # ==========================================================
+
+    updated_roles = updated.roles or []
+
+    # ==========================================================
+    # 16. PRIMARY ROLE
+    # ==========================================================
+
+    primary_role = (
+        updated_roles[0]
+        if updated_roles
+        else None
+    )
+
+    # ==========================================================
+    # 17. RETURN UPDATED USER
+    # ==========================================================
+
+    return schemas.UserDisplaySchema(
+        # ------------------------------------------------------
+        # Basic information
+        # ------------------------------------------------------
+
+        id=updated.id,
+
+        username=updated.username,
+
+        full_name=updated.full_name,
+
+        phone=updated.phone,
+
+        # ------------------------------------------------------
+        # Business
+        # ------------------------------------------------------
+
+        business_id=updated.business_id,
+
+        business_name=(
+            business.name
+            if business
+            else None
+        ),
+
+        # ------------------------------------------------------
+        # Multiple roles
+        # ------------------------------------------------------
+
+        roles=[
+            {
+                "id": role.id,
+                "name": role.name,
+                "code": role.code,
+            }
+            for role in updated_roles
+        ],
+
+        # ------------------------------------------------------
+        # Backward compatibility
+        # ------------------------------------------------------
+
+        role_id=(
+            primary_role.id
+            if primary_role
+            else None
+        ),
+
+        role_name=(
+            primary_role.name
+            if primary_role
+            else None
+        ),
+
+        role_code=(
+            primary_role.code
+            if primary_role
+            else None
+        ),
+
+        # ------------------------------------------------------
+        # Location
+        # ------------------------------------------------------
+
+        location_id=(
+            location.id
+            if location
+            else None
+        ),
+
+        location_name=(
+            location.name
+            if location
+            else None
+        ),
+
+        # ------------------------------------------------------
+        # Status
+        # ------------------------------------------------------
+
+        status=updated.status,
+
+        # ------------------------------------------------------
+        # Dates
+        # ------------------------------------------------------
+
+        created_at=updated.created_at,
+
+        updated_at=updated.updated_at,
+    )
+
 
 
 # ==========================================================

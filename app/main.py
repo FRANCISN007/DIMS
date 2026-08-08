@@ -102,7 +102,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.add_middleware(TenantMiddleware)
+
 
 # --------------------------------------------------
 # CORS (LAN SAFE)
@@ -122,6 +122,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(TenantMiddleware)
+
 # --------------------------------------------------
 # FILE UPLOADS
 # --------------------------------------------------
@@ -247,6 +250,7 @@ async def spa_fallback(request: Request, call_next):
     if request.url.path.startswith((
         "/users",
         "/superadmin",
+        "/business",
         "/rooms",
         "/bookings",
         "/payments",

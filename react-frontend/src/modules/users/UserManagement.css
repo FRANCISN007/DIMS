@@ -1,442 +1,1348 @@
-/* ===============================
+
+/* =========================================================
    USER MANAGEMENT CONTAINER
-=============================== */
+========================================================= */
+
 .user-container {
   padding: 12px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f8f9fa;
   border-radius: 8px;
+
   min-height: 100%;
-  height: calc(100vh - 80px);     
-  overflow: hidden;               
+  height: calc(100vh - 80px);
+
+  overflow: hidden;
+
   display: flex;
   flex-direction: column;
+
+  box-sizing: border-box;
 }
 
-/* Super admin mode */
+/* Super Admin mode */
 .user-container.super-admin-mode {
-  background-color: #f0e8ff;
+  background-color: #f4effc;
   border: 1px solid #6f42c1;
   box-shadow: 0 4px 15px rgba(111, 66, 193, 0.12);
 }
 
-/* ===============================
+
+/* =========================================================
    HEADER
-=============================== */
-.user-header {
+========================================================= */
+
+.user-heading-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+
+  margin-bottom: 12px;
+
+  gap: 12px;
   flex-wrap: wrap;
-  gap: 10px;
+
+  flex-shrink: 0;
 }
 
 .user-heading {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: #2c3e50;
   margin: 0;
+
+  font-size: 1.55rem;
+  font-weight: 600;
+
+  color: #2c3e50;
 }
 
-.user-heading.super-admin {
+.super-admin-mode .user-heading {
   color: #6f42c1;
 }
 
-.user-heading.super-admin::after {
+.super-admin-mode .user-heading::after {
   content: "SYSTEM-WIDE";
-  font-size: 0.72rem;
+
+  display: inline-block;
+
+  margin-left: 9px;
+  padding: 3px 8px;
+
   background: #6f42c1;
-  color: white;
-  padding: 2px 9px;
+  color: #ffffff;
+
   border-radius: 20px;
-  margin-left: 10px;
-  font-weight: 500;
+
+  font-size: 0.65rem;
+  font-weight: 600;
+
+  vertical-align: middle;
 }
+
+
+/* =========================================================
+   HEADER RIGHT
+========================================================= */
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+
+  flex-wrap: wrap;
 }
 
 .header-right select {
+  min-width: 190px;
+
   padding: 7px 10px;
+
+  border: 1px solid #ced4da;
   border-radius: 5px;
-  border: 1px solid #ccc;
-  font-size: 0.92rem;
-  background: white;
+
+  background: #ffffff;
+
+  color: #212529;
+
+  font-size: 0.88rem;
+
+  outline: none;
+
+  cursor: pointer;
 }
 
+.header-right select:focus {
+  border-color: #6f42c1;
+  box-shadow: 0 0 0 2px rgba(111, 66, 193, 0.12);
+}
+
+
+/* =========================================================
+   CLOSE MAIN BUTTON
+========================================================= */
+
 .close-main-button {
-  background: #dc3545;
-  color: white;
-  border: none;
-  font-size: 17px;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
-  cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #dc3545;
+  color: #ffffff;
+
+  font-size: 15px;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .close-main-button:hover {
   background: #c82333;
+  transform: scale(1.05);
 }
 
-/* ===============================
-   ERROR / POPUP
-=============================== */
+
+/* =========================================================
+   ERROR
+========================================================= */
+
 .error {
-  color: #dc3545;
-  font-weight: 500;
-  margin: 8px 0 12px 0;
+  flex-shrink: 0;
+
+  margin: 5px 0 10px;
+
   padding: 8px 12px;
+
   background: #ffebee;
-  border-radius: 4px;
+  border: 1px solid #f5c2c7;
+
+  border-radius: 5px;
+
+  color: #dc3545;
+
+  font-size: 0.88rem;
+  font-weight: 500;
 }
+
+
+/* =========================================================
+   POPUP MESSAGE
+========================================================= */
 
 .popup-inside {
+  flex-shrink: 0;
+
+  margin-bottom: 10px;
+  padding: 8px 13px;
+
   background: #198754;
-  color: white;
-  padding: 9px 14px;
-  border-radius: 6px;
+  color: #ffffff;
+
+  border-radius: 5px;
+
+  font-size: 0.88rem;
   font-weight: 500;
-  margin-bottom: 12px;
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-/* ===============================
-   TABLE STYLES - WITH VERTICAL SCROLL (COMPACT + ALIGNED)
-=============================== */
+
+/* =========================================================
+   USER / BUSINESS TABLE
+========================================================= */
+
 .user-table {
-  overflow-x: hidden;
-  overflow-y: auto;                    
-  border: 2px solid #28a745;
-  border-radius: 8px;
-  background-color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  flex: 1;                             
-  min-height: 200px;                   
+  flex: 1;
+
+  min-height: 200px;
+
+  overflow-x: auto;
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border: 1px solid #28a745;
+  border-radius: 7px;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+
+  box-sizing: border-box;
 }
 
-/* Super admin table */
-.user-table.super-admin-table {
-  border-color: #6f42c1;
-}
 
-/* Sticky Table Header */
+/* =========================================================
+   TABLE HEADER
+========================================================= */
+
 .user-table .table-header {
   display: grid;
-  background-color: #28a745;
-  color: white;
+
+  min-width: 900px;
+
+  background: #28a745;
+  color: #ffffff;
+
+  font-size: 0.82rem;
   font-weight: 600;
-  text-align: left;
-  font-size: 0.88rem;
+
   border-bottom: 2px solid #1e7e34;
+
   position: sticky;
   top: 0;
+
   z-index: 10;
 }
 
-/* ==================== EXACT COLUMN ALIGNMENT ==================== */
 
-/* Normal User Table (4 columns) */
-.user-table .table-header:not(.with-business),
-.user-table .table-row:not(.with-business) {
-  grid-template-columns: 65px 200px 1fr 280px;
+/*
+   CURRENT USER TABLE
+
+   ID
+   Username
+   Name
+   Roles
+   Business
+   Location
+   Status
+   Actions
+*/
+
+.user-table .table-header:not(.business-table-header) {
+  grid-template-columns:
+    55px
+    150px
+    minmax(150px, 1fr)
+    130px
+    160px
+    130px
+    90px
+    250px;
 }
 
-/* Super Admin Table (5 columns) - FIXED ALIGNMENT */
-.user-table .table-header.with-business,
-.user-table .table-row.with-business {
-  grid-template-columns: 65px 180px 1fr 130px 280px;   /* Business column = 130px */
+
+/* =========================================================
+   BUSINESS TABLE
+
+   ID
+   Name
+   Owner
+   Email
+   License
+   Actions
+========================================================= */
+
+.business-section .user-table .table-header {
+  min-width: 900px;
+
+  grid-template-columns:
+    55px
+    minmax(150px, 1fr)
+    170px
+    220px
+    100px
+    230px;
 }
 
-/* Header Cell Styling */
-.user-table .table-header div {
-  padding: 10px 8px;
-  border-right: 1px solid rgba(255,255,255,0.25);
+
+/* =========================================================
+   TABLE HEADER CELLS
+========================================================= */
+
+.user-table .table-header > div {
+  min-width: 0;
+
+  padding: 8px 7px;
+
   display: flex;
   align-items: center;
-}
 
-.user-table .table-header div:last-child {
-  border-right: none;
-}
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
 
-/* Business column highlight in header */
-.user-table .table-header.with-business div:nth-child(4) {
-  background-color: #5a32a3;
-}
-
-/* Table Rows */
-.user-table .table-row {
-  display: grid;
-  font-size: 0.82rem;
-  transition: background-color 0.2s ease;
-  align-items: center;
-  min-height: 25px;
-  height: 25px;
-}
-
-/* Row Cell Styling */
-.user-table .table-row div {
-  padding: 4px 8px;                   /* Consistent padding */
-  border-right: 1px solid #1f2020;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
+
+  box-sizing: border-box;
 }
 
-.user-table .table-row div:last-child {
+.user-table .table-header > div:last-child {
   border-right: none;
 }
 
-/* Grid Lines + Zebra */
-.user-table .table-row {
-  border-bottom: 1px solid #434646;
+
+/* =========================================================
+   BUSINESS HEADER HIGHLIGHT
+========================================================= */
+
+.business-section .table-header > div:nth-child(3) {
+  background: rgba(90, 50, 163, 0.35);
 }
 
-/* Zebra striping */
+
+/* =========================================================
+   TABLE ROW
+========================================================= */
+
+.user-table .table-row {
+  display: grid;
+
+  min-width: 900px;
+
+  min-height: 31px;
+
+  align-items: center;
+
+  font-size: 0.80rem;
+
+  border-bottom: 1px solid #d7dada;
+
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  box-sizing: border-box;
+}
+
+
+/* User table rows */
+
+.user-table .table-row:not(.business-table-row) {
+  grid-template-columns:
+    55px
+    150px
+    minmax(150px, 1fr)
+    130px
+    160px
+    130px
+    90px
+    250px;
+}
+
+
+/* Business table rows */
+
+.business-section .user-table .table-row {
+  grid-template-columns:
+    55px
+    minmax(150px, 1fr)
+    170px
+    220px
+    100px
+    230px;
+}
+
+
+/* =========================================================
+   TABLE CELLS
+========================================================= */
+
+.user-table .table-row > div {
+  min-width: 0;
+
+  height: 100%;
+
+  padding: 4px 7px;
+
+  display: flex;
+  align-items: center;
+
+  border-right: 1px solid #d7dada;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  box-sizing: border-box;
+}
+
+.user-table .table-row > div:last-child {
+  border-right: none;
+}
+
+
+/* =========================================================
+   ZEBRA STRIPING
+========================================================= */
+
 .user-table .table-row:nth-child(odd) {
   background-color: #f8f9fa;
 }
 
 .user-table .table-row:nth-child(even) {
-  background-color: white;
+  background-color: #ffffff;
 }
+
+
+/* Hover */
 
 .user-table .table-row:hover {
   background-color: #e9f5ee;
 }
 
-.user-table.super-admin-table .table-row:hover {
+
+/* Super Admin hover */
+
+.super-admin-mode .user-table .table-row:hover {
   background-color: #f0e8ff;
 }
 
-/* Highlight Business cell in rows */
-.user-table .table-row.with-business div:nth-child(4) {
-  background-color: #f8f4ff;
+
+/* =========================================================
+   BUSINESS COLUMN
+========================================================= */
+
+.user-table .table-row > div:nth-child(5) {
+  background-color: #fbfefb;
   font-weight: 500;
-  color: #4a2c8c;
 }
 
-/* Nice scrollbar styling */
+
+/* =========================================================
+   STATUS COLUMN
+========================================================= */
+
+.status-active,
+.status-inactive {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-width: 58px;
+
+  padding: 2px 7px;
+
+  border-radius: 12px;
+
+  font-size: 0.70rem;
+  font-weight: 600;
+}
+
+.status-active {
+  background: #d1e7dd;
+  color: #146c43;
+}
+
+.status-inactive {
+  background: #f8d7da;
+  color: #b02a37;
+}
+
+
+/* =========================================================
+   NO DATA
+========================================================= */
+
+.no-data {
+  padding: 30px 15px;
+
+  text-align: center;
+
+  color: #6c757d;
+
+  font-size: 0.9rem;
+}
+
+
+/* =========================================================
+   TABLE SCROLLBAR
+========================================================= */
+
 .user-table::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
+}
+
+.user-table::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 
 .user-table::-webkit-scrollbar-thumb {
-  background-color: #28a745;
+  background: #28a745;
   border-radius: 10px;
 }
 
 .user-table::-webkit-scrollbar-thumb:hover {
-  background-color: #1e7e34;
+  background: #1e7e34;
 }
 
-.user-table.super-admin-table::-webkit-scrollbar-thumb {
-  background-color: #6f42c1;
+.super-admin-mode .user-table::-webkit-scrollbar-thumb {
+  background: #6f42c1;
 }
 
-.user-table.super-admin-table::-webkit-scrollbar-thumb:hover {
-  background-color: #5a32a3;
+.super-admin-mode .user-table::-webkit-scrollbar-thumb:hover {
+  background: #5a32a3;
 }
 
-/* ===============================
+
+/* Firefox */
+
+.user-table {
+  scrollbar-width: thin;
+  scrollbar-color: #28a745 #f1f1f1;
+}
+
+.super-admin-mode .user-table {
+  scrollbar-color: #6f42c1 #f1f1f1;
+}
+
+
+/* =========================================================
    ACTION BUTTONS
-=============================== */
+========================================================= */
+
 .action-buttons {
   display: flex;
-  gap: 2px;
-  flex-wrap: wrap;
+  align-items: center;
+
+  gap: 3px;
+
+  flex-wrap: nowrap;
+
+  overflow: visible;
 }
+
+
+/* General button */
 
 .btn {
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 3px 7px;
+
   border: none;
+  border-radius: 4px;
+
+  font-size: 10.5px;
+  font-weight: 600;
+
+  line-height: 1.3;
+
+  white-space: nowrap;
+
   cursor: pointer;
-  transition: all 0.2s ease;
+
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease,
+    opacity 0.15s ease;
 }
 
-.btn.edit { background: #0d6efd; color: white; }
-.btn.edit:hover { background: #0b5ed7; }
+.btn:hover {
+  transform: translateY(-1px);
+}
 
-.btn.delete { background: #dc3545; color: white; }
-.btn.delete:hover { background: #bb2d3b; }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
 
-.btn.reset { background: #ffc107; color: #212529; }
-.btn.reset:hover { background: #e0a800; }
 
-/* ===============================
-   FORMS (Compact)
-=============================== */
+/* Edit */
+
+.btn.edit {
+  background: #0d6efd;
+  color: #ffffff;
+}
+
+.btn.edit:hover {
+  background: #0b5ed7;
+}
+
+
+/* Delete */
+
+.btn.delete {
+  background: #dc3545;
+  color: #ffffff;
+}
+
+.btn.delete:hover {
+  background: #bb2d3b;
+}
+
+
+/* Reset */
+
+.btn.reset {
+  background: #ffc107;
+  color: #212529;
+}
+
+.btn.reset:hover {
+  background: #e0a800;
+}
+
+
+/* Refresh */
+
+.btn.refresh {
+  padding: 7px 11px;
+
+  background: #6c757d;
+  color: #ffffff;
+
+  border-radius: 5px;
+
+  font-size: 0.84rem;
+}
+
+.btn.refresh:hover {
+  background: #5a6268;
+}
+
+
+/* Create */
+
+.btn.create {
+  padding: 7px 13px;
+
+  background: #28a745;
+  color: #ffffff;
+
+  border-radius: 5px;
+
+  font-size: 0.84rem;
+}
+
+.btn.create:hover {
+  background: #1e7e34;
+}
+
+
+/* =========================================================
+   FORMS
+========================================================= */
+
 .edit-form.compact-form {
-  margin-top: 16px;
+  width: 100%;
+
+  margin: 0 auto;
+
   padding: 16px;
-  background: #fff;
+
+  background: #ffffff;
+
   border: 1px solid #28a745;
   border-radius: 8px;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  box-sizing: border-box;
+
+  overflow-y: auto;
 }
 
-.edit-form.compact-form.super-admin-form {
+
+/* Super Admin forms */
+
+.super-admin-mode .edit-form.compact-form {
   border-color: #6f42c1;
-  background: #f8f5ff;
+  background: #faf8ff;
 }
 
-.edit-header h4 {
-  margin: 0 0 12px 0;
-  font-size: 1.15rem;
+
+/* Form headings */
+
+.edit-form.compact-form h3 {
+  margin: 0 0 15px;
+
   color: #2c3e50;
-}
 
-.edit-form label {
-  display: block;
-  margin-bottom: 5px;
+  font-size: 1.15rem;
   font-weight: 600;
-  font-size: 0.9rem;
 }
 
-.edit-form input {
-  width: 100%;
-  padding: 7px 9px;
-  border: 1px solid #ced4da;
-  border-radius: 5px;
-  font-size: 0.93rem;
+.super-admin-mode .edit-form.compact-form h3 {
+  color: #6f42c1;
+}
+
+
+.edit-header {
   margin-bottom: 10px;
 }
 
-/* Roles */
-.roles-checkboxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 0;
+.edit-header h4 {
+  margin: 0;
+
+  color: #2c3e50;
+
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
-.roles-checkboxes label {
-  background: #f8f9fa;
-  border: 1px solid #28a745;
-  padding: 5px 10px;
+
+/* =========================================================
+   FORM LABELS
+========================================================= */
+
+.edit-form label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #343a40;
+
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   FORM INPUTS
+========================================================= */
+
+.edit-form input,
+.edit-form select {
+  width: 100%;
+
+  margin-top: 4px;
+
+  padding: 7px 9px;
+
+  border: 1px solid #ced4da;
   border-radius: 5px;
+
+  background: #ffffff;
+
+  color: #212529;
+
+  font-family: inherit;
+
   font-size: 0.88rem;
-  cursor: pointer;
+
+  outline: none;
+
+  box-sizing: border-box;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-/* Form Buttons */
+.edit-form input:focus,
+.edit-form select:focus {
+  border-color: #28a745;
+
+  box-shadow:
+    0 0 0 2px rgba(40, 167, 69, 0.12);
+}
+
+
+/* Super Admin focus */
+
+.super-admin-mode .edit-form input:focus,
+.super-admin-mode .edit-form select:focus {
+  border-color: #6f42c1;
+
+  box-shadow:
+    0 0 0 2px rgba(111, 66, 193, 0.12);
+}
+
+
+/* Readonly fields */
+
+.edit-form input[readonly] {
+  background: #f1f3f5;
+
+  color: #6c757d;
+
+  cursor: not-allowed;
+}
+
+
+/* Disabled */
+
+.edit-form select:disabled,
+.edit-form input:disabled {
+  background: #e9ecef;
+
+  color: #6c757d;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   FORM BUTTONS
+========================================================= */
+
 .form-buttons {
   display: flex;
+
   justify-content: flex-end;
-  gap: 10px;
+  align-items: center;
+
+  gap: 8px;
+
   margin-top: 15px;
+
+  padding-top: 10px;
+
+  border-top: 1px solid #e9ecef;
 }
 
 .form-buttons button {
-  padding: 7px 16px;
-  border-radius: 5px;
-  font-weight: 600;
+  padding: 7px 15px;
+
   border: none;
+  border-radius: 5px;
+
+  font-size: 0.84rem;
+  font-weight: 600;
+
   cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
+
+.form-buttons button:hover {
+  transform: translateY(-1px);
+}
+
+
+/* Submit */
 
 .form-buttons button[type="submit"] {
   background: #28a745;
-  color: white;
+  color: #ffffff;
 }
 
 .form-buttons button[type="submit"]:hover {
   background: #1e7e34;
 }
 
-/* ===============================
-   MODALS
-=============================== */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+
+/* Cancel */
+
+.form-buttons button[type="button"] {
+  background: #6c757d;
+  color: #ffffff;
+}
+
+.form-buttons button[type="button"]:hover {
+  background: #5a6268;
+}
+
+
+/* =========================================================
+   ROLE CHECKBOXES
+========================================================= */
+
+.roles-checkboxes {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  margin: 10px 0;
 }
 
-.modal-content {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 360px;
-  max-width: 92%;
-  position: relative;
-}
+.roles-checkboxes label {
+  margin: 0;
 
-.close-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  padding: 5px 9px;
+
+  background: #f8f9fa;
+
+  border: 1px solid #28a745;
+
+  border-radius: 5px;
+
+  font-size: 0.82rem;
+
   cursor: pointer;
-  font-size: 15px;
 }
 
-/* ===============================
+
+/* =========================================================
    BUSINESS SECTION
-=============================== */
+========================================================= */
+
+.business-section {
+  flex: 1;
+
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* Business header */
+
 .business-section .section-header {
   display: flex;
-  justify-content: space-between;
+
   align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
   margin-bottom: 10px;
+
+  flex-shrink: 0;
 }
 
 .business-section .section-header h3 {
   margin: 0;
-  font-size: 1.2rem;
+
   color: #2c3e50;
+
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 
-.business-section .btn.create {
-  background: #28a745;
-  color: white;
-  padding: 7px 14px;
+
+/* Business table takes remaining height */
+
+.business-section .user-table {
+  flex: 1;
+
+  min-height: 200px;
+}
+
+
+/* =========================================================
+   BUSINESS EDIT FORM
+========================================================= */
+
+.business-section .edit-form {
+  border-color: #6f42c1;
+}
+
+
+/* =========================================================
+   LICENSE MANAGEMENT
+========================================================= */
+
+.license-management {
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+}
+
+
+/* License header */
+
+.license-management .section-header {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-bottom: 12px;
+}
+
+.license-management .section-header h3 {
+  margin: 0;
+
+  color: #6f42c1;
+
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+
+/* License card */
+
+.license-status-card {
+  padding: 16px;
+
+  background: #ffffff;
+
+  border: 1px solid #6f42c1;
+  border-radius: 8px;
+
+  box-shadow: 0 2px 8px rgba(111, 66, 193, 0.08);
+}
+
+.license-status-card h4 {
+  margin: 0 0 12px;
+
+  color: #6f42c1;
+
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+
+/* License information */
+
+.license-info {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(180px, 1fr));
+
+  gap: 8px 15px;
+}
+
+.license-info > div {
+  padding: 8px 10px;
+
+  background: #f8f5ff;
+
   border-radius: 5px;
-  font-size: 0.9rem;
+
+  color: #343a40;
+
+  font-size: 0.84rem;
 }
 
-.business-section .btn.create:hover {
-  background: #1e7e34;
+.license-info strong {
+  color: #495057;
 }
 
-/* Compact Business Table - Also aligned */
-.business-section .table-header.with-business,
-.business-section .table-row.with-business {
-  grid-template-columns: 65px 130px 190px 140px 200px 90px 240px;
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 15px;
+
+  background: rgba(0, 0, 0, 0.50);
+
+  box-sizing: border-box;
 }
 
-/* ===============================
-   REFRESH BUTTON
-=============================== */
-.btn.refresh {
-  background: #6c757d;
-  color: white;
-  padding: 7px 12px;
-  border-radius: 5px;
-  font-size: 0.9rem;
+
+/* Modal */
+
+.modal-content {
+  position: relative;
+
+  width: 360px;
+  max-width: 92%;
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  padding: 20px;
+
+  background: #ffffff;
+
+  border-radius: 8px;
+
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.20);
+
+  box-sizing: border-box;
+}
+
+.modal-content h3 {
+  margin: 0 30px 15px 0;
+
+  color: #2c3e50;
+
+  font-size: 1.05rem;
+}
+
+.modal-content p {
+  margin: 8px 0;
+
+  color: #495057;
+
+  font-size: 0.88rem;
+
+  line-height: 1.5;
+}
+
+
+/* Close */
+
+.close-btn {
+  position: absolute;
+
+  top: 10px;
+  right: 10px;
+
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #dc3545;
+  color: #ffffff;
+
+  font-size: 14px;
+
   cursor: pointer;
 }
 
-.btn.refresh:hover {
+.close-btn:hover {
+  background: #c82333;
+}
+
+
+/* =========================================================
+   MODAL ACTIONS
+========================================================= */
+
+.modal-actions {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  margin-top: 18px;
+}
+
+.action-btn {
+  padding: 7px 13px;
+
+  border: none;
+  border-radius: 5px;
+
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.action-btn.save {
+  background: #198754;
+  color: #ffffff;
+}
+
+.action-btn.save:hover {
+  background: #157347;
+}
+
+.action-btn.delete {
+  background: #dc3545;
+  color: #ffffff;
+}
+
+.action-btn.delete:hover {
+  background: #bb2d3b;
+}
+
+.action-btn.cancel {
+  background: #6c757d;
+  color: #ffffff;
+}
+
+.action-btn.cancel:hover {
   background: #5a6268;
 }
+
+
+/* =========================================================
+   WARNING TEXT
+========================================================= */
+
+.warning-text {
+  padding: 8px 10px;
+
+  background: #fff3cd;
+
+  border: 1px solid #ffecb5;
+
+  border-radius: 5px;
+
+  color: #664d03 !important;
+
+  font-size: 0.82rem !important;
+}
+
+
+/* =========================================================
+   ACCESS DENIED
+========================================================= */
+
+.user-container > div:not(.user-heading-row) {
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+
+@media (max-width: 1000px) {
+
+  .user-heading {
+    font-size: 1.35rem;
+  }
+
+  .header-right {
+    width: 100%;
+  }
+
+  .header-right select {
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .user-table {
+    overflow-x: auto;
+  }
+
+}
+
+
+@media (max-width: 700px) {
+
+  .user-container {
+    padding: 8px;
+
+    height: calc(100vh - 60px);
+  }
+
+  .user-heading-row {
+    align-items: flex-start;
+  }
+
+  .user-heading {
+    font-size: 1.2rem;
+  }
+
+  .header-right {
+    width: 100%;
+  }
+
+  .header-right select {
+    width: 100%;
+  }
+
+  .btn.refresh {
+    flex: 1;
+  }
+
+  .business-section .section-header,
+  .license-management .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .business-section .section-header .btn,
+  .license-management .section-header .btn {
+    width: 100%;
+  }
+
+  .edit-form.compact-form {
+    padding: 12px;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+  }
+
+  .form-buttons button {
+    width: 100%;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+
+/* =========================================================
+   SMALL SCREEN TABLE ACTIONS
+========================================================= */
+
+@media (max-width: 600px) {
+
+  .user-table .table-row > div {
+    padding: 4px 6px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .btn {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+}
+
+
+/* =========================================================
+   SMOOTH SCROLLING
+========================================================= */
+
+.user-table,
+.license-management,
+.edit-form.compact-form,
+.modal-content {
+  scroll-behavior: smooth;
+}
+

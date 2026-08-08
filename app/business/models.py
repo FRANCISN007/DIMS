@@ -70,11 +70,7 @@ class Business(Base):
     )
 
 
-    licenses = relationship(
-        "LicenseKey",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
+    
 
     # -----------------------------
     # FINANCE

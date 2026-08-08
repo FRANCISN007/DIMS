@@ -7,13 +7,49 @@ from sqlalchemy import (
     func,
     Index,
     UniqueConstraint,
+    Table,
 )
 from sqlalchemy.orm import relationship
 
 from app.database import Base
 
 
+# ==========================================================
+# USER ↔ ROLE ASSOCIATION
+# ==========================================================
+
+user_roles = Table(
+    "user_roles",
+    Base.metadata,
+
+    Column(
+        "user_id",
+        Integer,
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+    ),
+
+    Column(
+        "role_id",
+        Integer,
+        ForeignKey(
+            "roles.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+    ),
+)
+
+
+# ==========================================================
+# USER
+# ==========================================================
+
 class User(Base):
+
     __tablename__ = "users"
 
     __table_args__ = (
@@ -22,20 +58,51 @@ class User(Base):
             "username",
             name="uq_user_business_username",
         ),
-        Index("idx_user_business", "business_id"),
-        Index("idx_user_role", "role_id"),
-        Index("idx_user_location", "location_id"),
-        Index("idx_user_username", "username"),
-        Index("idx_user_status", "status"),
+
+        Index(
+            "idx_user_business",
+            "business_id",
+        ),
+
+        Index(
+            "idx_user_location",
+            "location_id",
+        ),
+
+        Index(
+            "idx_user_username",
+            "username",
+        ),
+
+        Index(
+            "idx_user_status",
+            "status",
+        ),
     )
 
-    id = Column(Integer, primary_key=True, index=True)
+    # ------------------------------------------------------
+    # ID
+    # ------------------------------------------------------
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    # ------------------------------------------------------
+    # USERNAME
+    # ------------------------------------------------------
 
     username = Column(
         String(50),
         nullable=False,
         index=True,
     )
+
+    # ------------------------------------------------------
+    # BASIC INFORMATION
+    # ------------------------------------------------------
 
     full_name = Column(
         String(150),
@@ -52,29 +119,45 @@ class User(Base):
         nullable=False,
     )
 
-    # Super Admin has no business
+    # ------------------------------------------------------
+    # BUSINESS
+    # ------------------------------------------------------
+
+    # Super Admin has no business.
     business_id = Column(
         Integer,
-        ForeignKey("businesses.id", ondelete="CASCADE"),
+        ForeignKey(
+            "businesses.id",
+            ondelete="CASCADE",
+        ),
         nullable=True,
         index=True,
     )
 
-    # Super Admin may not have a business role
-    role_id = Column(
-        Integer,
-        ForeignKey("roles.id", ondelete="RESTRICT"),
-        nullable=True,
-        index=True,
-    )
+    # ------------------------------------------------------
+    # LOCATION
+    # ------------------------------------------------------
 
-    # Optional for users not assigned to a location
+    # Location is OPTIONAL.
+    #
+    # Example:
+    # Accountant → may have no location
+    # Store      → may have no location
+    # Ops Manager → may have no location
+    #
     location_id = Column(
         Integer,
-        ForeignKey("locations.id", ondelete="SET NULL"),
+        ForeignKey(
+            "locations.id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
         index=True,
     )
+
+    # ------------------------------------------------------
+    # STATUS
+    # ------------------------------------------------------
 
     status = Column(
         String(20),
@@ -83,6 +166,10 @@ class User(Base):
         server_default="active",
         index=True,
     )
+
+    # ------------------------------------------------------
+    # DATES
+    # ------------------------------------------------------
 
     created_at = Column(
         DateTime(timezone=True),
@@ -97,16 +184,29 @@ class User(Base):
         nullable=False,
     )
 
-    # Relationships
+    # ======================================================
+    # RELATIONSHIPS
+    # ======================================================
+
     business = relationship(
         "Business",
         back_populates="users",
     )
 
-    role = relationship(
+    # ------------------------------------------------------
+    # MULTIPLE ROLES
+    # ------------------------------------------------------
+
+    roles = relationship(
         "Role",
+        secondary="user_roles",
         back_populates="users",
+        lazy="selectin",
     )
+
+    # ------------------------------------------------------
+    # LOCATION
+    # ------------------------------------------------------
 
     location = relationship(
         "Location",

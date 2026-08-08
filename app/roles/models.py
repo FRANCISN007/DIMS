@@ -5,31 +5,48 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     func,
+    UniqueConstraint,
 )
 
-from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.database import Base
 
 
 class Role(Base):
+
     __tablename__ = "roles"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
     business_id = Column(
         Integer,
-        ForeignKey("businesses.id", ondelete="CASCADE"),
+        ForeignKey(
+            "businesses.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         index=True,
     )
 
-    name = Column(String(100), nullable=False)
+    name = Column(
+        String(100),
+        nullable=False,
+    )
 
-    code = Column(String(50), nullable=False)
+    code = Column(
+        String(50),
+        nullable=False,
+    )
 
-    description = Column(String(255), nullable=True)
+    description = Column(
+        String(255),
+        nullable=True,
+    )
 
     status = Column(
         String(20),
@@ -58,12 +75,23 @@ class Role(Base):
         nullable=False,
     )
 
-    # Relationships
-    business = relationship("Business")
-    users = relationship("User", back_populates="role")
+    # ======================================================
+    # RELATIONSHIPS
+    # ======================================================
 
+    business = relationship(
+        "Business",
+    )
 
-    
+    users = relationship(
+        "User",
+        secondary="user_roles",
+        back_populates="roles",
+    )
+
+    # ======================================================
+    # CONSTRAINTS
+    # ======================================================
 
     __table_args__ = (
         UniqueConstraint(
@@ -71,6 +99,7 @@ class Role(Base):
             "name",
             name="uq_role_business_name",
         ),
+
         UniqueConstraint(
             "business_id",
             "code",

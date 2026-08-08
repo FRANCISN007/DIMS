@@ -149,7 +149,6 @@ def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme),
 ):
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid authentication credentials.",
@@ -163,7 +162,6 @@ def get_current_user(
     # ======================================================
 
     try:
-
         payload = jwt.decode(
             token,
             SECRET_KEY,
@@ -171,12 +169,10 @@ def get_current_user(
         )
 
     except JWTError as exc:
-
         print(
             "JWT DECODE ERROR:",
             repr(exc)
         )
-
         raise credentials_exception
 
     # ======================================================
@@ -189,12 +185,9 @@ def get_current_user(
         print(
             "JWT ERROR: Missing sub claim"
         )
-
         raise credentials_exception
 
-    username = str(
-        username
-    ).strip().lower()
+    username = str(username).strip().lower()
 
     # ======================================================
     # TOKEN BUSINESS
@@ -214,11 +207,9 @@ def get_current_user(
     )
 
     if not user:
-
         print(
             f"JWT ERROR: User '{username}' not found"
         )
-
         raise credentials_exception
 
     # ======================================================
@@ -226,7 +217,6 @@ def get_current_user(
     # ======================================================
 
     if user.status != "active":
-
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive.",
@@ -248,9 +238,6 @@ def get_current_user(
 
     if is_super_admin:
 
-        # A Super Admin should have no
-        # business restriction.
-
         business = None
 
     # ======================================================
@@ -260,7 +247,6 @@ def get_current_user(
     else:
 
         if token_business_id is None:
-
             print(
                 "JWT ERROR: Business user has no business_id in token"
             )
@@ -271,7 +257,6 @@ def get_current_user(
             )
 
         try:
-
             token_business_id = int(
                 token_business_id
             )
@@ -287,21 +272,20 @@ def get_current_user(
             )
 
         # --------------------------------------------------
-        # Verify token business matches database user
+        # Verify token business matches database
         # --------------------------------------------------
 
-        if (
-            token_business_id
-            != user.business_id
-        ):
+        if token_business_id != user.business_id:
 
             print(
                 "JWT BUSINESS MISMATCH:",
                 {
                     "token_business_id":
                         token_business_id,
+
                     "user_business_id":
                         user.business_id,
+
                     "username":
                         user.username,
                 }
@@ -319,14 +303,12 @@ def get_current_user(
         business = (
             db.query(Business)
             .filter(
-                Business.id
-                == user.business_id
+                Business.id == user.business_id
             )
             .first()
         )
 
         if not business:
-
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Business not found.",
@@ -337,51 +319,116 @@ def get_current_user(
         # --------------------------------------------------
 
         if not business.is_license_active:
-
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Business license is inactive.",
             )
 
     # ======================================================
-    # ROLE
+    # ROLES
     # ======================================================
 
-    role = user.role
+    roles = user.roles or []
 
     if is_super_admin:
 
-        role_id = (
-            role.id
-            if role
-            else None
-        )
+        role_id = None
 
-        role_name = (
-            "Super Administrator"
-        )
+        role_name = "Super Administrator"
 
         role_code = SUPER_ADMIN
 
+        role_list = []
+
     else:
 
+        role_list = [
+            {
+                "id": role.id,
+                "name": role.name,
+                "code": role.code,
+            }
+            for role in roles
+        ]
+
+        # --------------------------------------------------
+        # Primary role for backward compatibility
+        # --------------------------------------------------
+
+        primary_role = (
+            roles[0]
+            if roles
+            else None
+        )
+
         role_id = (
-            role.id
-            if role
+            primary_role.id
+            if primary_role
             else None
         )
 
         role_name = (
-            role.name
-            if role
+            primary_role.name
+            if primary_role
             else None
         )
 
         role_code = (
-            role.code
-            if role
+            primary_role.code
+            if primary_role
             else None
         )
+
+        # ------------------------------------------------------
+        # SUPER ADMIN
+        # ------------------------------------------------------
+
+        if is_super_admin:
+
+            role_id = None
+            role_name = "Super Administrator"
+            role_code = SUPER_ADMIN
+
+            role_list = []
+
+        # ------------------------------------------------------
+        # BUSINESS USER
+        # ------------------------------------------------------
+
+        else:
+
+            role_list = [
+                {
+                    "id": role.id,
+                    "name": role.name,
+                    "code": role.code,
+                }
+                for role in roles
+            ]
+
+            # --------------------------------------------------
+            # Primary role for backward compatibility
+            # --------------------------------------------------
+
+            primary_role = roles[0] if roles else None
+
+            role_id = (
+                primary_role.id
+                if primary_role
+                else None
+            )
+
+            role_name = (
+                primary_role.name
+                if primary_role
+                else None
+            )
+
+            role_code = (
+                primary_role.code
+                if primary_role
+                else None
+            )
 
     # ======================================================
     # LOCATION
@@ -407,35 +454,45 @@ def get_current_user(
 
     return user_schemas.UserDisplaySchema(
 
-        id=user.id,
+    id=user.id,
 
-        username=user.username,
+    username=user.username,
 
-        full_name=user.full_name,
+    full_name=user.full_name,
 
-        phone=user.phone,
+    phone=user.phone,
 
-        business_id=user.business_id,
+    business_id=user.business_id,
 
-        business_name=(
-            business.name
-            if business
-            else None
-        ),
+    business_name=(
+        business.name
+        if business
+        else None
+    ),
 
-        role_id=role_id,
+    # Multiple roles
+    roles=role_list,
 
-        role_name=role_name,
+    # Backward compatibility
+    role_id=role_id,
+    role_name=role_name,
+    role_code=role_code,
 
-        role_code=role_code,
+    location_id=(
+        user.location.id
+        if user.location
+        else None
+    ),
 
-        location_id=location_id,
+    location_name=(
+        user.location.name
+        if user.location
+        else None
+    ),
 
-        location_name=location_name,
+    status=user.status,
 
-        status=user.status,
+    created_at=user.created_at,
 
-        created_at=user.created_at,
-
-        updated_at=user.updated_at,
-    )
+    updated_at=user.updated_at,
+)

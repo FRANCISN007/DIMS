@@ -48,13 +48,7 @@ def create_business(
     if existing:
         raise HTTPException(status_code=400, detail="Business name already exists")
 
-    # Prevent duplicate owner_username for businesses (optional but recommended)
-    existing_owner = db.query(models.Business).filter(
-        models.Business.owner_username == business_in.owner_username.strip()
-    ).first()
-    if existing_owner:
-        raise HTTPException(status_code=400, detail="This username is already used as owner for another business")
-
+    
     # Create business with the specified owner_username
     business = models.Business(
         name=business_in.name.strip(),
@@ -383,22 +377,26 @@ def get_business(
 
 
 # ==========================================================
+
 # UPDATE BUSINESS
+
 # ==========================================================
+
 @router.put(
     "/{business_id}",
-    response_model=schemas.BusinessOut,
+response_model=schemas.BusinessOut,
 )
 def update_business(
     business_id: int,
     updated: schemas.BusinessUpdate,
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(
-            [SUPER_ADMIN, ADMIN]
-        )
+    role_required(
+    [SUPER_ADMIN, ADMIN]
+    )
     ),
-):
+    ):
+
 
     business = (
         db.query(models.Business)
@@ -414,6 +412,10 @@ def update_business(
             detail="Business not found.",
         )
 
+    # ----------------------------------------------------------
+    # PERMISSION CHECK
+    # ----------------------------------------------------------
+
     if (
         current_user.role_code != SUPER_ADMIN
         and current_user.business_id != business.id
@@ -423,28 +425,62 @@ def update_business(
             detail="Insufficient permissions.",
         )
 
+    # ----------------------------------------------------------
+    # GET ONLY FIELDS SENT BY CLIENT
+    # ----------------------------------------------------------
+
     update_data = updated.model_dump(
         exclude_unset=True
     )
 
+    # ----------------------------------------------------------
+    # PROTECTED FIELDS
+    # ----------------------------------------------------------
+    # owner_username is intentionally NOT protected.
+    # It can be edited.
+    #
+    # Business name remains unique because the database column
+    # has unique=True.
+    # ----------------------------------------------------------
+
     protected_fields = {
         "id",
-        "owner_username",
         "created_at",
     }
 
     for field in protected_fields:
         update_data.pop(field, None)
 
+    # ----------------------------------------------------------
+    # UPDATE BUSINESS
+    # ----------------------------------------------------------
+
     for field, value in update_data.items():
+
+        # Clean owner username if supplied
+        if field == "owner_username" and value is not None:
+            value = value.strip()
+
+        # Clean business name if supplied
+        if field == "name" and value is not None:
+            value = value.strip()
+
         setattr(
             business,
             field,
             value,
         )
 
+    # ----------------------------------------------------------
+    # SAVE
+    # ----------------------------------------------------------
+
     db.commit()
     db.refresh(business)
+
+    # ----------------------------------------------------------
+    # GET LATEST LICENSE
+    # ----------------------------------------------------------
 
     latest_license = (
         db.query(license_models.LicenseKey)
@@ -471,6 +507,10 @@ def update_business(
             latest_license.is_active
             and latest_license.expiration_date >= now_wat()
         )
+
+    # ----------------------------------------------------------
+    # RESPONSE
+    # ----------------------------------------------------------
 
     return schemas.BusinessOut(
         id=business.id,
