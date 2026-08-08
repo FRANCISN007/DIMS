@@ -218,8 +218,21 @@ def login(
     Authenticate user and return JWT token.
     """
 
-    username = form_data.username.strip().lower()
+    username = (
+        form_data.username
+        .strip()
+        .lower()
+    )
+
     password = form_data.password
+
+    logger.info(
+        f"Login attempt -> {username}"
+    )
+
+    # ======================================================
+    # AUTHENTICATE
+    # ======================================================
 
     user = authenticate_user(
         db=db,
@@ -228,55 +241,92 @@ def login(
     )
 
     if not user:
-        logger.warning(f"Authentication failed for '{username}'")
+
+        logger.warning(
+            f"Authentication failed -> {username}"
+        )
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password.",
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
         )
 
-    # ---------------------------------------------------
-    # User Status
-    # ---------------------------------------------------
+    logger.info(
+        f"Password authentication successful -> {username}"
+    )
+
+    # ======================================================
+    # USER STATUS
+    # ======================================================
 
     if user.status != "active":
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive.",
         )
 
+    # ======================================================
+    # RELATIONSHIPS
+    # ======================================================
+
     role = user.role
     business = user.business
     location = user.location
 
-    # Super Admin has no business
-    is_super_admin = user.business_id is None
+    # ======================================================
+    # SUPER ADMIN
+    # ======================================================
 
-    license_key = None
+    is_super_admin = (
+        user.business_id is None
+    )
+
     business_id = None
+    license_key = None
 
-    # ---------------------------------------------------
-    # Business & License Validation
-    # ---------------------------------------------------
+    # ======================================================
+    # BUSINESS USER
+    # ======================================================
 
     if not is_super_admin:
 
         if business is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User is not assigned to any business.",
+
+            logger.error(
+                f"User {username} has business_id "
+                f"{user.business_id} but business was not found."
             )
 
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User is not assigned to a valid business.",
+            )
+
+        # --------------------------------------------------
+        # BUSINESS LICENSE
+        # --------------------------------------------------
+
         if not business.is_license_active:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Business license is inactive.",
             )
 
+        # --------------------------------------------------
+        # ACTIVE LICENSE
+        # --------------------------------------------------
+
         license_key = (
             db.query(LicenseKey)
             .filter(
-                LicenseKey.business_id == business.id,
+                LicenseKey.business_id
+                == business.id,
+
                 LicenseKey.is_active.is_(True),
             )
             .order_by(
@@ -286,73 +336,193 @@ def login(
         )
 
         if license_key is None:
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No active license found.",
             )
 
-        
+        # --------------------------------------------------
+        # LICENSE EXPIRATION
+        # --------------------------------------------------
 
-        if to_wat(license_key.expiration_date) < now_wat():
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Business license has expired.",
-            )
+        if (
+            license_key.expiration_date
+            is not None
+        ):
+
+            if (
+                to_wat(
+                    license_key.expiration_date
+                )
+                < now_wat()
+            ):
+
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Business license has expired.",
+                )
 
         business_id = business.id
 
-    # ---------------------------------------------------
-    # Create JWT
-    # ---------------------------------------------------
+    # ======================================================
+    # JWT PAYLOAD
+    # ======================================================
+
+    token_data = {
+        "sub": user.username,
+
+        "business_id": business_id,
+
+        "role_id": (
+            role.id
+            if role
+            else None
+        ),
+
+        "role_code": (
+            SUPER_ADMIN
+            if is_super_admin
+            else (
+                role.code
+                if role
+                else None
+            )
+        ),
+
+        "location_id": (
+            location.id
+            if location
+            else None
+        ),
+    }
+
+    logger.info(
+        f"JWT payload -> {token_data}"
+    )
+
+    # ======================================================
+    # CREATE TOKEN
+    # ======================================================
 
     access_token = create_access_token(
-        data={
-            "sub": user.username,
-            "business_id": business_id,
-            "role_id": role.id if role else None,
-            "role_code": role.code if role else None,
-            "location_id": location.id if location else None,
-        }
+        data=token_data
     )
 
     logger.info(
-        f"Login successful -> {user.username}"
+        f"Login successful -> {username}"
     )
+
+    # ======================================================
+    # RESPONSE
+    # ======================================================
 
     return {
 
         "access_token": access_token,
+
         "token_type": "bearer",
 
         "user": {
+
             "id": user.id,
+
             "username": user.username,
+
             "full_name": user.full_name,
+
             "phone": user.phone,
+
             "status": user.status,
 
-            "role_id": role.id if role else None,
-            "role_name": role.name if role else None,
-            "role_code": role.code if role else None,
+            "business_id": user.business_id,
 
-            "location_id": location.id if location else None,
-            "location_name": location.name if location else None,
+            "business_name": (
+                business.name
+                if business
+                else None
+            ),
+
+            "role_id": (
+                role.id
+                if role
+                else None
+            ),
+
+            "role_name": (
+                "Super Administrator"
+                if is_super_admin
+                else (
+                    role.name
+                    if role
+                    else None
+                )
+            ),
+
+            "role_code": (
+                SUPER_ADMIN
+                if is_super_admin
+                else (
+                    role.code
+                    if role
+                    else None
+                )
+            ),
+
+            "location_id": (
+                location.id
+                if location
+                else None
+            ),
+
+            "location_name": (
+                location.name
+                if location
+                else None
+            ),
         },
 
         "business": {
-            "id": business.id if business else None,
-            "name": business.name if business else None,
-            "address": business.address if business else None,
-            "phone": business.phone if business else None,
-            "email": business.email if business else None,
+
+            "id": (
+                business.id
+                if business
+                else None
+            ),
+
+            "name": (
+                business.name
+                if business
+                else None
+            ),
+
+            "address": (
+                business.address
+                if business
+                else None
+            ),
+
+            "phone": (
+                business.phone
+                if business
+                else None
+            ),
+
+            "email": (
+                business.email
+                if business
+                else None
+            ),
         },
 
         "license": {
+
             "is_active": (
                 license_key.is_active
                 if license_key
                 else None
             ),
+
             "expiration_date": (
                 license_key.expiration_date
                 if license_key

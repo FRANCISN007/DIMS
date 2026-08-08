@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import axios from "axios";
-//import HotelPhoto3 from "../assets/images/HotelPhoto3.png";
+
 import "./DashboardPage.css";
 import * as FaIcons from "react-icons/fa";
 
@@ -18,7 +18,7 @@ const API_BASE_URL = getBaseUrl();
 
 const DashboardPage = () => {
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const businessName = storedUser.business?.name || "HEMS Hotel";
+  const businessName = storedUser.business?.name || "";
 
   const navigate = useNavigate();
 
@@ -480,7 +480,7 @@ const DashboardPage = () => {
           }}
         >
           <h1 className="header-title" style={{ flexGrow: 1 }}>
-            🏠 Hotel Management Dashboard
+            🏠 Distribution & Inventory Management Dashboard
           </h1>
 
           <div style={{ display: "flex", gap: "10px" }}>

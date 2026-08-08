@@ -493,3 +493,5 @@ def delete_role(
     return {
         "detail": "Role deleted successfully."
     }
+
+

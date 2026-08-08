@@ -8,6 +8,7 @@ from sqlalchemy import func
 from app.users.auth import get_current_user
 from app.users.schemas import UserDisplaySchema
 from app.license import models as license_models
+from datetime import datetime
 
 
 from sqlalchemy import func
@@ -151,7 +152,8 @@ def list_businesses(
         )
 
     businesses = (
-        query.order_by(models.Business.id.asc())
+        query
+        .order_by(models.Business.id.asc())
         .all()
     )
 
@@ -159,10 +161,14 @@ def list_businesses(
 
     for business in businesses:
 
+        # -------------------------------------------------
+        # Get latest license
+        # -------------------------------------------------
         latest_license = (
             db.query(license_models.LicenseKey)
             .filter(
-                license_models.LicenseKey.business_id == business.id,
+                license_models.LicenseKey.business_id
+                == business.id
             )
             .order_by(
                 license_models.LicenseKey.expiration_date.desc()
@@ -174,38 +180,52 @@ def list_businesses(
         expiration_date = None
 
         if latest_license:
-            expiration_date = latest_license.expiration_date
 
-            license_active = (
-                latest_license.is_active
-                and latest_license.expiration_date >= now
+            expiration_date = (
+                latest_license.expiration_date
             )
 
-        # ---------------------------------------------
+            # ---------------------------------------------
+            # Check license expiration safely
+            # ---------------------------------------------
+            if (
+                latest_license.is_active
+                and expiration_date is not None
+            ):
+
+                # Database may return a naive datetime.
+                # Convert it to the same timezone basis as now.
+                if expiration_date.tzinfo is None:
+                    expiration_date = expiration_date.replace(
+                        tzinfo=now.tzinfo
+                    )
+
+                license_active = (
+                    expiration_date >= now
+                )
+
+        # -------------------------------------------------
         # Active / inactive filter
-        # ---------------------------------------------
-        if active is not None and license_active != active:
-            continue
+        # -------------------------------------------------
+        if active is not None:
+            if license_active != active:
+                continue
 
+        # -------------------------------------------------
+        # Add result
+        # -------------------------------------------------
         results.append(
-
             schemas.BusinessOut(
-
                 id=business.id,
                 name=business.name,
                 address=business.address,
                 phone=business.phone,
                 email=business.email,
-
                 owner_username=business.owner_username,
-
                 created_at=business.created_at,
-
                 license_active=license_active,
                 expiration_date=expiration_date,
-
             )
-
         )
 
     return schemas.BusinessListResponse(
@@ -516,3 +536,6 @@ def delete_business(
         "message":
             f"Business '{business.name}' deleted successfully."
     }
+
+
+

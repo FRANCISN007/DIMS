@@ -246,6 +246,7 @@ async def spa_fallback(request: Request, call_next):
     # If API route → return JSON normally
     if request.url.path.startswith((
         "/users",
+        "/superadmin",
         "/rooms",
         "/bookings",
         "/payments",

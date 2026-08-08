@@ -7,16 +7,6 @@ from app.users.schemas import UserDisplaySchema
 from app.core.roles import ADMIN, SUPER_ADMIN
 
 
-
-from typing import Iterable
-
-from fastapi import Depends, HTTPException, status
-
-from app.users.auth import get_current_user
-from app.users.schemas import UserDisplaySchema
-from app.core.roles import ADMIN, SUPER_ADMIN
-
-
 def role_required(
     allowed_roles: Iterable[str],
     bypass_admin: bool = True,
@@ -24,27 +14,12 @@ def role_required(
     """
     Ensures the current user has one of the allowed roles.
 
-    Role permissions are checked using role_name.
+    Supports both role_name and role_code.
 
-    role_name:
-        - admin
-        - super_admin
-        - manager
-        - cashier
-        - etc.
-
-    role_code:
-        - ADM001
-        - ADM111
-        - etc.
-
-    If bypass_admin=True, users with ADMIN or SUPER_ADMIN
-    automatically pass the permission check.
+    Super Admin / Admin bypass permission checking when
+    bypass_admin=True.
     """
 
-    # --------------------------------------------------
-    # Normalize allowed roles
-    # --------------------------------------------------
     allowed_set = {
         role.lower().strip()
         for role in allowed_roles
@@ -53,28 +28,49 @@ def role_required(
     def wrapper(
         current_user: UserDisplaySchema = Depends(get_current_user),
     ):
+
         # --------------------------------------------------
-        # Get user's role NAME
+        # Normalize role name and role code
         # --------------------------------------------------
-        user_role = (
+
+        role_name = (
             current_user.role_name.lower().strip()
             if current_user.role_name
+            else ""
+        )
+
+        role_code = (
+            current_user.role_code.lower().strip()
+            if current_user.role_code
             else ""
         )
 
         # --------------------------------------------------
         # Super Admin / Admin bypass
         # --------------------------------------------------
-        if bypass_admin and user_role in {
-            ADMIN.lower(),
-            SUPER_ADMIN.lower(),
-        }:
-            return current_user
+
+        if bypass_admin:
+
+            if role_name in {
+                ADMIN.lower(),
+                SUPER_ADMIN.lower(),
+            }:
+                return current_user
+
+            if role_code in {
+                ADMIN.lower(),
+                SUPER_ADMIN.lower(),
+            }:
+                return current_user
 
         # --------------------------------------------------
         # Permission check
         # --------------------------------------------------
-        if user_role not in allowed_set:
+
+        if (
+            role_name not in allowed_set
+            and role_code not in allowed_set
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions.",
