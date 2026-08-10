@@ -52,14 +52,15 @@
   border: none;
   color: #d1d5db;
   text-align: left;
-  padding: 6px 12px;         /* reduced vertical padding */
+  padding: 12px 12px;         /* reduced vertical padding */
   margin-bottom: 4px;        /* less space between items */
-  font-size: 0.85rem;        /* smaller text */
+  font-size: .95rem;        /* smaller text */
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease;
   display: block;
   width: 100%;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -69,23 +70,26 @@
 }
 
 /* Special colors for reservation button */
-.reservation-button {
-  background-color: #e0dbdb;
-  color: white;
-  padding: 8px 12px;          /* reduced padding for compact size */
-  margin-bottom: 10px;
+.exit-button {
+  background-color: #6b7280; /* gray-500 */
+  border: none;
+  color: #d1d5db;
+  text-align: left;
+  padding: 8px 12px;         /* reduced vertical padding */
+  margin-bottom: 4px;        /* less space between items */
+  font-size: 1rem;        /* smaller text */
   border-radius: 6px;
   cursor: pointer;
-  width: fit-content;         /* ensure it wraps content perfectly */
-  display: inline-block;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  display: block;
+  font-weight: 700;
+  width: 100%;
   white-space: nowrap;
-  text-align: center;
-  font-size: 14px;            /* optional: smaller font for tighter look */
 }
 
 
 /* Adjust reservation button hover */
-.reservation-button:hover {
+.exit-button:hover {
   background-color: #b91c1c; /* darker red */
   color: white;
 }
@@ -252,13 +256,13 @@
  border-color: #5537c4;
 }
 
-.reservation-button.alert-active {
+.exit-button {
   background-color: #dc2626; /* red */
   color: white;
   font-weight: bold;
 }
 
-.reservation-button.alert-inactive {
+.exit-button {
   background-color: #6b7280; /* gray-500 */
   color: white;
   font-weight: normal;

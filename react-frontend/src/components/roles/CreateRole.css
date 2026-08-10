@@ -1,0 +1,355 @@
+
+/* =========================================================
+   CREATE ROLE PAGE
+========================================================= */
+
+.create-role-page {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.create-role-header {
+  margin-bottom: 12px;
+}
+
+.create-role-header h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.create-role-header p {
+  margin: 3px 0 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+.role-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.role-message-success {
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.role-message-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.role-message-icon {
+  font-weight: 700;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.create-role-form {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px 18px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* =========================================================
+   FORM GROUP
+========================================================= */
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.create-role-form {
+  position: relative;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 18px 20px 16px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* =========================================================
+   CLOSE BUTTON - TOP RIGHT OF FORM
+========================================================= */
+
+.create-role-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 5px;
+
+  background: transparent;
+  color: #6b7280;
+
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 30px;
+
+  cursor: pointer;
+
+  z-index: 10;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.create-role-close:hover {
+  background: #f3f4f6;
+  color: #dc2626;
+}
+
+.create-role-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 11px;
+}
+
+.form-group label {
+  margin-bottom: 4px;
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.required {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+/* =========================================================
+   INPUT / SELECT / TEXTAREA
+========================================================= */
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  outline: none;
+  background: #ffffff;
+  color: #1f2937;
+  font-family: inherit;
+  font-size: 0.84rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.form-group input,
+.form-group select {
+  height: 36px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #2563eb;
+  box-shadow:
+    0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* =========================================================
+   DESCRIPTION
+========================================================= */
+
+.form-group textarea {
+  height: 55px;
+  min-height: 55px;
+  max-height: 80px;
+  resize: vertical;
+}
+
+/* =========================================================
+   DISABLED BUSINESS
+========================================================= */
+
+.business-disabled {
+  background: #f3f4f6 !important;
+  color: #6b7280 !important;
+  border-color: #d1d5db !important;
+  cursor: not-allowed !important;
+}
+
+/* =========================================================
+   DISABLED FIELDS
+========================================================= */
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* =========================================================
+   RESET
+========================================================= */
+
+.reset-role-button {
+  padding: 8px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.reset-role-button:hover {
+  background: #f3f4f6;
+}
+
+.reset-role-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   CREATE
+========================================================= */
+
+.create-role-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 120px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 5px;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    transform 0.1s ease;
+}
+
+.create-role-button:hover {
+  background: #1d4ed8;
+}
+
+.create-role-button:active {
+  transform: translateY(1px);
+}
+
+.create-role-button:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   SPINNER
+========================================================= */
+
+.role-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: roleSpinner 0.7s linear infinite;
+}
+
+@keyframes roleSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 600px) {
+  .create-role-page {
+    padding: 10px;
+  }
+
+  .create-role-form {
+    padding: 14px;
+  }
+
+  .form-actions {
+    justify-content: stretch;
+  }
+
+  .reset-role-button,
+  .create-role-button {
+    flex: 1;
+  }
+}
+

@@ -95,6 +95,12 @@ import EventUpdate from "./components/events/EventUpdate";
 import ViewEventPayment from "./components/events/ViewEventPayment";
 
 
+// ================= ROLES =================
+import CreateRole from "./components/roles/CreateRole";
+import ListRole from "./components/roles/ListRole";
+
+
+
 console.log(
   "API BASE:",
   process.env.REACT_APP_API_BASE_URL
@@ -512,6 +518,29 @@ const App = () => {
             />
 
           </Route>
+
+
+
+          {/* ===================================================
+              ROLES
+          =================================================== */}
+
+          <Route path="roles">
+
+            <Route
+              index
+              element={<ListRole />}
+            />
+
+            <Route
+              path="create"
+              element={<CreateRole />}
+            />
+
+            
+
+          </Route>
+
 
 
           {/* ===================================================

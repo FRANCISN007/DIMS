@@ -254,12 +254,12 @@
 .user-table .table-header:not(.business-table-header) {
   grid-template-columns:
     55px
-    150px
-    minmax(150px, 1fr)
-    130px
     160px
-    130px
-    90px
+    minmax(155px, 1fr)
+    138px
+    166px
+    145px
+    95px
     250px;
 }
 
@@ -280,10 +280,10 @@
 
   grid-template-columns:
     55px
-    minmax(150px, 1fr)
-    170px
-    220px
-    100px
+    minmax(140px, 1fr)
+    177px
+    230px
+    115px
     230px;
 }
 

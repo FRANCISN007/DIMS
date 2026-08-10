@@ -8,6 +8,7 @@ import * as FaIcons from "react-icons/fa";
 
 import getBaseUrl from "../api/config";
 import axiosWithAuth from "../utils/axiosWithAuth";
+import CreateRole from "../components/roles/CreateRole";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -45,16 +46,7 @@ const DashboardPage = () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("DashboardData");
 
-    // ✅ Determine title by pathname
-    const path = window.location.pathname;
-    let title = "Dashboard Data";
-    if (path.includes("bookings")) title = "Guest Booking Details";
-    else if (path.includes("payments")) title = "Payment Report";
-    else if (path.includes("debtor")) title = "Debtor Report";
-    else if (path.includes("events")) title = "Event Report";
-    else if (path.includes("daily")) title = "Daily Payment Summary";
-    else if (path.includes("eventpayment")) title = "Event Payment Report";
-
+    
     const headers = Array.from(table.querySelectorAll("thead th")).map((th) =>
       th.innerText.trim()
     );
@@ -79,154 +71,7 @@ const DashboardPage = () => {
     // ✅ Blank row
     sheet.addRow([]);
 
-    // === 🔽 Summary Sections ===
-
-    // 1. Booking Summary
-    const bookingSummary = document.querySelector(".booking-summary");
-    if (bookingSummary) {
-      const lines = Array.from(bookingSummary.querySelectorAll("p")).map((p) =>
-        p.innerText.trim()
-      );
-      if (lines.length) {
-        sheet.addRow(["Booking Summary"]).font = { bold: true, italic: true };
-        lines.forEach((line) => sheet.addRow([line]));
-        sheet.addRow([]);
-      }
-    }
-
-    // 2. Payment Summary
-    const allSummary = document.querySelector(".all-summary-wrapper");
-    if (allSummary) {
-      sheet.addRow(["Payment Summary"]).font = { bold: true, italic: true };
-      const rows = allSummary.querySelectorAll(".summary-row");
-      rows.forEach((rowEl) => {
-        const left = rowEl.querySelector(".summary-left");
-        const right = rowEl.querySelector(".summary-right");
-
-        const leftText = left ? left.innerText.trim() : "";
-        const rightText = right ? right.innerText.trim() : "";
-
-        if (leftText && rightText) {
-          sheet.addRow([leftText, rightText]);
-        } else if (leftText) {
-          sheet.addRow([leftText]);
-        }
-      });
-      sheet.addRow([]);
-    }
-
-    // 3. Debtor Summary
-    const debtorSummary = document.querySelector(".debtor-summary-wrapper");
-    if (debtorSummary) {
-      sheet.addRow(["Debtor Summary"]).font = { bold: true, italic: true };
-      const rows = debtorSummary.querySelectorAll(".summary-row");
-      rows.forEach((rowEl) => {
-        const left = rowEl.querySelector(".summary-left");
-        const text = left ? left.innerText.trim() : "";
-        if (text) sheet.addRow([text]);
-      });
-      sheet.addRow([]);
-    }
-
-    // 4. Daily Payment Summary
-    const dailySummary = document.querySelector(".payment-method-summary");
-    if (dailySummary) {
-      sheet.addRow(["Daily Payment Breakdown"]).font = { bold: true, italic: true };
-      const listItems = dailySummary.querySelectorAll("ul li");
-      listItems.forEach((li) => {
-        sheet.addRow([li.innerText.trim()]);
-      });
-      sheet.addRow([]);
-    }
-
-    // 5. Status Summary
-    const statusSummary = document.querySelector(".status-summary-wrapper");
-    if (statusSummary) {
-      sheet.addRow(["Status Summary"]).font = { bold: true, italic: true };
-      const lines = Array.from(statusSummary.querySelectorAll("p")).map((p) =>
-        p.innerText.trim()
-      );
-      lines.forEach((line) => {
-        sheet.addRow([line]);
-      });
-      sheet.addRow([]);
-    }
-
-    // 6. Event Summary
-    const eventSummary = document.querySelector(".event-summary-wrapper");
-    if (eventSummary) {
-      sheet.addRow(["Event Summary"]).font = { bold: true, italic: true };
-
-      const lines = Array.from(eventSummary.querySelectorAll("div")).map((div) =>
-        div.innerText.trim()
-      );
-
-      lines.forEach((line) => {
-        sheet.addRow([line]);
-      });
-
-      sheet.addRow([]);
-    }
-
-    // 7. Event Payment Breakdown
-    const eventPaymentBreakdown = document.querySelector(".all-summary-wrappers");
-    if (eventPaymentBreakdown) {
-      sheet.addRow(["Event Payment Breakdown"]).font = { bold: true, italic: true };
-      const rows = eventPaymentBreakdown.querySelectorAll(".summary-rows");
-      rows.forEach((rowEl) => {
-        const left = rowEl.querySelector(".summary-lefts");
-        const right = rowEl.querySelector(".summary-rights");
-
-        const leftText = left ? left.innerText.trim() : "";
-        const rightText = right ? right.innerText.trim() : "";
-
-        if (leftText && rightText) {
-          sheet.addRow([leftText, rightText]);
-        } else if (leftText) {
-          sheet.addRow([leftText]);
-        }
-      });
-      sheet.addRow([]);
-    }
-
-    // 8. Event Payment Summary (Outstanding Events + Balance)
-    const eventOutstandingSummary = document.querySelector(".event-payment-summary");
-    if (eventOutstandingSummary) {
-      sheet.addRow(["Outstanding Event Summary"]).font = { bold: true, italic: true };
-
-      const lines = Array.from(
-        eventOutstandingSummary.querySelectorAll(".summary-line")
-      ).map((el) => el.innerText.trim());
-
-      lines.forEach((line) => {
-        sheet.addRow([line]);
-      });
-
-      sheet.addRow([]);
-    }
-
-    // ✅ Style all cells
-    sheet.eachRow((row) => {
-      row.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-        cell.alignment = { vertical: "middle", horizontal: "left" };
-      });
-    });
-
-    // ✅ Auto column width
-    sheet.columns.forEach((col) => {
-      let maxLength = 10;
-      col.eachCell({ includeEmpty: true }, (cell) => {
-        const val = cell.value ? cell.value.toString() : "";
-        maxLength = Math.max(maxLength, val.length);
-      });
-      col.width = maxLength + 2;
-    });
+    
 
     // ✅ Download file
     const buffer = await workbook.xlsx.writeBuffer();
@@ -253,6 +98,9 @@ const DashboardPage = () => {
   //const [hasReservationAlert, setHasReservationAlert] = useState(false);
   const [reservationCount, setReservationCount] = useState(0);
   const [licenseInfo, setLicenseInfo] = useState(null);
+
+  const [showCreateRole, setShowCreateRole] =
+  useState(false);
 
   // 🔥 PORTAL SUBMENU FUNCTIONS
   const openSubmenu = (e, item) => {
@@ -402,9 +250,32 @@ const DashboardPage = () => {
   const menu = [
     { name: "🙎 Users", path: "/dashboard/users", adminOnly: true },
     
-    
-    { name: "🍷 Locations", path: "/bar" },
-    { name: "🏪 Store & Inventory", path: "/store" },
+    {
+  name: "🏷️Manage Role",
+
+    submenu: [
+      {
+        label: "➕ Create Role",
+        action: "create-role",
+      },
+
+      {
+        label: "📝 List Roles",
+        path: "/dashboard/roles/list",
+      },
+    ],
+  },
+    { name: "📍 Location",
+
+      submenu: [
+        { label: "➕ Create Location", path: "/dashboard/locations/create" },
+        { label: "📝 List Locations", path: "/dashboard/locations/list" },
+        
+      ]
+    },
+
+    { name: "🍽️Catering Service", path: "/bar" },
+    { name: "🏭Store Control", path: "/store" },
     
   ];
 
@@ -453,12 +324,9 @@ const DashboardPage = () => {
           </button>
 
           <button
-            onClick={() => navigate("/dashboard/reservation-alert")}
-            className={`sidebar-button reservation-button ${
-              reservationCount > 0 ? "alert-active" : "alert-inactive"
-            }`}
+            className="exit-button"
           >
-            🔔 Reservation Alert{reservationCount > 0 ? ` (${reservationCount})` : ""}
+            ❌ Exit
           </button>
         </nav>
       </aside>
@@ -523,17 +391,32 @@ const DashboardPage = () => {
           )}
 
         <section className="content-area">
-          <div className="background-overlay">
-            <h1 className="watermark">{businessName}</h1>
-          </div>
 
-          <div className="content-inner">
+        <div className="background-overlay">
+          <h1 className="watermark">
+            {businessName}
+          </h1>
+        </div>
+
+        <div className="content-inner">
+
+          {showCreateRole ? (
+            <CreateRole
+              onClose={() => setShowCreateRole(false)}
+            />
+          ) : (
             <Outlet />
-          </div>
-        </section>
+          )}
+
+        </div>
+
+      </section>
       </main>
 
-      {/* 🔥 PORTAL SUBMENU */}
+      {/* =========================================================
+          PORTAL SUBMENU
+      ========================================================= */}
+
       {submenu.visible &&
         createPortal(
           <div
@@ -548,10 +431,28 @@ const DashboardPage = () => {
           >
             {submenu.items.map((sub) => (
               <button
-                key={sub.path}
+                key={sub.path || sub.action || sub.label}
                 className="submenu-item"
                 onClick={() => {
-                  navigate(sub.path);
+
+                  /* =============================================
+                    CREATE ROLE
+                  ============================================= */
+
+                  if (sub.action === "create-role") {
+                    setShowCreateRole(true);
+                    closeSubmenu();
+                    return;
+                  }
+
+                  /* =============================================
+                    NORMAL ROUTE
+                  ============================================= */
+
+                  if (sub.path) {
+                    navigate(sub.path);
+                  }
+
                   closeSubmenu();
                 }}
               >

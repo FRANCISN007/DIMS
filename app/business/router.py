@@ -376,6 +376,25 @@ def get_business(
     )
 
 
+
+from datetime import timezone
+from zoneinfo import ZoneInfo
+
+WAT = ZoneInfo("Africa/Lagos")
+
+
+def ensure_wat_aware(dt):
+    if dt is None:
+        return None
+
+    # Database returned a naive datetime.
+    # Treat it as Africa/Lagos time.
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=WAT)
+
+    # Already timezone-aware
+    return dt.astimezone(WAT)
+
 # ==========================================================
 
 # UPDATE BUSINESS
@@ -503,9 +522,13 @@ def update_business(
             latest_license.expiration_date
         )
 
+        expiration_date = ensure_wat_aware(
+            latest_license.expiration_date
+        )
+
         license_active = (
             latest_license.is_active
-            and latest_license.expiration_date >= now_wat()
+            and expiration_date >= now_wat()
         )
 
     # ----------------------------------------------------------

@@ -27,35 +27,171 @@ const LoginPage = () => {
 
   const warning = getLicenseExpiryWarning();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const user = await loginUser(username.trim().toLowerCase(), password);
-      localStorage.setItem("token", user.access_token);
-      localStorage.setItem("user", JSON.stringify(user));
+  try {
+    const user = await loginUser(
+      username.trim().toLowerCase(),
+      password
+    );
 
-      if (user.roles?.some(role => 
-        role.toLowerCase() === "admin" || role.toLowerCase() === "super_admin"
-      )) {
-        navigate("/dashboard/users");
-      } else if (user.roles?.includes("dashboard")) {
-        navigate("/dashboard/rooms/status");
-      } else if (user.roles?.includes("event")) {
-        navigate("/dashboard/events");
-      } else {
-        navigate("/dashboard");
+    // Save authentication data
+    localStorage.setItem(
+      "token",
+      user.access_token
+    );
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify(user)
+    );
+
+    // =====================================================
+    // NORMALIZE USER ROLES
+    // =====================================================
+
+    const roles = Array.isArray(user.roles)
+      ? user.roles
+          .map((role) => {
+            if (typeof role === "string") {
+              return role
+                .trim()
+                .toLowerCase()
+                .replace(/[\s-]+/g, "_");
+            }
+
+            if (role && typeof role === "object") {
+              return String(
+                role.code ??
+                role.role_code ??
+                role.name ??
+                role.role_name ??
+                ""
+              )
+                .trim()
+                .toLowerCase()
+                .replace(/[\s-]+/g, "_");
+            }
+
+            return "";
+          })
+          .filter(Boolean)
+      : [];
+
+    // Also support a single role / role_code
+    if (user.role) {
+      const singleRole =
+        typeof user.role === "string"
+          ? user.role
+          : user.role.code ??
+            user.role.role_code ??
+            user.role.name ??
+            user.role.role_name ??
+            "";
+
+      const normalizedRole = String(singleRole)
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+      if (
+        normalizedRole &&
+        !roles.includes(normalizedRole)
+      ) {
+        roles.push(normalizedRole);
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      const backendMessage = err.response?.data?.detail || err.message;
-      setError(backendMessage || "Invalid username or password.");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    if (user.role_code) {
+      const normalizedRole = String(
+        user.role_code
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+      if (
+        normalizedRole &&
+        !roles.includes(normalizedRole)
+      ) {
+        roles.push(normalizedRole);
+      }
+    }
+
+    if (user.role_name) {
+      const normalizedRole = String(
+        user.role_name
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+      if (
+        normalizedRole &&
+        !roles.includes(normalizedRole)
+      ) {
+        roles.push(normalizedRole);
+      }
+    }
+
+    console.log("Logged-in user:", user);
+    console.log("Detected roles:", roles);
+
+    // =====================================================
+    // ADMIN / SUPER ADMIN
+    // OPEN USER MANAGEMENT AUTOMATICALLY
+    // =====================================================
+
+    const isSuperAdmin =
+      roles.includes("super_admin") ||
+      user.business_id == null;
+
+    const isAdmin =
+      roles.includes("admin");
+
+    if (isSuperAdmin || isAdmin) {
+      navigate("/dashboard/users", {
+        replace: true,
+      });
+
+      return;
+    }
+
+    // =====================================================
+    // OTHER USERS
+    // =====================================================
+
+  
+
+    // Default dashboard
+    navigate("/dashboard", {
+      replace: true,
+    });
+
+  } catch (err) {
+    console.error(
+      "Login error:",
+      err
+    );
+
+    const backendMessage =
+      err.response?.data?.detail ||
+      err.message;
+
+    setError(
+      backendMessage ||
+        "Invalid username or password."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const handleInquiryChange = (e) => {
     setInquiryData({
