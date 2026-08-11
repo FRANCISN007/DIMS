@@ -53,7 +53,7 @@ const ListGuestOrder = () => {
   roles = roles.map((r) => r.toLowerCase());
 
   // Get business name from the login response
-  const businessName = storedUser.business?.name || "HEMS Hotel";
+  const businessName = storedUser.business?.name || "DIMS";
 
   if (!(roles.includes("admin") || roles.includes("restaurant"))) {
     return (

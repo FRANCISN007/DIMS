@@ -9,10 +9,15 @@ import * as FaIcons from "react-icons/fa";
 import getBaseUrl from "../api/config";
 import axiosWithAuth from "../utils/axiosWithAuth";
 import CreateRole from "../components/roles/CreateRole";
+import CreateLocation from "../components/locations/CreateLocation";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
+
+
+
+
 
 
 const API_BASE_URL = getBaseUrl();
@@ -22,6 +27,28 @@ const DashboardPage = () => {
   const businessName = storedUser.business?.name || "";
 
   const navigate = useNavigate();
+
+  const handleExit = () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to exit the application?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Clear login/session information
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // Try to close the application/window
+    window.close();
+
+    // Browser fallback
+    setTimeout(() => {
+      navigate("/homepage");
+    }, 300);
+  };
 
   // ✅ 🔐 AUTH GUARD (ADD THIS HERE)
   useEffect(() => {
@@ -41,44 +68,131 @@ const DashboardPage = () => {
 
   const exportToExcel = async () => {
     const table = document.querySelector(".content-area table");
-    if (!table) return alert("No table found to export.");
 
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("DashboardData");
+    if (!table) {
+      alert("No table found to export.");
+      return;
+    }
 
-    
-    const headers = Array.from(table.querySelectorAll("thead th")).map((th) =>
-      th.innerText.trim()
-    );
-    const colCount = headers.length;
+    try {
+      const title =
+        document.querySelector(".header-title")?.innerText?.trim() ||
+        "Dashboard Data";
 
-    // ✅ Title
-    sheet.mergeCells(1, 1, 1, colCount);
-    const titleCell = sheet.getCell("A1");
-    titleCell.value = title;
-    titleCell.font = { size: 14, bold: true };
-    titleCell.alignment = { vertical: "middle", horizontal: "center" };
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet("DashboardData");
 
-    // ✅ Table headers
-    sheet.addRow(headers).font = { bold: true };
+      /* =========================================================
+        TABLE HEADERS
+      ========================================================= */
 
-    // ✅ Table rows
-    const rows = Array.from(table.querySelectorAll("tbody tr")).map((tr) =>
-      Array.from(tr.querySelectorAll("td")).map((td) => td.innerText.trim())
-    );
-    rows.forEach((row) => sheet.addRow(row));
+      const headers = Array.from(
+        table.querySelectorAll("thead th")
+      ).map((th) => th.innerText.trim());
 
-    // ✅ Blank row
-    sheet.addRow([]);
+      if (headers.length === 0) {
+        alert("No table headers found to export.");
+        return;
+      }
 
-    
+      const colCount = headers.length;
 
-    // ✅ Download file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    saveAs(blob, `${title.replace(/\s+/g, "_").toLowerCase()}.xlsx`);
+      /* =========================================================
+        TITLE
+      ========================================================= */
+
+      sheet.mergeCells(1, 1, 1, colCount);
+
+      const titleCell = sheet.getCell("A1");
+
+      titleCell.value = title;
+      titleCell.font = {
+        size: 14,
+        bold: true,
+      };
+
+      titleCell.alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
+
+      /* =========================================================
+        TABLE HEADERS
+      ========================================================= */
+
+      const headerRow = sheet.addRow(headers);
+
+      headerRow.font = {
+        bold: true,
+      };
+
+      /* =========================================================
+        TABLE ROWS
+      ========================================================= */
+
+      const rows = Array.from(
+        table.querySelectorAll("tbody tr")
+      ).map((tr) =>
+        Array.from(tr.querySelectorAll("td")).map(
+          (td) => td.innerText.trim()
+        )
+      );
+
+      rows.forEach((row) => {
+        sheet.addRow(row);
+      });
+
+      /* =========================================================
+        COLUMN WIDTH
+      ========================================================= */
+
+      sheet.columns.forEach((column) => {
+        let maxLength = 10;
+
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const value = cell.value
+            ? cell.value.toString()
+            : "";
+
+          maxLength = Math.max(
+            maxLength,
+            value.length
+          );
+        });
+
+        column.width = Math.min(
+          maxLength + 2,
+          40
+        );
+      });
+
+      /* =========================================================
+        DOWNLOAD
+      ========================================================= */
+
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      const blob = new Blob([buffer], {
+        type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const filename = `${title
+        .replace(/\s+/g, "_")
+        .toLowerCase()}.xlsx`;
+
+      saveAs(blob, filename);
+
+    } catch (error) {
+      console.error(
+        "Excel export error:",
+        error
+      );
+
+      alert(
+        "Failed to export the table to Excel."
+      );
+    }
   };
 
   const printContent = () => {
@@ -100,6 +214,9 @@ const DashboardPage = () => {
   const [licenseInfo, setLicenseInfo] = useState(null);
 
   const [showCreateRole, setShowCreateRole] =
+  useState(false);
+
+  const [showCreateLocation, setShowCreateLocation] =
   useState(false);
 
   // 🔥 PORTAL SUBMENU FUNCTIONS
@@ -251,7 +368,7 @@ const DashboardPage = () => {
     { name: "🙎 Users", path: "/dashboard/users", adminOnly: true },
     
     {
-  name: "🏷️Manage Role",
+  name: "🏷️Roles",
 
     submenu: [
       {
@@ -265,17 +382,24 @@ const DashboardPage = () => {
       },
     ],
   },
-    { name: "📍 Location",
+    {
+    name: "📍 Locations",
 
       submenu: [
-        { label: "➕ Create Location", path: "/dashboard/locations/create" },
-        { label: "📝 List Locations", path: "/dashboard/locations/list" },
-        
+        {
+          label: "➕ Create Location",
+          action: "create-location",
+        },
+        {
+          label: "📝 List Locations",
+          path: "/dashboard/locations/list",
+        },
       ]
     },
 
-    { name: "🍽️Catering Service", path: "/bar" },
+    
     { name: "🏭Store Control", path: "/store" },
+    { name: "🍽️Catering Services", path: "/bar" },
     
   ];
 
@@ -320,11 +444,13 @@ const DashboardPage = () => {
             className="sidebars-button"
             style={{ fontSize: "0.9rem", marginTop: "8px" }}
           >
-            💾 Backup Files
+            💾 Database Backup
           </button>
 
           <button
+            type="button"
             className="exit-button"
+            onClick={handleExit}
           >
             ❌ Exit
           </button>
@@ -332,7 +458,7 @@ const DashboardPage = () => {
       </aside>
 
       {/* Logout Button */}
-      <button onClick={() => navigate("/logout")} className="logout-button">
+      <button onClick={() => navigate("/login")} className="logout-button">
         🚪 Logout
       </button>
 
@@ -401,12 +527,16 @@ const DashboardPage = () => {
         <div className="content-inner">
 
           {showCreateRole ? (
-            <CreateRole
-              onClose={() => setShowCreateRole(false)}
+          <CreateRole
+            onClose={() => setShowCreateRole(false)}
+          />
+          ) : showCreateLocation ? (
+            <CreateLocation
+              onClose={() => setShowCreateLocation(false)}
             />
           ) : (
-            <Outlet />
-          )}
+          <Outlet />
+         )}
 
         </div>
 
@@ -445,6 +575,12 @@ const DashboardPage = () => {
                     return;
                   }
 
+
+                  if (sub.action === "create-location") {
+                    setShowCreateLocation(true);
+                    closeSubmenu();
+                    return;
+                  }
                   /* =============================================
                     NORMAL ROUTE
                   ============================================= */

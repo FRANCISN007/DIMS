@@ -63,23 +63,6 @@
   font-weight: 700;
 }
 
-/* =========================================================
-   FORM
-========================================================= */
-
-.create-role-form {
-  width: 100%;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px 18px;
-  box-sizing: border-box;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* =========================================================
-   FORM GROUP
-========================================================= */
 
 /* =========================================================
    FORM
@@ -88,8 +71,8 @@
 .create-role-form {
   position: relative;
   width: 100%;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: #f7f5f5;
+  border: 1px solid #145be9;
   border-radius: 8px;
   padding: 18px 20px 16px;
   box-sizing: border-box;

@@ -1,9 +1,11 @@
 
+// src/components/CreateLocation.jsx
+
 import React, { useEffect, useState } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
-import "./CreateRole.css";
+import "./CreateLocation.css";
 
-const CreateRole = ({ onClose }) => {
+const CreateLocation = ({ onClose }) => {
   /* =========================================================
      STATE
   ========================================================= */
@@ -11,6 +13,8 @@ const CreateRole = ({ onClose }) => {
   const [formData, setFormData] = useState({
     name: "",
     code: "",
+    address: "",
+    phone: "",
     description: "",
     status: "active",
   });
@@ -22,9 +26,7 @@ const CreateRole = ({ onClose }) => {
 
   /* =========================================================
      AUTO HIDE MESSAGE
-     
-     Success and error messages automatically disappear
-     after 3 seconds.
+     Message disappears after 3 seconds
   ========================================================= */
 
   useEffect(() => {
@@ -69,8 +71,8 @@ const CreateRole = ({ onClose }) => {
     }));
 
     /*
-     * Clear any previous message when
-     * the user starts editing again.
+     * Clear any existing message when
+     * the user starts making changes.
      */
     if (message) {
       setMessage("");
@@ -84,7 +86,13 @@ const CreateRole = ({ onClose }) => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setMessage("Role name is required.");
+      setMessage("Location name is required.");
+      setMessageType("error");
+      return false;
+    }
+
+    if (!formData.code.trim()) {
+      setMessage("Location code is required.");
       setMessageType("error");
       return false;
     }
@@ -93,7 +101,7 @@ const CreateRole = ({ onClose }) => {
   };
 
   /* =========================================================
-     CREATE ROLE
+     CREATE LOCATION
   ========================================================= */
 
   const handleSubmit = async (e) => {
@@ -110,87 +118,101 @@ const CreateRole = ({ onClose }) => {
       setSubmitting(true);
 
       /*
-       * Business ID is NOT included.
+       * Business ID is NOT included here.
        *
-       * The backend determines the business
-       * from the logged-in user.
+       * For normal business users, the backend gets
+       * the business from current_user.business_id.
+       *
+       * For Super Admin, the backend currently requires
+       * business_id as a query parameter.
+       *
+       * If your Create Location screen later includes
+       * a Business selector for Super Admin, we can add
+       * that without changing the rest of this form.
        */
+
       const payload = {
         name: formData.name.trim(),
-        code: formData.code.trim() || null,
+        code: formData.code.trim().toUpperCase(),
+        address: formData.address.trim() || null,
+        phone: formData.phone.trim() || null,
         description: formData.description.trim() || null,
         status: formData.status,
       };
 
-      console.log("CREATE ROLE PAYLOAD:", payload);
+      console.log(
+        "CREATE LOCATION PAYLOAD:",
+        payload
+      );
 
       const response = await axiosWithAuth().post(
-        "/roles",
+        "/locations",
         payload
       );
 
       console.log(
-        "CREATE ROLE RESPONSE:",
+        "CREATE LOCATION RESPONSE:",
         response.data
       );
 
-      /*
-       * Show success message.
-       *
-       * The useEffect above will automatically
-       * remove it after 3 seconds.
-       */
-      setMessage("Role created successfully.");
+      /* =====================================================
+         SUCCESS
+      ===================================================== */
+
+      setMessage(
+        "Location created successfully."
+      );
+
       setMessageType("success");
 
       /*
-       * Clear form after successful creation.
+       * Clear the form after successful creation.
        */
       setFormData({
         name: "",
         code: "",
+        address: "",
+        phone: "",
         description: "",
         status: "active",
       });
     } catch (error) {
       console.error(
-        "Create role error:",
+        "Create location error:",
         error?.response?.data || error
       );
 
       const status = error?.response?.status;
 
-      const detail = error?.response?.data?.detail;
+      const detail =
+        error?.response?.data?.detail;
 
-      if (status === 409) {
-        setMessage(
-          detail || "Role name or code already exists."
-        );
-      } else if (status === 400) {
+      /* =====================================================
+         ERROR HANDLING
+      ===================================================== */
+
+      if (status === 400) {
         setMessage(
           detail ||
-            "Please check the information provided."
+            "Location name or code already exists."
         );
       } else if (status === 403) {
         setMessage(
           detail ||
-            "You do not have permission to create this role."
+            "You do not have permission to create this location."
         );
       } else if (status === 404) {
         setMessage(
-          detail || "Business not found."
+          detail ||
+            "Business not found."
         );
       } else {
         setMessage(
           detail ||
-            "Failed to create role. Please try again."
+            "Failed to create location. Please try again."
         );
       }
 
-      /*
-       * Error message will also disappear
-       * automatically after 3 seconds.
-       */
       setMessageType("error");
     } finally {
       setSubmitting(false);
@@ -205,6 +227,8 @@ const CreateRole = ({ onClose }) => {
     setFormData({
       name: "",
       code: "",
+      address: "",
+      phone: "",
       description: "",
       status: "active",
     });
@@ -218,18 +242,20 @@ const CreateRole = ({ onClose }) => {
   ========================================================= */
 
   return (
-    <div className="create-role-page">
+    <div className="create-location-page">
+
       <form
-        className="create-role-form"
+        className="create-location-form"
         onSubmit={handleSubmit}
       >
+
         {/* ===================================================
             CLOSE BUTTON
         =================================================== */}
 
         <button
           type="button"
-          className="create-role-close"
+          className="create-location-close"
           onClick={handleClose}
           disabled={submitting}
           aria-label="Close"
@@ -242,12 +268,12 @@ const CreateRole = ({ onClose }) => {
             HEADER
         =================================================== */}
 
-        <div className="create-role-header">
+        <div className="create-location-header">
           <div>
-            <h2>Create Role</h2>
+            <h2>Create Location</h2>
 
             <p>
-              Create a new role for your business.
+              Create a new location for your business.
             </p>
           </div>
         </div>
@@ -258,13 +284,13 @@ const CreateRole = ({ onClose }) => {
 
         {message && (
           <div
-            className={`role-message ${
+            className={`location-message ${
               messageType === "success"
-                ? "role-message-success"
-                : "role-message-error"
+                ? "location-message-success"
+                : "location-message-error"
             }`}
           >
-            <span className="role-message-icon">
+            <span className="location-message-icon">
               {messageType === "success"
                 ? "✓"
                 : "⚠"}
@@ -275,22 +301,22 @@ const CreateRole = ({ onClose }) => {
         )}
 
         {/* ===================================================
-            ROLE NAME
+            LOCATION NAME
         =================================================== */}
 
         <div className="form-group">
-          <label htmlFor="name">
-            Role Name{" "}
+          <label htmlFor="location-name">
+            Location Name{" "}
             <span className="required">*</span>
           </label>
 
           <input
-            id="name"
+            id="location-name"
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
-            placeholder="Enter role name"
+            placeholder="Enter location name"
             maxLength={100}
             disabled={submitting}
             autoComplete="off"
@@ -298,22 +324,67 @@ const CreateRole = ({ onClose }) => {
         </div>
 
         {/* ===================================================
-            ROLE CODE
+            LOCATION CODE
         =================================================== */}
 
         <div className="form-group">
-          <label htmlFor="code">
-            Role Code
+          <label htmlFor="location-code">
+            Location Code{" "}
+            <span className="required">*</span>
           </label>
 
           <input
-            id="code"
+            id="location-code"
             type="text"
             name="code"
             value={formData.code}
             onChange={handleChange}
-            placeholder="Example: STO222"
-            maxLength={50}
+            placeholder="Example: LOC001"
+            maxLength={30}
+            disabled={submitting}
+            autoComplete="off"
+          />
+        </div>
+
+        {/* ===================================================
+            ADDRESS
+        =================================================== */}
+
+        <div className="form-group">
+          <label htmlFor="location-address">
+            Address
+          </label>
+
+          <input
+            id="location-address"
+            type="text"
+            name="address"
+            value={formData.address}
+            onChange={handleChange}
+            placeholder="Enter location address"
+            maxLength={255}
+            disabled={submitting}
+            autoComplete="off"
+          />
+        </div>
+
+        {/* ===================================================
+            PHONE
+        =================================================== */}
+
+        <div className="form-group">
+          <label htmlFor="location-phone">
+            Phone
+          </label>
+
+          <input
+            id="location-phone"
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="Enter phone number"
+            maxLength={20}
             disabled={submitting}
             autoComplete="off"
           />
@@ -324,18 +395,18 @@ const CreateRole = ({ onClose }) => {
         =================================================== */}
 
         <div className="form-group">
-          <label htmlFor="description">
+          <label htmlFor="location-description">
             Description
           </label>
 
           <textarea
-            id="description"
+            id="location-description"
             name="description"
             value={formData.description}
             onChange={handleChange}
-            placeholder="Brief description of the role"
+            placeholder="Brief description of the location"
             rows={2}
-            maxLength={500}
+            maxLength={255}
             disabled={submitting}
           />
         </div>
@@ -345,12 +416,12 @@ const CreateRole = ({ onClose }) => {
         =================================================== */}
 
         <div className="form-group">
-          <label htmlFor="status">
+          <label htmlFor="location-status">
             Status
           </label>
 
           <select
-            id="status"
+            id="location-status"
             name="status"
             value={formData.status}
             onChange={handleChange}
@@ -371,9 +442,10 @@ const CreateRole = ({ onClose }) => {
         =================================================== */}
 
         <div className="form-actions">
+
           <button
             type="button"
-            className="reset-role-button"
+            className="reset-location-button"
             onClick={handleReset}
             disabled={submitting}
           >
@@ -382,22 +454,25 @@ const CreateRole = ({ onClose }) => {
 
           <button
             type="submit"
-            className="create-role-button"
+            className="create-location-button"
             disabled={submitting}
           >
             {submitting ? (
               <>
-                <span className="role-spinner"></span>
+                <span className="location-spinner"></span>
                 Creating...
               </>
             ) : (
-              "Create Role"
+              "Create Location"
             )}
           </button>
+
         </div>
+
       </form>
     </div>
   );
 };
 
-export default CreateRole;
+export default CreateLocation;
+

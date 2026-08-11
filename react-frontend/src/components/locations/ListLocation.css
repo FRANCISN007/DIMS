@@ -1,20 +1,21 @@
 
 /* =========================================================
-   LIST ROLE PAGE
+   LIST LOCATION PAGE
 ========================================================= */
 
-.list-role-page {
+.list-location-page {
   width: 100%;
   box-sizing: border-box;
   padding: 15px;
   margin: 0 auto;
 }
 
+
 /* =========================================================
    HEADER
 ========================================================= */
 
-.list-role-header {
+.list-location-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -22,20 +23,20 @@
   margin-bottom: 15px;
 }
 
-.list-role-header h2 {
+.list-location-header h2 {
   margin: 0;
   color: #1f2937;
   font-size: 1.45rem;
   font-weight: 700;
 }
 
-.list-role-header p {
+.list-location-header p {
   margin: 4px 0 0;
   color: #6b7280;
   font-size: 0.84rem;
 }
 
-.role-count {
+.location-count {
   padding: 6px 12px;
   border-radius: 6px;
   background: #f3f4f6;
@@ -45,11 +46,12 @@
   white-space: nowrap;
 }
 
+
 /* =========================================================
    MESSAGE
 ========================================================= */
 
-.role-message {
+.location-message {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -60,28 +62,29 @@
   font-weight: 500;
 }
 
-.role-message-success {
+.location-message-success {
   color: #047857;
   background: #ecfdf5;
   border: 1px solid #a7f3d0;
 }
 
-.role-message-error {
+.location-message-error {
   color: #b91c1c;
   background: #fef2f2;
   border: 1px solid #fecaca;
 }
 
-.role-message-icon {
+.location-message-icon {
   font-size: 0.95rem;
   font-weight: 700;
 }
+
 
 /* =========================================================
    FILTER BAR
 ========================================================= */
 
-.role-filter-bar {
+.location-filter-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -93,14 +96,14 @@
   border-radius: 7px;
 }
 
-.role-search-form {
+.location-search-form {
   display: flex;
   align-items: center;
   gap: 7px;
   flex: 1;
 }
 
-.role-search-input {
+.location-search-input {
   width: 100%;
   max-width: 360px;
   height: 36px;
@@ -114,18 +117,18 @@
   font-size: 0.84rem;
 }
 
-.role-search-input:focus {
+.location-search-input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
-.role-status-filter {
+.location-status-filter {
   display: flex;
   align-items: center;
   gap: 7px;
 }
 
-.role-filter-select {
+.location-filter-select {
   height: 36px;
   padding: 0 9px;
   border: 1px solid #d1d5db;
@@ -136,13 +139,13 @@
   outline: none;
 }
 
-.role-filter-select:focus {
+.location-filter-select:focus {
   border-color: #2563eb;
 }
 
-.role-search-button,
-.role-filter-button,
-.role-clear-button {
+.location-search-button,
+.location-filter-button,
+.location-clear-button {
   height: 36px;
   padding: 0 12px;
   border: none;
@@ -153,39 +156,40 @@
   white-space: nowrap;
 }
 
-.role-search-button {
+.location-search-button {
   background: #2563eb;
   color: #ffffff;
 }
 
-.role-search-button:hover {
+.location-search-button:hover {
   background: #1d4ed8;
 }
 
-.role-filter-button {
+.location-filter-button {
   background: #374151;
   color: #ffffff;
 }
 
-.role-filter-button:hover {
+.location-filter-button:hover {
   background: #1f2937;
 }
 
-.role-clear-button {
+.location-clear-button {
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #d1d5db;
 }
 
-.role-clear-button:hover {
+.location-clear-button:hover {
   background: #e5e7eb;
 }
+
 
 /* =========================================================
    EDIT PANEL
 ========================================================= */
 
-.role-edit-panel {
+.location-edit-panel {
   position: relative;
   margin-bottom: 12px;
   padding: 14px;
@@ -195,27 +199,27 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.role-edit-header {
+.location-edit-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
 
-.role-edit-header h3 {
+.location-edit-header h3 {
   margin: 0;
   color: #1f2937;
   font-size: 1rem;
 }
 
-.role-edit-header span {
+.location-edit-header span {
   display: block;
   margin-top: 2px;
   color: #6b7280;
   font-size: 0.78rem;
 }
 
-.role-edit-close {
+.location-edit-close {
   width: 28px;
   height: 28px;
   display: flex;
@@ -229,24 +233,29 @@
   cursor: pointer;
 }
 
-.role-edit-close:hover {
+.location-edit-close:hover {
   background: #f3f4f6;
   color: #dc2626;
 }
 
-.role-edit-form {
+.location-edit-form {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1.5fr 0.8fr auto;
+  grid-template-columns:
+    1.2fr
+    0.8fr
+    1.5fr
+    0.9fr
+    0.8fr;
   align-items: end;
   gap: 10px;
 }
 
-.role-edit-group {
+.location-edit-group {
   display: flex;
   flex-direction: column;
 }
 
-.role-edit-group label {
+.location-edit-group label {
   margin-bottom: 5px;
   color: #374151;
   font-size: 0.78rem;
@@ -258,9 +267,9 @@
   color: #dc2626;
 }
 
-.role-edit-group input,
-.role-edit-group select,
-.role-edit-group textarea {
+.location-edit-group input,
+.location-edit-group select,
+.location-edit-group textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 9px;
@@ -273,26 +282,30 @@
   font-size: 0.82rem;
 }
 
-.role-edit-group textarea {
+.location-edit-group textarea {
   resize: vertical;
   min-height: 36px;
 }
 
-.role-edit-group input:focus,
-.role-edit-group select:focus,
-.role-edit-group textarea:focus {
+.location-edit-group input:focus,
+.location-edit-group select:focus,
+.location-edit-group textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
 }
 
-.role-edit-actions {
+.location-edit-description {
+  grid-column: span 3;
+}
+
+.location-edit-actions {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.role-edit-cancel,
-.role-edit-save {
+.location-edit-cancel,
+.location-edit-save {
   height: 34px;
   padding: 0 11px;
   border-radius: 5px;
@@ -302,37 +315,38 @@
   white-space: nowrap;
 }
 
-.role-edit-cancel {
+.location-edit-cancel {
   border: 1px solid #d1d5db;
   background: #ffffff;
   color: #374151;
 }
 
-.role-edit-cancel:hover {
+.location-edit-cancel:hover {
   background: #f3f4f6;
 }
 
-.role-edit-save {
+.location-edit-save {
   border: none;
   background: #2563eb;
   color: #ffffff;
 }
 
-.role-edit-save:hover {
+.location-edit-save:hover {
   background: #1d4ed8;
 }
 
-.role-edit-cancel:disabled,
-.role-edit-save:disabled {
+.location-edit-cancel:disabled,
+.location-edit-save:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 
 /* =========================================================
    TABLE CONTAINER
 ========================================================= */
 
-.roles-table-container {
+.locations-table-container {
   width: 100%;
   overflow-x: auto;
   background: #f3efef;
@@ -341,23 +355,24 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+
 /* =========================================================
    TABLE
 ========================================================= */
 
-.roles-table {
+.locations-table {
   width: 100%;
-  min-width: 850px;
+  min-width: 1050px;
   border-collapse: collapse;
   font-size: 0.82rem;
   background: #eff1f3;
 }
 
-.roles-table thead {
+.locations-table thead {
   background: #dfe3e7;
 }
 
-.roles-table th {
+.locations-table th {
   padding: 10px 9px;
   text-align: left;
   color: #374151;
@@ -367,34 +382,34 @@
   white-space: nowrap;
 }
 
-.roles-table td {
-  padding: 9px;
+.locations-table td {
+  padding: 4px 5px;
   color: #4b5563;
   border-bottom: 1px solid #c9d5e2;
   vertical-align: middle;
-  padding: 4px 5px;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
-.roles-table tbody tr:hover {
+.locations-table tbody tr:hover {
   background: #f9fafb;
 }
 
-.roles-table tbody tr:last-child td {
+.locations-table tbody tr:last-child td {
   border-bottom: none;
 }
 
+
 /* =========================================================
-   ROLE CELLS
+   LOCATION CELLS
 ========================================================= */
 
-.role-name-cell {
+.location-name-cell {
   color: #1f2937 !important;
   font-weight: 600;
   white-space: nowrap;
 }
 
-.role-code {
+.location-code {
   display: inline-block;
   padding: 3px 7px;
   border-radius: 4px;
@@ -405,16 +420,23 @@
   font-weight: 600;
 }
 
-.role-description-cell {
-  max-width: 280px;
+.location-address-cell {
+  max-width: 220px;
   line-height: 1.35;
 }
 
+.location-description-cell {
+  max-width: 230px;
+  line-height: 1.35;
+}
+
+
 /* =========================================================
    STATUS
+   SAME PATTERN AS ROLE LIST
 ========================================================= */
 
-.role-status-select {
+.location-status-select {
   min-width: 90px;
   padding: 5px 7px;
   border-radius: 5px;
@@ -424,36 +446,37 @@
   cursor: pointer;
 }
 
-.role-status-select.status-active {
+.location-status-select.status-active {
   color: #047857;
   background: #ecfdf5;
   border: 1px solid #a7f3d0;
 }
 
-.role-status-select.status-inactive {
+.location-status-select.status-inactive {
   color: #b91c1c;
   background: #fef2f2;
   border: 1px solid #fecaca;
 }
 
-.role-status-select:disabled {
+.location-status-select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 
 /* =========================================================
    ACTIONS
 ========================================================= */
 
-.role-actions {
+.location-actions {
   display: flex;
   align-items: center;
   gap: 5px;
   white-space: nowrap;
 }
 
-.role-action-edit,
-.role-action-delete {
+.location-action-edit,
+.location-action-delete {
   padding: 6px 8px;
   border-radius: 5px;
   cursor: pointer;
@@ -461,36 +484,38 @@
   font-weight: 600;
 }
 
-.role-action-edit {
+.location-action-edit {
   border: 1px solid #bfdbfe;
   background: #eff6ff;
   color: #1d4ed8;
 }
 
-.role-action-edit:hover {
+.location-action-edit:hover {
   background: #dbeafe;
 }
 
-.role-action-delete {
+.location-action-delete {
   border: 1px solid #fecaca;
   background: #fef2f2;
   color: #b91c1c;
 }
 
-.role-action-delete:hover {
+.location-action-delete:hover {
   background: #fee2e2;
 }
 
-.role-action-delete:disabled {
+.location-action-edit:disabled,
+.location-action-delete:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
 
 /* =========================================================
    LOADING
 ========================================================= */
 
-.roles-loading {
+.locations-loading {
   min-height: 180px;
   display: flex;
   align-items: center;
@@ -500,26 +525,27 @@
   font-size: 0.85rem;
 }
 
-.role-loading-spinner {
+.location-loading-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid #d1d5db;
   border-top-color: #2563eb;
   border-radius: 50%;
-  animation: roleListSpinner 0.7s linear infinite;
+  animation: locationListSpinner 0.7s linear infinite;
 }
 
-@keyframes roleListSpinner {
+@keyframes locationListSpinner {
   to {
     transform: rotate(360deg);
   }
 }
 
+
 /* =========================================================
    EMPTY
 ========================================================= */
 
-.roles-empty {
+.locations-empty {
   min-height: 180px;
   display: flex;
   flex-direction: column;
@@ -529,103 +555,107 @@
   padding: 25px;
 }
 
-.roles-empty-icon {
+.locations-empty-icon {
   font-size: 2rem;
   margin-bottom: 5px;
 }
 
-.roles-empty h3 {
+.locations-empty h3 {
   margin: 0;
   color: #374151;
   font-size: 0.95rem;
 }
 
-.roles-empty p {
+.locations-empty p {
   margin: 5px 0 0;
   color: #9ca3af;
   font-size: 0.8rem;
 }
 
+
 /* =========================================================
    RESPONSIVE
 ========================================================= */
 
-@media (max-width: 1100px) {
-  .role-filter-bar {
-    flex-direction: column;
-    align-items: stretch;
+@media (max-width: 1200px) {
+  .location-edit-form {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 
-  .role-search-form {
-    width: 100%;
-  }
-
-  .role-search-input {
-    max-width: none;
-  }
-
-  .role-status-filter {
-    justify-content: flex-end;
-  }
-
-  .role-edit-form {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .role-edit-description {
+  .location-edit-description {
     grid-column: span 2;
   }
 
-  .role-edit-actions {
+  .location-edit-actions {
     justify-content: flex-end;
   }
 }
 
+
+@media (max-width: 1100px) {
+  .location-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .location-search-form {
+    width: 100%;
+  }
+
+  .location-search-input {
+    max-width: none;
+  }
+
+  .location-status-filter {
+    justify-content: flex-end;
+  }
+}
+
+
 @media (max-width: 650px) {
-  .list-role-page {
+  .list-location-page {
     padding: 10px;
   }
 
-  .list-role-header {
+  .list-location-header {
     align-items: flex-start;
   }
 
-  .list-role-header h2 {
+  .list-location-header h2 {
     font-size: 1.25rem;
   }
 
-  .role-status-filter {
+  .location-status-filter {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
 
-  .role-search-form {
+  .location-search-form {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .role-search-input {
+  .location-search-input {
     max-width: none;
   }
 
-  .role-search-button {
+  .location-search-button {
     width: 100%;
   }
 
-  .role-edit-form {
+  .location-edit-form {
     grid-template-columns: 1fr;
   }
 
-  .role-edit-description {
+  .location-edit-description {
     grid-column: span 1;
   }
 
-  .role-edit-actions {
+  .location-edit-actions {
     justify-content: flex-end;
   }
 
-  .roles-table {
-    min-width: 800px;
+  .locations-table {
+    min-width: 1050px;
   }
 }
-

@@ -1,6 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./ListItem.css";
+
 
 const ListItem = () => {
   const [items, setItems] = useState([]);
@@ -14,6 +16,7 @@ const ListItem = () => {
   // =====================
   // Editing states
   // =====================
+
   const [editingItem, setEditingItem] = useState(null);
   const [updateName, setUpdateName] = useState("");
   const [updateUnit, setUpdateUnit] = useState("");
@@ -26,6 +29,7 @@ const ListItem = () => {
   // =====================
   // Creation states
   // =====================
+
   const [newName, setNewName] = useState("");
   const [newUnit, setNewUnit] = useState("");
   const [newUnitPrice, setNewUnitPrice] = useState("");
@@ -36,206 +40,435 @@ const ListItem = () => {
   // =====================
   // Search state
   // =====================
+
   const [searchText, setSearchText] = useState("");
 
-  const unitOptions = ["Carton", "Pack", "Crate", "Piece"];
-  const itemTypeOptions = ["All", "bar", "kitchen", "housekeeping", "maintenance", "general"];
+  const unitOptions = [
+    "Carton",
+    "Kg",
+    "Basket",
+    "Piece",
+  ];
 
-  // =====================
-  // User roles check
-  // =====================
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  let roles = Array.isArray(storedUser.roles)
-    ? storedUser.roles
-    : storedUser.role
-    ? [storedUser.role]
-    : [];
-  roles = roles.map((r) => r.toLowerCase());
+  const itemTypeOptions = [
+    "All",
+    "bar",
+    "kitchen",
+    "food stuff",
+    "protein",
+    "general",
+  ];
 
-  if (!(roles.includes("admin") || roles.includes("store"))) {
-    return (
-      <div className="unauthorized">
-        <h2>🚫 Access Denied</h2>
-        <p>You do not have permission to manage items.</p>
-      </div>
-    );
-  }
 
-  // =====================
-  // Fetch data
-  // =====================
+  // =========================================================
+  // FETCH DATA
+  // =========================================================
+
   useEffect(() => {
     fetchItems();
     fetchSimpleItems();
     fetchCategories();
   }, []);
 
-  // Auto-clear messages
+
+  // =========================================================
+  // AUTO-CLEAR MESSAGES
+  // =========================================================
+
   useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(""), 3000);
-    return () => clearTimeout(timer);
+    if (!message) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setMessage("");
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, [message]);
 
-  const safeMessage = (err, fallback = "❌ Operation failed") => {
-    if (!err?.response?.data?.detail) return fallback;
+
+  // =========================================================
+  // SAFE ERROR MESSAGE
+  // =========================================================
+
+  const safeMessage = (
+    err,
+    fallback = "❌ Operation failed"
+  ) => {
+    if (!err?.response?.data?.detail) {
+      return fallback;
+    }
+
     return typeof err.response.data.detail === "string"
       ? err.response.data.detail
       : JSON.stringify(err.response.data.detail);
   };
 
-  // =====================
-  // Fetch Items with Search
-  // =====================
+
+  // =========================================================
+  // FETCH ITEMS
+  // =========================================================
+
   const fetchItems = async (search = "") => {
     setLoading(true);
+
     try {
-      const res = await axiosWithAuth().get("/store/items", { params: { search } });
-      setItems(res.data);
+      const res = await axiosWithAuth().get(
+        "/store/items",
+        {
+          params: {
+            search,
+          },
+        }
+      );
+
+      setItems(
+        Array.isArray(res.data)
+          ? res.data
+          : []
+      );
     } catch (err) {
-      setMessage("❌ Failed to load items");
+      console.error(
+        "❌ Failed to load items:",
+        err?.response?.data || err
+      );
+
+      setMessage(
+        safeMessage(
+          err,
+          "❌ Failed to load items."
+        )
+      );
     } finally {
       setLoading(false);
     }
   };
 
+
+  // =========================================================
+  // FETCH SIMPLE ITEMS
+  // =========================================================
+
   const fetchSimpleItems = async (search = "") => {
     try {
-      const res = await axiosWithAuth().get("/store/items/simple-search", { params: { search } });
-      setSimpleItems(Array.isArray(res.data) ? res.data : []);
+      const res = await axiosWithAuth().get(
+        "/store/items/simple-search",
+        {
+          params: {
+            search,
+          },
+        }
+      );
+
+      setSimpleItems(
+        Array.isArray(res.data)
+          ? res.data
+          : []
+      );
     } catch (err) {
-      console.error("❌ Failed to load simple items", err);
+      console.error(
+        "❌ Failed to load simple items:",
+        err
+      );
+
       setSimpleItems([]);
     }
   };
 
+
+  // =========================================================
+  // FETCH CATEGORIES
+  // =========================================================
+
   const fetchCategories = async () => {
     try {
-      const res = await axiosWithAuth().get("/store/categories");
-      setCategories(res.data);
+      const res = await axiosWithAuth().get(
+        "/store/categories"
+      );
+
+      setCategories(
+        Array.isArray(res.data)
+          ? res.data
+          : []
+      );
     } catch (err) {
-      console.error("❌ Failed to fetch categories", err);
+      console.error(
+        "❌ Failed to fetch categories:",
+        err?.response?.data || err
+      );
+
+      setCategories([]);
+
+      setMessage(
+        safeMessage(
+          err,
+          "❌ Failed to load categories."
+        )
+      );
     }
   };
 
-  // =====================
-  // Handle Search Input
-  // =====================
+
+  // =========================================================
+  // HANDLE SEARCH
+  // =========================================================
+
   const handleSearchChange = (e) => {
     const value = e.target.value;
+
     setSearchText(value);
+
     fetchItems(value);
     fetchSimpleItems(value);
   };
 
-  // =====================
-  // Delete Item
-  // =====================
+
+  // =========================================================
+  // DELETE ITEM
+  // =========================================================
+
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this item?"
+      )
+    ) {
+      return;
+    }
+
     try {
-      await axiosWithAuth().delete(`/store/items/${id}`);
-      setItems(items.filter((i) => i.id !== id));
-      setMessage("✅ Item deleted successfully.");
+      await axiosWithAuth().delete(
+        `/store/items/${id}`
+      );
+
+      setItems(
+        items.filter(
+          (i) => i.id !== id
+        )
+      );
+
+      setMessage(
+        "✅ Item deleted successfully."
+      );
+
       fetchSimpleItems();
     } catch (err) {
-      setMessage(safeMessage(err, "❌ Failed to delete item."));
+      console.error(
+        "❌ Failed to delete item:",
+        err?.response?.data || err
+      );
+
+      setMessage(
+        safeMessage(
+          err,
+          "❌ Failed to delete item."
+        )
+      );
     }
   };
 
-  // =====================
-  // Open Edit Modal
-  // =====================
+
+  // =========================================================
+  // OPEN EDIT MODAL
+  // =========================================================
+
   const openEditModal = (item) => {
     setEditingItem(item);
-    setUpdateName(item.name);
-    setUpdateUnit(item.unit || "");
-    setUpdateUnitPrice(item.unit_price || "");
-    setUpdateSellingPrice(item.selling_price || "");
-    setUpdateCategoryId(item.category?.id || "");
-    setUpdateItemType(item.item_type || "All");
-    setSelectedSimpleItemId(item.id);
+
+    setUpdateName(
+      item.name || ""
+    );
+
+    setUpdateUnit(
+      item.unit || ""
+    );
+
+    setUpdateUnitPrice(
+      item.unit_price ?? ""
+    );
+
+    setUpdateSellingPrice(
+      item.selling_price ?? ""
+    );
+
+    setUpdateCategoryId(
+      item.category?.id || ""
+    );
+
+    setUpdateItemType(
+      item.item_type || "All"
+    );
+
+    setSelectedSimpleItemId(
+      item.id
+    );
   };
+
+
+  // =========================================================
+  // HANDLE SIMPLE ITEM CHANGE
+  // =========================================================
 
   const handleSimpleItemChange = (value) => {
     setSelectedSimpleItemId(value);
-    const selected = simpleItems.find((it) => String(it.id) === String(value));
+
+    const selected = simpleItems.find(
+      (it) =>
+        String(it.id) === String(value)
+    );
+
     if (selected) {
-      setUpdateName(selected.name || "");
-      setUpdateUnit(selected.unit || "");
-      setUpdateUnitPrice(selected.unit_price || "");
-      setUpdateSellingPrice(selected.selling_price || "");
-      setUpdateItemType(selected.item_type || "All");
+      setUpdateName(
+        selected.name || ""
+      );
+
+      setUpdateUnit(
+        selected.unit || ""
+      );
+
+      setUpdateUnitPrice(
+        selected.unit_price ?? ""
+      );
+
+      setUpdateSellingPrice(
+        selected.selling_price ?? ""
+      );
+
+      setUpdateCategoryId(
+        selected.category?.id || ""
+      );
+
+      setUpdateItemType(
+        selected.item_type || "All"
+      );
     }
   };
 
-  // =====================
-  // Update Item
-  // =====================
-  // =====================
-// Update Item
-// =====================
+
+  // =========================================================
+  // UPDATE ITEM
+  // =========================================================
+
   const handleUpdate = async (e) => {
     e.preventDefault();
 
-    // Prevent double submission
-    if (isSubmitting) return;
-
-    const unitPrice = parseFloat(updateUnitPrice);
-    const sellingPrice = parseFloat(updateSellingPrice);
-    const parsedCategoryId = parseInt(updateCategoryId);
-
-    if (isNaN(unitPrice) || isNaN(sellingPrice)) {
-      setMessage("❌ Unit price and Selling price must be numbers.");
+    if (isSubmitting) {
       return;
     }
 
-    if (!updateName.trim() || !updateUnit.trim()) {
-      setMessage("❌ Name and Unit are required.");
+    const unitPrice =
+      parseFloat(updateUnitPrice);
+
+    const sellingPrice =
+      parseFloat(updateSellingPrice);
+
+    const parsedCategoryId =
+      parseInt(updateCategoryId);
+
+
+    if (
+      isNaN(unitPrice) ||
+      isNaN(sellingPrice)
+    ) {
+      setMessage(
+        "❌ Unit price and Selling price must be numbers."
+      );
+
       return;
     }
 
-    if (!parsedCategoryId || isNaN(parsedCategoryId)) {
-      setMessage("❌ Please select a valid category.");
+
+    if (
+      !updateName.trim() ||
+      !updateUnit.trim()
+    ) {
+      setMessage(
+        "❌ Name and Unit are required."
+      );
+
       return;
     }
+
+
+    if (
+      !parsedCategoryId ||
+      isNaN(parsedCategoryId)
+    ) {
+      setMessage(
+        "❌ Please select a valid category."
+      );
+
+      return;
+    }
+
 
     setIsSubmitting(true);
 
     try {
-      await axiosWithAuth().put(`/store/items/${editingItem.id}`, {
-        name: updateName.trim(),
-        unit: updateUnit.trim(),
-        unit_price: unitPrice,
-        selling_price: sellingPrice,
-        category_id: parsedCategoryId,
-        item_type: updateItemType,
-      });
+      await axiosWithAuth().put(
+        `/store/items/${editingItem.id}`,
+        {
+          name: updateName.trim(),
+          unit: updateUnit.trim(),
+          unit_price: unitPrice,
+          selling_price: sellingPrice,
+          category_id: parsedCategoryId,
+          item_type: updateItemType,
+        }
+      );
 
-      setMessage("✅ Item updated successfully.");
+      setMessage(
+        "✅ Item updated successfully."
+      );
+
       setEditingItem(null);
 
       await fetchItems(searchText);
       await fetchSimpleItems(searchText);
+      await fetchCategories();
 
     } catch (err) {
-      setMessage(safeMessage(err, "❌ Failed to update item."));
+      console.error(
+        "❌ Failed to update item:",
+        err?.response?.data || err
+      );
+
+      setMessage(
+        safeMessage(
+          err,
+          "❌ Failed to update item."
+        )
+      );
+
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // =====================
-  // Create Item
-  // =====================
+
+  // =========================================================
+  // CREATE ITEM
+  // =========================================================
+
   const handleCreate = async (e) => {
     e.preventDefault();
 
-    if (isSubmitting) return; // Prevent double click
+    if (isSubmitting) {
+      return;
+    }
 
-    const unitPrice = parseFloat(newUnitPrice);
-    const sellingPrice = parseFloat(newSellingPrice);
-    const parsedCategoryId = parseInt(newCategoryId);
+    const unitPrice =
+      parseFloat(newUnitPrice);
+
+    const sellingPrice =
+      parseFloat(newSellingPrice);
+
+    const parsedCategoryId =
+      parseInt(newCategoryId);
+
 
     if (
       !newName.trim() ||
@@ -244,22 +477,33 @@ const ListItem = () => {
       isNaN(sellingPrice) ||
       isNaN(parsedCategoryId)
     ) {
-      return setMessage("❌ All fields are required and must be valid.");
+      setMessage(
+        "❌ All fields are required and must be valid."
+      );
+
+      return;
     }
+
 
     setIsSubmitting(true);
 
     try {
-      await axiosWithAuth().post("/store/items", {
-        name: newName.trim(),
-        unit: newUnit.trim(),
-        unit_price: unitPrice,
-        selling_price: sellingPrice,
-        category_id: parsedCategoryId,
-        item_type: newItemType || "All",
-      });
+      await axiosWithAuth().post(
+        "/store/items",
+        {
+          name: newName.trim(),
+          unit: newUnit.trim(),
+          unit_price: unitPrice,
+          selling_price: sellingPrice,
+          category_id: parsedCategoryId,
+          item_type: newItemType || "All",
+        }
+      );
 
-      setMessage("✅ Item created successfully.");
+      setMessage(
+        "✅ Item created successfully."
+      );
+
 
       setNewName("");
       setNewUnit("");
@@ -268,24 +512,50 @@ const ListItem = () => {
       setNewCategoryId("");
       setNewItemType("");
 
-      fetchItems(searchText);
-      fetchSimpleItems(searchText);
+
+      await fetchItems(searchText);
+      await fetchSimpleItems(searchText);
+      await fetchCategories();
+
     } catch (err) {
-      setMessage(safeMessage(err, "❌ Failed to create item."));
+      console.error(
+        "❌ Failed to create item:",
+        err?.response?.data || err
+      );
+
+      setMessage(
+        safeMessage(
+          err,
+          "❌ Failed to create item."
+        )
+      );
+
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // =====================
-  // Render
-  // =====================
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
     <div className="list-item-container">
-      <h2>📋 Item List</h2>
-      {message && <p className="list-item-message">{message}</p>}
 
-      {/* Search */}
+      <h2>📋 Item List</h2>
+
+      {message && (
+        <p className="list-item-message">
+          {message}
+        </p>
+      )}
+
+
+      {/* =====================================================
+          SEARCH
+      ===================================================== */}
+
       <input
         type="text"
         placeholder="🔍 Search items..."
@@ -294,66 +564,175 @@ const ListItem = () => {
         className="search-input"
       />
 
-      {/* Create Item Form */}
+
+      {/* =====================================================
+          CREATE ITEM
+      ===================================================== */}
+
       <h3>➕ Create New Item</h3>
-      <form onSubmit={handleCreate} className="create-item-form">
+
+      <form
+        onSubmit={handleCreate}
+        className="create-item-form"
+      >
+
         <label>
           Name:
-          <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Coke, Fanta" required />
+
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) =>
+              setNewName(e.target.value)
+            }
+            placeholder="e.g. Food Stuff, Protein"
+            required
+          />
         </label>
+
 
         <label>
           Unit:
-          <select value={newUnit} onChange={(e) => setNewUnit(e.target.value)} required>
-            <option value="">Select Unit</option>
-            {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
+
+          <select
+            value={newUnit}
+            onChange={(e) =>
+              setNewUnit(e.target.value)
+            }
+            required
+          >
+            <option value="">
+              Select Unit
+            </option>
+
+            {unitOptions.map((u) => (
+              <option
+                key={u}
+                value={u}
+              >
+                {u}
+              </option>
+            ))}
           </select>
         </label>
+
 
         <label>
           Unit Price:
-          <input type="number" step="0.01" value={newUnitPrice} onChange={(e) => setNewUnitPrice(e.target.value)} placeholder="e.g. 800" required />
+
+          <input
+            type="number"
+            step="0.01"
+            value={newUnitPrice}
+            onChange={(e) =>
+              setNewUnitPrice(e.target.value)
+            }
+            placeholder="e.g. 800"
+            required
+          />
         </label>
+
 
         <label>
           Selling Price:
-          <input type="number" step="0.01" value={newSellingPrice} onChange={(e) => setNewSellingPrice(e.target.value)} placeholder="e.g. 1000" required />
+
+          <input
+            type="number"
+            step="0.01"
+            value={newSellingPrice}
+            onChange={(e) =>
+              setNewSellingPrice(e.target.value)
+            }
+            placeholder="e.g. 1000"
+            required
+          />
         </label>
+
 
         <label>
           Category:
-          <select value={newCategoryId} onChange={(e) => setNewCategoryId(e.target.value)} required>
-            <option value="">Select Category</option>
-            {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+
+          <select
+            value={newCategoryId}
+            onChange={(e) =>
+              setNewCategoryId(e.target.value)
+            }
+            required
+          >
+            <option value="">
+              Select Category
+            </option>
+
+            {categories.map((cat) => (
+              <option
+                key={cat.id}
+                value={cat.id}
+              >
+                {cat.name}
+              </option>
+            ))}
           </select>
         </label>
 
+
         <label>
           Item Type:
-          <select value={newItemType} onChange={(e) => setNewItemType(e.target.value)}>
-            {itemTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
+
+          <select
+            value={newItemType}
+            onChange={(e) =>
+              setNewItemType(e.target.value)
+            }
+          >
+            {itemTypeOptions.map((type) => (
+              <option
+                key={type}
+                value={type}
+              >
+                {type}
+              </option>
+            ))}
           </select>
         </label>
+
 
         <button
           type="submit"
           className="save-btn"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Saving..." : "➕ Add Item"}
+          {isSubmitting
+            ? "Saving..."
+            : "➕ Add Item"}
         </button>
+
       </form>
+
 
       <hr />
 
-      {/* Item Table with Vertical Scroll */}
+
+      {/* =====================================================
+          ITEM TABLE
+      ===================================================== */}
+
       {loading ? (
-        <p>Loading items...</p>
+        <p>
+          Loading items...
+        </p>
+
       ) : items.length === 0 ? (
-        <p>No items found.</p>
+
+        <p>
+          No items found.
+        </p>
+
       ) : (
+
         <div className="scrollable-table-container">
+
           <table className="item-table">
+
             <thead>
               <tr>
                 <th>Id</th>
@@ -366,106 +745,342 @@ const ListItem = () => {
                 <th>Actions</th>
               </tr>
             </thead>
+
+
             <tbody>
-              {items.map((item, index) => (
-                <tr key={item.id} className={index % 2 === 0 ? "even-row" : "odd-row"}>
-                  <td>{item.id}</td>
-                  <td>{item.name}</td>
-                  <td>{item.unit}</td>
-                  <td>{item.unit_price}</td>
-                  <td>{item.selling_price}</td>
-                  <td>{item.category?.name}</td>
-                  <td>{item.item_type || "All"}</td>
-                  <td>
-                    <button className="edit-btn" onClick={() => openEditModal(item)}>✏️ Edit</button>
-                    <button className="delete-btn" onClick={() => handleDelete(item.id)}>🗑 Delete</button>
-                  </td>
-                </tr>
-              ))}
+
+              {items.map(
+                (item, index) => (
+
+                  <tr
+                    key={item.id}
+                    className={
+                      index % 2 === 0
+                        ? "even-row"
+                        : "odd-row"
+                    }
+                  >
+
+                    <td>
+                      {item.id}
+                    </td>
+
+                    <td>
+                      {item.name}
+                    </td>
+
+                    <td>
+                      {item.unit}
+                    </td>
+
+                    <td>
+                      {item.unit_price}
+                    </td>
+
+                    <td>
+                      {item.selling_price}
+                    </td>
+
+                    <td>
+                      {item.category?.name}
+                    </td>
+
+                    <td>
+                      {item.item_type || "All"}
+                    </td>
+
+                    <td>
+
+                      <button
+                        type="button"
+                        className="edit-btn"
+                        onClick={() =>
+                          openEditModal(item)
+                        }
+                      >
+                        ✏️ Edit
+                      </button>
+
+
+                      <button
+                        type="button"
+                        className="delete-btn"
+                        onClick={() =>
+                          handleDelete(item.id)
+                        }
+                      >
+                        🗑 Delete
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                )
+              )}
+
             </tbody>
+
           </table>
+
         </div>
+
       )}
 
-      {/* Edit Modal */}
+
+      {/* =====================================================
+          EDIT MODAL
+      ===================================================== */}
+
       {editingItem && (
+
         <div className="modal-backdrop">
+
           <div className="modal-content">
-            <h3>✏️ Update Item</h3>
+
+            <h3>
+              ✏️ Update Item
+            </h3>
+
 
             <label>
+
               Search & Select Item:
+
               <input
                 type="text"
                 placeholder="🔍 Search item in catalog..."
-                onChange={(e) => fetchSimpleItems(e.target.value)}
+                onChange={(e) =>
+                  fetchSimpleItems(
+                    e.target.value
+                  )
+                }
                 className="search-input"
               />
-              <select value={selectedSimpleItemId} onChange={(e) => handleSimpleItemChange(e.target.value)}>
-                <option value="">-- Select Item --</option>
-                {simpleItems.map((it) => (
-                  <option key={it.id} value={it.id}>
-                    {it.name} ({it.unit}) - ₦{it.unit_price} / ₦{it.selling_price} - {it.item_type || "All"}
-                  </option>
-                ))}
+
+
+              <select
+                value={selectedSimpleItemId}
+                onChange={(e) =>
+                  handleSimpleItemChange(
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="">
+                  -- Select Item --
+                </option>
+
+                {simpleItems.map(
+                  (it) => (
+
+                    <option
+                      key={it.id}
+                      value={it.id}
+                    >
+                      {it.name} ({it.unit}) - ₦
+                      {it.unit_price} / ₦
+                      {it.selling_price} -{" "}
+                      {it.item_type || "All"}
+                    </option>
+
+                  )
+                )}
+
               </select>
+
             </label>
 
+
             <form onSubmit={handleUpdate}>
+
               <label>
                 Name:
-                <input type="text" value={updateName} onChange={(e) => setUpdateName(e.target.value)} required />
+
+                <input
+                  type="text"
+                  value={updateName}
+                  onChange={(e) =>
+                    setUpdateName(
+                      e.target.value
+                    )
+                  }
+                  required
+                />
               </label>
+
 
               <label>
                 Unit:
-                <select value={updateUnit} onChange={(e) => setUpdateUnit(e.target.value)} required>
-                  <option value="">Select Unit</option>
-                  {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
+
+                <select
+                  value={updateUnit}
+                  onChange={(e) =>
+                    setUpdateUnit(
+                      e.target.value
+                    )
+                  }
+                  required
+                >
+                  <option value="">
+                    Select Unit
+                  </option>
+
+                  {unitOptions.map(
+                    (u) => (
+                      <option
+                        key={u}
+                        value={u}
+                      >
+                        {u}
+                      </option>
+                    )
+                  )}
+
                 </select>
+
               </label>
+
 
               <label>
                 Unit Cost Price:
-                <input type="number" step="0.01" value={updateUnitPrice} onChange={(e) => setUpdateUnitPrice(e.target.value)} required />
+
+                <input
+                  type="number"
+                  step="0.01"
+                  value={updateUnitPrice}
+                  onChange={(e) =>
+                    setUpdateUnitPrice(
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+
               </label>
+
 
               <label>
                 Selling Price:
-                <input type="number" step="0.01" value={updateSellingPrice} onChange={(e) => setUpdateSellingPrice(e.target.value)} required />
+
+                <input
+                  type="number"
+                  step="0.01"
+                  value={updateSellingPrice}
+                  onChange={(e) =>
+                    setUpdateSellingPrice(
+                      e.target.value
+                    )
+                  }
+                  required
+                />
+
               </label>
+
 
               <label>
                 Category:
-                <select value={updateCategoryId} onChange={(e) => setUpdateCategoryId(e.target.value)} required>
-                  <option value="">Select Category</option>
-                  {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+
+                <select
+                  value={updateCategoryId}
+                  onChange={(e) =>
+                    setUpdateCategoryId(
+                      e.target.value
+                    )
+                  }
+                  required
+                >
+
+                  <option value="">
+                    Select Category
+                  </option>
+
+                  {categories.map(
+                    (cat) => (
+
+                      <option
+                        key={cat.id}
+                        value={cat.id}
+                      >
+                        {cat.name}
+                      </option>
+
+                    )
+                  )}
+
                 </select>
+
               </label>
+
 
               <label>
                 Item Type:
-                <select value={updateItemType} onChange={(e) => setUpdateItemType(e.target.value)}>
-                  {itemTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
+
+                <select
+                  value={updateItemType}
+                  onChange={(e) =>
+                    setUpdateItemType(
+                      e.target.value
+                    )
+                  }
+                >
+
+                  {itemTypeOptions.map(
+                    (type) => (
+
+                      <option
+                        key={type}
+                        value={type}
+                      >
+                        {type}
+                      </option>
+
+                    )
+                  )}
+
                 </select>
+
               </label>
 
+
               <div className="modal-buttons">
+
                 <button
                   type="submit"
                   className="save-btn"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Saving..." : "💾 Save"}
+                  {isSubmitting
+                    ? "Saving..."
+                    : "💾 Save"}
                 </button>
-                <button type="button" className="cancel-btn" onClick={() => setEditingItem(null)}>❌ Cancel</button>
+
+
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={() =>
+                    setEditingItem(null)
+                  }
+                >
+                  ❌ Cancel
+                </button>
+
               </div>
+
             </form>
+
           </div>
+
         </div>
+
       )}
+
     </div>
   );
 };
 
+
 export default ListItem;
+

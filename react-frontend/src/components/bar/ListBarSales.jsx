@@ -14,7 +14,7 @@ const ListBarSales = () => {
   const user = JSON.parse(localStorage.getItem("user")) || {};
   const roles = user.roles || [];
   
-  const businessName = user.business?.name || "HEMS Hotel";
+  const businessName = user.business?.name || "DISM";
 
   if (!(roles.includes("admin") || roles.includes("bar"))) {
     return (

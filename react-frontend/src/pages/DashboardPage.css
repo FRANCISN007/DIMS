@@ -52,15 +52,15 @@
   border: none;
   color: #d1d5db;
   text-align: left;
-  padding: 12px 12px;         /* reduced vertical padding */
+  padding: 8px 0px;         /* reduced vertical padding */
   margin-bottom: 4px;        /* less space between items */
-  font-size: .95rem;        /* smaller text */
+  font-size: 1rem;        /* smaller text */
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease;
   display: block;
   width: 100%;
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 

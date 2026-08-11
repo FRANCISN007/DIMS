@@ -11,7 +11,7 @@ import "./StoreDashboardPage.css";
 
 const StoreDashboardPage = () => {
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const businessName = storedUser.business?.name || "HEMS Hotel";
+  const businessName = storedUser.business?.name || "DIMS";
 
   const navigate = useNavigate();
 
@@ -103,13 +103,13 @@ const StoreDashboardPage = () => {
     },
 
     {
-      name: "🍶 Manage Bar",
+      name: "🍶 Manage Location",
       submenu: [
         { label: "📤 Issue to Bar", path: "issue/create" },
         { label: "📃 List Items", path: "issue/list" },
       ],
     },
-
+    /*
     {
       name: "👨‍🍳 Manage Kitchen",
       submenu: [
@@ -120,7 +120,7 @@ const StoreDashboardPage = () => {
         { label: "🔧 List Adjustment", path: "kitchenadjustment/list" },
       ],
     },
-
+    */
     {
       name: "⚖️ Stock Adjustment",
       submenu: [
@@ -130,8 +130,8 @@ const StoreDashboardPage = () => {
     },
 
     { name: "📊 Store Stock", path: "stock-balance" },
-    { name: "📊 Bar Stock", path: "barstock-balance" },
-    { name: "👨‍🍳 Kitchen Stock", path: "kitchenstock" },
+    { name: "📊 Location Stock", path: "barstock-balance" },
+    /*{ name: "👨‍🍳 Kitchen Stock", path: "kitchenstock" },*/
     { name: "🏭 Manage Vendor", path: "vendor/list" },
 
     {

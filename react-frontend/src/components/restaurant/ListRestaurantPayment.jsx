@@ -35,7 +35,7 @@ const ListRestaurantPayment = () => {
   }
 
   // ✅ Get business name dynamically (same as sales)
-  const businessName = storedUser.business?.name || "HEMS Hotel";
+  const businessName = storedUser.business?.name || "DIMS";
 
 
   const getToday = () => {

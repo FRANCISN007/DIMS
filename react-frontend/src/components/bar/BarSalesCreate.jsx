@@ -19,7 +19,7 @@ const BarSalesCreate = () => {
   const roles = user.roles || [];
 
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  const businessName = storedUser.business?.name || "HEMS Hotel";
+  const businessName = storedUser.business?.name || "DIMS";
 
 
   const axios = axiosWithAuth();

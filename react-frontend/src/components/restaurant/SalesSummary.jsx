@@ -36,7 +36,7 @@ const SalesSummary = () => {
   roles = roles.map((r) => r.toLowerCase());
 
   const businessName =
-    storedUser.business?.name || "HEMS Hotel";
+    storedUser.business?.name || "DIMS";
 
   if (
     !(

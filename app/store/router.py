@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime, timezone
@@ -83,42 +83,65 @@ WAT = ZoneInfo("Africa/Lagos")
 
 
 
+
 # ----------------------------
 # Create Category
 # ----------------------------
-@router.post("/categories", response_model=store_schemas.StoreCategoryDisplay)
+
+@router.post(
+    "/categories",
+    response_model=store_schemas.StoreCategoryDisplay,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_category(
     category: store_schemas.StoreCategoryCreate,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(
+        role_required(["store"])
+    ),
 ):
-    # ✅ Resolve + validate tenancy
-    business_id = resolve_business_id(current_user, business_id)
+    # ==================================================
+    # RESOLVE BUSINESS
+    # ==================================================
 
-    # ✅ Normalize name (avoid "Food" vs "food")
-    category_name = category.name.strip().lower()
+    business_id = resolve_business_id(
+        current_user,
+        business_id,
+    )
 
-    # ✅ Check duplicate within same business
+    # ==================================================
+    # NORMALIZE CATEGORY NAME
+    # ==================================================
+
+    category_name = category.name.strip()
+
+    # ==================================================
+    # CHECK DUPLICATE
+    # ==================================================
+
     existing = (
         db.query(store_models.StoreCategory)
         .filter(
             store_models.StoreCategory.business_id == business_id,
-            store_models.StoreCategory.name.ilike(category_name)
+            store_models.StoreCategory.name.ilike(category_name),
         )
         .first()
     )
 
     if existing:
         raise HTTPException(
-            status_code=400,
-            detail="Category already exists for this business"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Category already exists for this business.",
         )
 
-    # ✅ Create category
+    # ==================================================
+    # CREATE CATEGORY
+    # ==================================================
+
     new_category = store_models.StoreCategory(
         name=category_name,
-        business_id=business_id
+        business_id=business_id,
     )
 
     db.add(new_category)
@@ -126,7 +149,6 @@ def create_category(
     db.refresh(new_category)
 
     return new_category
-
 
 
 # ----------------------------

@@ -2,6 +2,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.users.auth import get_current_user
@@ -9,6 +11,8 @@ from app.users.schemas import UserDisplaySchema
 from app.users.permissions import role_required
 from app.core.roles import USER_MANAGEMENT_ROLES
 from app.business.models import Business
+
+from app.users.models import User, user_roles
 
 from app.core.schemas import StatusUpdate
 from sqlalchemy import  func, or_
@@ -444,54 +448,131 @@ def delete_role(
 
     - Super Admin → any non-system role
     - Business users → only non-system roles in their business
+
+    A role cannot be deleted if:
+    - It is a system role
+    - It is assigned to one or more users
     """
 
-    query = db.query(Role).filter(
-        Role.id == role_id
-    )
+    try:
+        print("========== DELETE ROLE ==========")
+        print("ROLE ID:", role_id)
+        print("CURRENT USER:", current_user)
 
-    if current_user.business_id is not None:
-        query = query.filter(
-            Role.business_id == current_user.business_id
+        # --------------------------------------------------
+        # FIND ROLE
+        # --------------------------------------------------
+
+        query = db.query(Role).filter(
+            Role.id == role_id
         )
 
-    role = query.first()
+        # --------------------------------------------------
+        # BUSINESS RESTRICTION
+        # --------------------------------------------------
 
-    if not role:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Role not found.",
+        if current_user.business_id is not None:
+            query = query.filter(
+                Role.business_id == current_user.business_id
+            )
+
+        role = query.first()
+
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Role not found.",
+            )
+
+        print("ROLE FOUND:", role.id)
+        print("ROLE NAME:", role.name)
+        print("ROLE CODE:", role.code)
+        print("ROLE BUSINESS:", role.business_id)
+
+        # --------------------------------------------------
+        # PROTECT SYSTEM ROLES
+        # --------------------------------------------------
+
+        role_code = (
+            role.code or ""
+        ).strip().lower()
+
+        if role_code in {
+            SUPER_ADMIN.lower(),
+            ADMIN.lower(),
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="System roles cannot be deleted.",
+            )
+
+        # --------------------------------------------------
+        # CHECK USER ↔ ROLE ASSOCIATION
+        # --------------------------------------------------
+
+        assigned_user = (
+            db.query(user_roles)
+            .filter(
+                user_roles.c.role_id == role.id
+            )
+            .first()
         )
 
-    if role.code.lower() in {
-        SUPER_ADMIN.lower(),
-        ADMIN.lower(),
-    }:
+        if assigned_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "This role has been assigned to one or more "
+                    "users and cannot be deleted."
+                ),
+            )
+
+        # --------------------------------------------------
+        # DELETE ROLE
+        # --------------------------------------------------
+
+        db.delete(role)
+
+        db.commit()
+
+        print(
+            "ROLE DELETED SUCCESSFULLY:",
+            role_id,
+        )
+
+        return {
+            "detail": "Role deleted successfully."
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except IntegrityError as error:
+        db.rollback()
+
+        print(
+            "❌ ROLE DELETE INTEGRITY ERROR:",
+            error,
+        )
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="System roles cannot be deleted.",
+            detail=(
+                "This role cannot be deleted because it "
+                "is still being used by another record."
+            ),
         )
 
-    user_query = db.query(User).filter(
-        User.role_id == role.id
-    )
+    except Exception as error:
+        db.rollback()
 
-    if current_user.business_id is not None:
-        user_query = user_query.filter(
-            User.business_id == current_user.business_id
+        print(
+            "❌ ROLE DELETE ERROR:",
+            error,
         )
 
-    if db.query(user_query.exists()).scalar():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This role has been assigned to one or more users and cannot be deleted.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete role.",
         )
-
-    db.delete(role)
-    db.commit()
-
-    return {
-        "detail": "Role deleted successfully."
-    }
-
-

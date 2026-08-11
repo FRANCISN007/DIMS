@@ -100,6 +100,10 @@ import CreateRole from "./components/roles/CreateRole";
 import ListRole from "./components/roles/ListRole";
 
 
+// ================= LOCATIONS =================
+import CreateLocation from "./components/locations/CreateLocation";
+import ListLocation from "./components/locations/ListLocation";
+
 
 console.log(
   "API BASE:",
@@ -529,6 +533,7 @@ const App = () => {
 
             <Route
               index
+              path="list"
               element={<ListRole />}
             />
 
@@ -541,6 +546,27 @@ const App = () => {
 
           </Route>
 
+
+          {/* ===================================================
+              ROLES
+          =================================================== */}
+
+          <Route path="locations">
+
+            <Route
+              index
+              path="list"
+              element={<ListLocation />}
+            />
+
+            <Route
+              path="create"
+              element={<CreateLocation />}
+            />
+
+            
+
+          </Route>
 
 
           {/* ===================================================

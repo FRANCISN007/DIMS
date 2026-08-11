@@ -2,7 +2,7 @@ export const openViewForm = (booking) => {
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
 
   // ✅ Dynamic business name
-  const businessName = storedUser.business?.name || "HEMS Hotel";
+  const businessName = storedUser.business?.name || "DIMS";
 
   const printWindow = window.open("", "_blank", "width=900,height=700");
 

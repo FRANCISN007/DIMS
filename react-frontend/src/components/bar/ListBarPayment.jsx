@@ -29,7 +29,7 @@ const ListBarPayment = () => {
     );
   }
 
-  const businessName = user.business?.name || "HEMS Hotel";
+  const businessName = user.business?.name || "DIMS";
 
   const today = new Date().toISOString().split("T")[0];
   const [startDate, setStartDate] = useState(today);
