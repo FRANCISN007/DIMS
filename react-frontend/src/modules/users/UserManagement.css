@@ -4,15 +4,17 @@
 ========================================================= */
 
 .user-container {
-  padding: 12px;
+  padding: 10px;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f8f9fa;
+  background-color: #668eb6;
   border-radius: 8px;
 
   min-height: 100%;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 120px);
 
   overflow: hidden;
+
+  min-height: 0;
 
   display: flex;
   flex-direction: column;
@@ -203,7 +205,7 @@
   overflow-x: auto;
   overflow-y: auto;
 
-  background: #ffffff;
+  background: #f3efef;
 
   border: 1px solid #28a745;
   border-radius: 7px;
@@ -338,7 +340,7 @@
 
   font-size: 0.80rem;
 
-  border-bottom: 1px solid #d7dada;
+  border-bottom: 1px solid #ccdddd;
 
   transition:
     background-color 0.15s ease,

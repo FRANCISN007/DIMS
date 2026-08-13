@@ -13,24 +13,38 @@ from app.core.mixins import BusinessMixin
 class Bar(Base, BusinessMixin):
     __tablename__ = "bars"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
-    name = Column(String, nullable=False)
-    location = Column(String, nullable=True)
+    name = Column(
+        String,
+        nullable=False
+    )
 
-    
+    location = Column(
+        String,
+        nullable=True
+    )
 
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(ZoneInfo("Africa/Lagos"))
+        default=lambda: datetime.now(
+            ZoneInfo("Africa/Lagos")
+        )
     )
 
     __table_args__ = (
-        UniqueConstraint("business_id", "name", name="uq_bar_business_name"),
+        UniqueConstraint(
+            "business_id",
+            "name",
+            name="uq_bar_business_name"
+        ),
     )
 
-    
     inventory_items = relationship(
         "BarInventory",
         back_populates="bar",
@@ -43,8 +57,7 @@ class Bar(Base, BusinessMixin):
         cascade="all, delete-orphan"
     )
 
-    issues = relationship("StoreIssue", back_populates="bar")
-
+    
 
 # ----------------------------
 # Bar Inventory

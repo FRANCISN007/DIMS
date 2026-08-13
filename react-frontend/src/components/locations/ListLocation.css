@@ -91,6 +91,7 @@
   gap: 10px;
   padding: 10px;
   margin-bottom: 12px;
+
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 7px;
@@ -107,13 +108,18 @@
   width: 100%;
   max-width: 360px;
   height: 36px;
+
   padding: 0 10px;
   box-sizing: border-box;
+
   border: 1px solid #d1d5db;
   border-radius: 6px;
+
   outline: none;
+
   color: #1f2937;
   background: #ffffff;
+
   font-size: 0.84rem;
 }
 
@@ -121,6 +127,11 @@
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
+
+
+/* =========================================================
+   STATUS FILTER
+========================================================= */
 
 .location-status-filter {
   display: flex;
@@ -131,10 +142,13 @@
 .location-filter-select {
   height: 36px;
   padding: 0 9px;
+
   border: 1px solid #d1d5db;
   border-radius: 6px;
+
   background: #ffffff;
   color: #374151;
+
   font-size: 0.84rem;
   outline: none;
 }
@@ -143,16 +157,25 @@
   border-color: #2563eb;
 }
 
+
+/* =========================================================
+   FILTER BUTTONS
+========================================================= */
+
 .location-search-button,
 .location-filter-button,
 .location-clear-button {
   height: 36px;
   padding: 0 12px;
+
   border: none;
   border-radius: 6px;
+
   cursor: pointer;
+
   font-size: 0.82rem;
   font-weight: 600;
+
   white-space: nowrap;
 }
 
@@ -191,11 +214,14 @@
 
 .location-edit-panel {
   position: relative;
+
   margin-bottom: 12px;
   padding: 14px;
+
   background: #ffffff;
   border: 1px solid #dbeafe;
   border-radius: 8px;
+
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -203,18 +229,22 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   margin-bottom: 12px;
 }
 
 .location-edit-header h3 {
   margin: 0;
+
   color: #1f2937;
   font-size: 1rem;
 }
 
 .location-edit-header span {
   display: block;
+
   margin-top: 2px;
+
   color: #6b7280;
   font-size: 0.78rem;
 }
@@ -222,14 +252,19 @@
 .location-edit-close {
   width: 28px;
   height: 28px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   border: none;
   border-radius: 5px;
+
   background: transparent;
   color: #6b7280;
+
   font-size: 22px;
+
   cursor: pointer;
 }
 
@@ -238,15 +273,24 @@
   color: #dc2626;
 }
 
+
+/* =========================================================
+   EDIT FORM
+========================================================= */
+
 .location-edit-form {
   display: grid;
+
   grid-template-columns:
+    1.1fr
+    0.7fr
     1.2fr
-    0.8fr
-    1.5fr
     0.9fr
-    0.8fr;
+    1.3fr
+    auto;
+
   align-items: end;
+
   gap: 10px;
 }
 
@@ -257,7 +301,9 @@
 
 .location-edit-group label {
   margin-bottom: 5px;
+
   color: #374151;
+
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -272,12 +318,17 @@
 .location-edit-group textarea {
   width: 100%;
   box-sizing: border-box;
+
   padding: 8px 9px;
+
   border: 1px solid #d1d5db;
   border-radius: 5px;
+
   outline: none;
+
   background: #ffffff;
   color: #1f2937;
+
   font-family: inherit;
   font-size: 0.82rem;
 }
@@ -294,9 +345,10 @@
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
 }
 
-.location-edit-description {
-  grid-column: span 3;
-}
+
+/* =========================================================
+   EDIT ACTIONS
+========================================================= */
 
 .location-edit-actions {
   display: flex;
@@ -308,10 +360,14 @@
 .location-edit-save {
   height: 34px;
   padding: 0 11px;
+
   border-radius: 5px;
+
   cursor: pointer;
+
   font-size: 0.78rem;
   font-weight: 600;
+
   white-space: nowrap;
 }
 
@@ -348,10 +404,14 @@
 
 .locations-table-container {
   width: 100%;
+
   overflow-x: auto;
+
   background: #f3efef;
+
   border: 1px solid #115aec;
   border-radius: 8px;
+
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -362,9 +422,12 @@
 
 .locations-table {
   width: 100%;
-  min-width: 1050px;
+  min-width: 950px;
+
   border-collapse: collapse;
+
   font-size: 0.82rem;
+
   background: #eff1f3;
 }
 
@@ -374,20 +437,29 @@
 
 .locations-table th {
   padding: 10px 9px;
+
   text-align: left;
+
   color: #374151;
+
   border-bottom: 1px solid #c3cbda;
+
   font-weight: 800;
   font-size: 1rem;
+
   white-space: nowrap;
 }
 
 .locations-table td {
-  padding: 4px 5px;
   color: #4b5563;
+
   border-bottom: 1px solid #c9d5e2;
+
   vertical-align: middle;
-  font-size: 0.95rem;
+
+  padding: 4px 5px;
+
+  font-size: 1rem;
 }
 
 .locations-table tbody tr:hover {
@@ -411,50 +483,67 @@
 
 .location-code {
   display: inline-block;
+
   padding: 3px 7px;
+
   border-radius: 4px;
+
   background: #f3f4f6;
   color: #374151;
+
   font-family: monospace;
   font-size: 0.76rem;
   font-weight: 600;
 }
 
 .location-address-cell {
-  max-width: 220px;
+  max-width: 240px;
   line-height: 1.35;
 }
 
 .location-description-cell {
-  max-width: 230px;
+  max-width: 250px;
   line-height: 1.35;
+}
+
+.location-phone-cell {
+  white-space: nowrap;
 }
 
 
 /* =========================================================
    STATUS
-   SAME PATTERN AS ROLE LIST
+   Same pattern as ROLE LIST
 ========================================================= */
 
 .location-status-select {
   min-width: 90px;
+
   padding: 5px 7px;
+
   border-radius: 5px;
+
   outline: none;
+
   font-size: 0.76rem;
   font-weight: 600;
+
   cursor: pointer;
 }
 
 .location-status-select.status-active {
   color: #047857;
+
   background: #ecfdf5;
+
   border: 1px solid #a7f3d0;
 }
 
 .location-status-select.status-inactive {
   color: #b91c1c;
+
   background: #fef2f2;
+
   border: 1px solid #fecaca;
 }
 
@@ -471,21 +560,27 @@
 .location-actions {
   display: flex;
   align-items: center;
+
   gap: 5px;
+
   white-space: nowrap;
 }
 
 .location-action-edit,
 .location-action-delete {
   padding: 6px 8px;
+
   border-radius: 5px;
+
   cursor: pointer;
+
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .location-action-edit {
   border: 1px solid #bfdbfe;
+
   background: #eff6ff;
   color: #1d4ed8;
 }
@@ -496,6 +591,7 @@
 
 .location-action-delete {
   border: 1px solid #fecaca;
+
   background: #fef2f2;
   color: #b91c1c;
 }
@@ -504,7 +600,6 @@
   background: #fee2e2;
 }
 
-.location-action-edit:disabled,
 .location-action-delete:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -517,20 +612,27 @@
 
 .locations-loading {
   min-height: 180px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   gap: 9px;
+
   color: #6b7280;
+
   font-size: 0.85rem;
 }
 
 .location-loading-spinner {
   width: 16px;
   height: 16px;
+
   border: 2px solid #d1d5db;
   border-top-color: #2563eb;
+
   border-radius: 50%;
+
   animation: locationListSpinner 0.7s linear infinite;
 }
 
@@ -547,11 +649,14 @@
 
 .locations-empty {
   min-height: 180px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
   text-align: center;
+
   padding: 25px;
 }
 
@@ -562,13 +667,17 @@
 
 .locations-empty h3 {
   margin: 0;
+
   color: #374151;
+
   font-size: 0.95rem;
 }
 
 .locations-empty p {
   margin: 5px 0 0;
+
   color: #9ca3af;
+
   font-size: 0.8rem;
 }
 
@@ -580,10 +689,6 @@
 @media (max-width: 1200px) {
   .location-edit-form {
     grid-template-columns: 1fr 1fr 1fr;
-  }
-
-  .location-edit-description {
-    grid-column: span 2;
   }
 
   .location-edit-actions {
@@ -607,6 +712,14 @@
   }
 
   .location-status-filter {
+    justify-content: flex-end;
+  }
+
+  .location-edit-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .location-edit-actions {
     justify-content: flex-end;
   }
 }
@@ -647,15 +760,12 @@
     grid-template-columns: 1fr;
   }
 
-  .location-edit-description {
-    grid-column: span 1;
-  }
-
   .location-edit-actions {
     justify-content: flex-end;
   }
 
   .locations-table {
-    min-width: 1050px;
+    min-width: 900px;
   }
 }
+

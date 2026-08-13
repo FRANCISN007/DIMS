@@ -5,17 +5,18 @@ from pydantic import BaseModel, Field
 from app.vendor.schemas import VendorDisplay  # ✅ import this
 from app.vendor.schemas import VendorInStoreDisplay  # make sure this import path is correct
 from app.vendor.schemas import VendorOut
-#from app.bar.schemas import BarDisplaySimple
+
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal, Union
-from app.bar.schemas import BarDisplaySimple
+
 from app.kitchen.schemas import KitchenDisplaySimple
 
+from app.locations.schemas import LocationSimple
 
 
 
-class SomeSchema(BaseModel):
-    related: 'BarDisplaySimple'  # use a string to avoid import issues
+
+
 
 
 # ----------------------------
@@ -202,20 +203,26 @@ class UpdatePurchase(BaseModel):
 
 
 
-# ----------------------------
+from datetime import datetime
+from typing import List, Optional, Literal
+
+from pydantic import BaseModel, Field
+
+
+# ==========================================================
 # Store Issue
-# ----------------------------
-class IssueItemCreate(BaseModel):  # ✅ renamed from StoreIssueItemBase
+# ==========================================================
+
+class IssueItemCreate(BaseModel):
     item_id: int
     quantity: int
 
 
-class IssueCreate(BaseModel):  # ✅ renamed from StoreIssueCreate
-    issue_to: Literal["bar", "kitchen"]
-    issued_to_id: int        # ID of the bar/kitchen
-    issue_items: List[IssueItemCreate]  # ✅ renamed from 'items'
+class IssueCreate(BaseModel):
+    issue_to: Literal["location"]
+    issued_to_id: int
+    issue_items: List[IssueItemCreate]
     issue_date: datetime = Field(default_factory=datetime.utcnow)
-
 
 
 class IssueItemDisplay(BaseModel):
@@ -227,20 +234,22 @@ class IssueItemDisplay(BaseModel):
         from_attributes = True
 
 
-
 class IssueDisplay(BaseModel):
     id: int
-    issue_to: str  # "bar" or "kitchen"
+    issue_to: str
     issued_to_id: int
-    # Use a Union so it can be Bar or Kitchen display
-    issued_to: Optional[Union['BarDisplaySimple', 'KitchenDisplaySimple']] = None
+
+    # Location returned here
+    issued_to: Optional["LocationSimple"] = None
+
     issue_date: datetime
     issue_items: List[IssueItemDisplay]
 
     class Config:
         from_attributes = True
 
-class IssueDisplayOut(BaseModel):  # ✅ renamed from StoreIssueDisplay
+
+class IssueDisplayOut(BaseModel):
     id: int
     issue_to: str
     issued_to_id: int
@@ -270,27 +279,7 @@ class StoreInventoryAdjustmentDisplay(BaseModel):
         from_attributes = True
 
 
-from app.bar.schemas import BarDisplaySimple
-SomeSchema.update_forward_refs()
 
-
-class BarStockBalanceRow(BaseModel):
-    bar_id: int
-    bar_name: str
-    item_id: int
-    item_name: str
-    unit: Optional[str]        # ✅ Ensure this exists
-    category_name: Optional[str]  # ✅ Ensure this exists
-    item_type: Optional[str]   # <--- ADD THIS
-    unit: Optional[str] = None
-    quantity: float
-    selling_price: float
-    amount: float  # quantity * selling_price
-
-class BarStockBalanceResponse(BaseModel):
-    rows: List[BarStockBalanceRow]
-    total_entries: int
-    total_amount: float
 
 
 class StoreStockBalance(BaseModel):

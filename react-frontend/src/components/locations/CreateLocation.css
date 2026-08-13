@@ -1,13 +1,79 @@
 
 /* =========================================================
-   LIST LOCATION PAGE
+   CREATE LOCATION PAGE
 ========================================================= */
 
-.list-location-page {
+.create-location-page {
   width: 100%;
+  min-height: 100%;
+  padding: 0px;
   box-sizing: border-box;
-  padding: 15px;
+  
+  
+}
+
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.create-location-form {
+  position: relative;
+  width: 100%;
+  max-width: 650px;
   margin: 0 auto;
+  padding: 10px 20px;
+  box-sizing: border-box;
+
+  background: #f5f2f2;
+  border: 1px solid #5f91d3;
+  border-radius: 9px;
+
+  box-shadow:
+    0 3px 10px rgba(15, 23, 42, 0.05);
+}
+
+
+/* =========================================================
+   CLOSE BUTTON
+========================================================= */
+
+.create-location-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 6px;
+
+  background: transparent;
+  color: #64748b;
+
+  font-size: 23px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.create-location-close:hover {
+  background: #f1f5f9;
+  color: #dc2626;
+}
+
+.create-location-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 
@@ -15,35 +81,27 @@
    HEADER
 ========================================================= */
 
-.list-location-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 15px;
+.create-location-header {
+  padding-right: 35px;
+  margin-bottom: 14px;
 }
 
-.list-location-header h2 {
-  margin: 0;
-  color: #1f2937;
-  font-size: 1.45rem;
+.create-location-header h2 {
+  margin: 0 0 3px;
+
+  color: #0f172a;
+
+  font-size: 21px;
   font-weight: 700;
 }
 
-.list-location-header p {
-  margin: 4px 0 0;
-  color: #6b7280;
-  font-size: 0.84rem;
-}
+.create-location-header p {
+  margin: 0;
 
-.location-count {
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: #f3f4f6;
-  color: #374151;
-  font-size: 0.82rem;
-  font-weight: 600;
-  white-space: nowrap;
+  color: #64748b;
+
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 
@@ -55,500 +113,160 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px;
+
+  width: 100%;
+  min-height: 36px;
+
   margin-bottom: 12px;
+  padding: 7px 10px;
+
+  box-sizing: border-box;
+
   border-radius: 6px;
-  font-size: 0.84rem;
+
+  font-size: 13px;
   font-weight: 500;
+
+  animation: locationMessageSlide 0.2s ease-out;
 }
 
 .location-message-success {
-  color: #047857;
   background: #ecfdf5;
   border: 1px solid #a7f3d0;
+  color: #047857;
 }
 
 .location-message-error {
-  color: #b91c1c;
   background: #fef2f2;
   border: 1px solid #fecaca;
+  color: #b91c1c;
 }
 
 .location-message-icon {
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-
-/* =========================================================
-   FILTER BAR
-========================================================= */
-
-.location-filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px;
-  margin-bottom: 12px;
-
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-}
-
-.location-search-form {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex: 1;
-}
-
-.location-search-input {
-  width: 100%;
-  max-width: 360px;
-  height: 36px;
-
-  padding: 0 10px;
-  box-sizing: border-box;
-
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-
-  outline: none;
-
-  color: #1f2937;
-  background: #ffffff;
-
-  font-size: 0.84rem;
-}
-
-.location-search-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-
-
-/* =========================================================
-   STATUS FILTER
-========================================================= */
-
-.location-status-filter {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.location-filter-select {
-  height: 36px;
-  padding: 0 9px;
-
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-
-  background: #ffffff;
-  color: #374151;
-
-  font-size: 0.84rem;
-  outline: none;
-}
-
-.location-filter-select:focus {
-  border-color: #2563eb;
-}
-
-
-/* =========================================================
-   FILTER BUTTONS
-========================================================= */
-
-.location-search-button,
-.location-filter-button,
-.location-clear-button {
-  height: 36px;
-  padding: 0 12px;
-
-  border: none;
-  border-radius: 6px;
-
-  cursor: pointer;
-
-  font-size: 0.82rem;
-  font-weight: 600;
-
-  white-space: nowrap;
-}
-
-.location-search-button {
-  background: #2563eb;
-  color: #ffffff;
-}
-
-.location-search-button:hover {
-  background: #1d4ed8;
-}
-
-.location-filter-button {
-  background: #374151;
-  color: #ffffff;
-}
-
-.location-filter-button:hover {
-  background: #1f2937;
-}
-
-.location-clear-button {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-
-.location-clear-button:hover {
-  background: #e5e7eb;
-}
-
-
-/* =========================================================
-   EDIT PANEL
-========================================================= */
-
-.location-edit-panel {
-  position: relative;
-
-  margin-bottom: 12px;
-  padding: 14px;
-
-  background: #ffffff;
-  border: 1px solid #dbeafe;
-  border-radius: 8px;
-
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.location-edit-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  margin-bottom: 12px;
-}
-
-.location-edit-header h3 {
-  margin: 0;
-
-  color: #1f2937;
-  font-size: 1rem;
-}
-
-.location-edit-header span {
-  display: block;
-
-  margin-top: 2px;
-
-  color: #6b7280;
-  font-size: 0.78rem;
-}
-
-.location-edit-close {
-  width: 28px;
-  height: 28px;
-
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  border: none;
-  border-radius: 5px;
+  width: 19px;
+  height: 19px;
 
-  background: transparent;
-  color: #6b7280;
+  flex-shrink: 0;
 
-  font-size: 22px;
+  border-radius: 50%;
 
-  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.location-edit-close:hover {
-  background: #f3f4f6;
-  color: #dc2626;
+.location-message-success .location-message-icon {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.location-message-error .location-message-icon {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+@keyframes locationMessageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 
 /* =========================================================
-   EDIT FORM
+   FORM GROUP
 ========================================================= */
 
-.location-edit-form {
-  display: grid;
-
-  grid-template-columns:
-    1.1fr
-    0.7fr
-    1.2fr
-    0.9fr
-    1.3fr
-    auto;
-
-  align-items: end;
-
-  gap: 10px;
+.form-group {
+  margin-bottom: 9px;
 }
 
-.location-edit-group {
-  display: flex;
-  flex-direction: column;
-}
+.form-group label {
+  display: block;
 
-.location-edit-group label {
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 
-  color: #374151;
+  color: #334155;
 
-  font-size: 0.78rem;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .required {
-  margin-left: 2px;
   color: #dc2626;
+  margin-left: 2px;
 }
 
-.location-edit-group input,
-.location-edit-group select,
-.location-edit-group textarea {
+
+/* =========================================================
+   INPUTS / SELECT / TEXTAREA
+========================================================= */
+
+.form-group input,
+.form-group select,
+.form-group textarea {
   width: 100%;
+
   box-sizing: border-box;
 
-  padding: 8px 9px;
-
-  border: 1px solid #d1d5db;
-  border-radius: 5px;
-
-  outline: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
 
   background: #ffffff;
-  color: #1f2937;
+  color: #0f172a;
 
   font-family: inherit;
-  font-size: 0.82rem;
-}
-
-.location-edit-group textarea {
-  resize: vertical;
-  min-height: 36px;
-}
-
-.location-edit-group input:focus,
-.location-edit-group select:focus,
-.location-edit-group textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
-}
-
-
-/* =========================================================
-   EDIT ACTIONS
-========================================================= */
-
-.location-edit-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.location-edit-cancel,
-.location-edit-save {
-  height: 34px;
-  padding: 0 11px;
-
-  border-radius: 5px;
-
-  cursor: pointer;
-
-  font-size: 0.78rem;
-  font-weight: 600;
-
-  white-space: nowrap;
-}
-
-.location-edit-cancel {
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
-}
-
-.location-edit-cancel:hover {
-  background: #f3f4f6;
-}
-
-.location-edit-save {
-  border: none;
-  background: #2563eb;
-  color: #ffffff;
-}
-
-.location-edit-save:hover {
-  background: #1d4ed8;
-}
-
-.location-edit-cancel:disabled,
-.location-edit-save:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-
-/* =========================================================
-   TABLE CONTAINER
-========================================================= */
-
-.locations-table-container {
-  width: 100%;
-
-  overflow-x: auto;
-
-  background: #f3efef;
-
-  border: 1px solid #115aec;
-  border-radius: 8px;
-
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-
-/* =========================================================
-   TABLE
-========================================================= */
-
-.locations-table {
-  width: 100%;
-  min-width: 950px;
-
-  border-collapse: collapse;
-
-  font-size: 0.82rem;
-
-  background: #eff1f3;
-}
-
-.locations-table thead {
-  background: #dfe3e7;
-}
-
-.locations-table th {
-  padding: 10px 9px;
-
-  text-align: left;
-
-  color: #374151;
-
-  border-bottom: 1px solid #c3cbda;
-
-  font-weight: 800;
-  font-size: 1rem;
-
-  white-space: nowrap;
-}
-
-.locations-table td {
-  color: #4b5563;
-
-  border-bottom: 1px solid #c9d5e2;
-
-  vertical-align: middle;
-
-  padding: 4px 5px;
-
-  font-size: 1rem;
-}
-
-.locations-table tbody tr:hover {
-  background: #f9fafb;
-}
-
-.locations-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-
-/* =========================================================
-   LOCATION CELLS
-========================================================= */
-
-.location-name-cell {
-  color: #1f2937 !important;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.location-code {
-  display: inline-block;
-
-  padding: 3px 7px;
-
-  border-radius: 4px;
-
-  background: #f3f4f6;
-  color: #374151;
-
-  font-family: monospace;
-  font-size: 0.76rem;
-  font-weight: 600;
-}
-
-.location-address-cell {
-  max-width: 240px;
-  line-height: 1.35;
-}
-
-.location-description-cell {
-  max-width: 250px;
-  line-height: 1.35;
-}
-
-.location-phone-cell {
-  white-space: nowrap;
-}
-
-
-/* =========================================================
-   STATUS
-   Same pattern as ROLE LIST
-========================================================= */
-
-.location-status-select {
-  min-width: 90px;
-
-  padding: 5px 7px;
-
-  border-radius: 5px;
+  font-size: 13px;
 
   outline: none;
 
-  font-size: 0.76rem;
-  font-weight: 600;
-
-  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
-.location-status-select.status-active {
-  color: #047857;
-
-  background: #ecfdf5;
-
-  border: 1px solid #a7f3d0;
+.form-group input,
+.form-group select {
+  height: 36px;
+  padding: 0 10px;
 }
 
-.location-status-select.status-inactive {
-  color: #b91c1c;
+.form-group textarea {
+  min-height: 58px;
+  padding: 8px 10px;
 
-  background: #fef2f2;
-
-  border: 1px solid #fecaca;
+  resize: vertical;
+  line-height: 1.4;
 }
 
-.location-status-select:disabled {
-  opacity: 0.6;
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #94a3b8;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 0 2px rgba(37, 99, 235, 0.10);
+}
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background: #f8fafc;
+  color: #64748b;
   cursor: not-allowed;
 }
 
@@ -557,86 +275,120 @@
    ACTIONS
 ========================================================= */
 
-.location-actions {
+.form-actions {
   display: flex;
+  justify-content: flex-end;
   align-items: center;
+  gap: 8px;
 
-  gap: 5px;
+  margin-top: 14px;
+  padding-top: 12px;
 
-  white-space: nowrap;
+  border-top: 1px solid #e2e8f0;
 }
 
-.location-action-edit,
-.location-action-delete {
-  padding: 6px 8px;
 
-  border-radius: 5px;
+/* =========================================================
+   RESET BUTTON
+========================================================= */
+
+.reset-location-button {
+  min-width: 85px;
+  height: 36px;
+
+  padding: 0 14px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+
+  background: #ffffff;
+  color: #475569;
+
+  font-size: 13px;
+  font-weight: 600;
 
   cursor: pointer;
 
-  font-size: 0.75rem;
-  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.location-action-edit {
-  border: 1px solid #bfdbfe;
-
-  background: #eff6ff;
-  color: #1d4ed8;
+.reset-location-button:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #1e293b;
 }
 
-.location-action-edit:hover {
-  background: #dbeafe;
-}
-
-.location-action-delete {
-  border: 1px solid #fecaca;
-
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.location-action-delete:hover {
-  background: #fee2e2;
-}
-
-.location-action-delete:disabled {
+.reset-location-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
 
 /* =========================================================
-   LOADING
+   CREATE BUTTON
 ========================================================= */
 
-.locations-loading {
-  min-height: 180px;
+.create-location-button {
+  min-width: 125px;
+  height: 36px;
 
-  display: flex;
+  padding: 0 16px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: #2563eb;
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 7px;
 
-  gap: 9px;
-
-  color: #6b7280;
-
-  font-size: 0.85rem;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.location-loading-spinner {
-  width: 16px;
-  height: 16px;
+.create-location-button:hover {
+  background: #1d4ed8;
 
-  border: 2px solid #d1d5db;
-  border-top-color: #2563eb;
+  box-shadow:
+    0 2px 6px rgba(37, 99, 235, 0.20);
+}
+
+.create-location-button:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   LOADING SPINNER
+========================================================= */
+
+.location-spinner {
+  width: 13px;
+  height: 13px;
+
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
 
   border-radius: 50%;
 
-  animation: locationListSpinner 0.7s linear infinite;
+  animation: locationSpin 0.7s linear infinite;
 }
 
-@keyframes locationListSpinner {
+@keyframes locationSpin {
   to {
     transform: rotate(360deg);
   }
@@ -644,127 +396,47 @@
 
 
 /* =========================================================
-   EMPTY
-========================================================= */
-
-.locations-empty {
-  min-height: 180px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-
-  padding: 25px;
-}
-
-.locations-empty-icon {
-  font-size: 2rem;
-  margin-bottom: 5px;
-}
-
-.locations-empty h3 {
-  margin: 0;
-
-  color: #374151;
-
-  font-size: 0.95rem;
-}
-
-.locations-empty p {
-  margin: 5px 0 0;
-
-  color: #9ca3af;
-
-  font-size: 0.8rem;
-}
-
-
-/* =========================================================
    RESPONSIVE
 ========================================================= */
 
-@media (max-width: 1200px) {
-  .location-edit-form {
-    grid-template-columns: 1fr 1fr 1fr;
+@media (max-width: 768px) {
+  .create-location-page {
+    padding: 5px;
   }
 
-  .location-edit-actions {
-    justify-content: flex-end;
+  .create-location-form {
+    max-width: 100%;
+    padding: 15px 16px;
+  }
+
+  .create-location-header h2 {
+    font-size: 20px;
   }
 }
 
 
-@media (max-width: 1100px) {
-  .location-filter-bar {
-    flex-direction: column;
+@media (max-width: 520px) {
+  .create-location-page {
+    padding: 4px;
+  }
+
+  .create-location-form {
+    padding: 14px 12px;
+    border-radius: 7px;
+  }
+
+  .create-location-header {
+    margin-bottom: 12px;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
     align-items: stretch;
   }
 
-  .location-search-form {
+  .reset-location-button,
+  .create-location-button {
     width: 100%;
-  }
-
-  .location-search-input {
-    max-width: none;
-  }
-
-  .location-status-filter {
-    justify-content: flex-end;
-  }
-
-  .location-edit-form {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .location-edit-actions {
-    justify-content: flex-end;
   }
 }
 
-
-@media (max-width: 650px) {
-  .list-location-page {
-    padding: 10px;
-  }
-
-  .list-location-header {
-    align-items: flex-start;
-  }
-
-  .list-location-header h2 {
-    font-size: 1.25rem;
-  }
-
-  .location-status-filter {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-
-  .location-search-form {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .location-search-input {
-    max-width: none;
-  }
-
-  .location-search-button {
-    width: 100%;
-  }
-
-  .location-edit-form {
-    grid-template-columns: 1fr;
-  }
-
-  .location-edit-actions {
-    justify-content: flex-end;
-  }
-
-  .locations-table {
-    min-width: 900px;
-  }
-}

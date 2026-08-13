@@ -1,4 +1,3 @@
-
 import React, {
   useCallback,
   useEffect,
@@ -7,7 +6,6 @@ import React, {
 } from "react";
 
 import { useNavigate } from "react-router-dom";
-
 import "./UserManagement.css";
 import getBaseUrl from "../../api/config";
 
@@ -235,7 +233,11 @@ const UserManagement = () => {
     full_name: "",
     phone: "",
     password: "",
-    business_id: "",
+    business_id: isSuperAdmin
+      ? ""
+      : String(
+          storedUser.business_id || ""
+        ),
     role_id: "",
     location_id: "",
   };
@@ -719,6 +721,50 @@ const UserManagement = () => {
   ]);
 
   /* =======================================================
+     INITIALIZE CREATE USER BUSINESS
+     
+     IMPORTANT:
+     Non-Super-Admin users already belong to a business.
+     Therefore we automatically use their business ID.
+  ======================================================= */
+
+  useEffect(() => {
+    if (
+      selectedAction !== "add"
+    ) {
+      return;
+    }
+
+    if (!isSuperAdmin) {
+      const businessId =
+        storedUser.business_id
+          ? String(
+              storedUser.business_id
+            )
+          : "";
+
+      setNewUser((previous) => {
+        if (
+          previous.business_id ===
+          businessId
+        ) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          business_id:
+            businessId,
+        };
+      });
+    }
+  }, [
+    selectedAction,
+    isSuperAdmin,
+    storedUser.business_id,
+  ]);
+
+  /* =======================================================
      LOAD LOCATIONS FOR CREATE USER
   ======================================================= */
 
@@ -911,6 +957,14 @@ const UserManagement = () => {
           "Invalid role."
         );
         return;
+      }
+
+      /*
+       * Super Admin without a business
+       * cannot have a location.
+       */
+      if (!businessId) {
+        locationId = null;
       }
 
       const payload = {
@@ -1183,6 +1237,14 @@ const UserManagement = () => {
           );
           return;
         }
+      }
+
+      /*
+       * A user without a business
+       * cannot have a location.
+       */
+      if (!businessId) {
+        locationId = null;
       }
 
       const payload = {
@@ -1640,159 +1702,161 @@ const UserManagement = () => {
       }
     };
 
-  
-  
-/* =======================================================
-   UPDATE BUSINESS
-======================================================= */
+  /* =======================================================
+     UPDATE BUSINESS
+  ======================================================= */
 
-const handleUpdateBusiness = async (event) => {
-  event.preventDefault();
+  const handleUpdateBusiness =
+    async (event) => {
+      event.preventDefault();
 
-  if (!isSuperAdmin) {
-    showPopup(
-      "Only Super Admin can manage businesses."
-    );
-    return;
-  }
-
-  if (!editingBusiness || !editingBusiness.id) {
-    showPopup("No business selected.");
-    return;
-  }
-
-  if (!editingBusiness.name?.trim()) {
-    showPopup("Business name is required.");
-    return;
-  }
-
-  const businessId = Number(editingBusiness.id);
-
-  if (
-    !Number.isInteger(businessId) ||
-    businessId <= 0
-  ) {
-    showPopup("Invalid business ID.");
-    return;
-  }
-
-  const payload = {
-    name: editingBusiness.name.trim(),
-
-    owner_username:
-      editingBusiness.owner_username?.trim() || null,
-
-    address:
-      editingBusiness.address?.trim() || null,
-
-    phone:
-      editingBusiness.phone?.trim() || null,
-
-    email:
-      editingBusiness.email?.trim() || null,
-  };
-
-  console.log("=================================");
-  console.log("UPDATE BUSINESS");
-  console.log("Business ID:", businessId);
-  console.log("Payload:", payload);
-  console.log(
-    "URL:",
-    `${API_BASE_URL}/business/${businessId}`
-  );
-  console.log("=================================");
-
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/business/${businessId}`,
-      {
-        method: "PUT",
-
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-
-        body: JSON.stringify(payload),
+      if (!isSuperAdmin) {
+        showPopup(
+          "Only Super Admin can manage businesses."
+        );
+        return;
       }
-    );
 
-    const responseText = await response.text();
+      if (
+        !editingBusiness ||
+        !editingBusiness.id
+      ) {
+        showPopup(
+          "No business selected."
+        );
+        return;
+      }
 
-    let data = {};
+      if (
+        !editingBusiness.name?.trim()
+      ) {
+        showPopup(
+          "Business name is required."
+        );
+        return;
+      }
 
-    try {
-      data = responseText
-        ? JSON.parse(responseText)
-        : {};
-    } catch {
-      data = {
-        detail: responseText,
+      const businessId = Number(
+        editingBusiness.id
+      );
+
+      if (
+        !Number.isInteger(
+          businessId
+        ) ||
+        businessId <= 0
+      ) {
+        showPopup(
+          "Invalid business ID."
+        );
+        return;
+      }
+
+      const payload = {
+        name:
+          editingBusiness.name.trim(),
+
+        owner_username:
+          editingBusiness.owner_username?.trim() ||
+          null,
+
+        address:
+          editingBusiness.address?.trim() ||
+          null,
+
+        phone:
+          editingBusiness.phone?.trim() ||
+          null,
+
+        email:
+          editingBusiness.email?.trim() ||
+          null,
       };
-    }
 
-    console.log(
-      "Response status:",
-      response.status
-    );
+      try {
+        const response =
+          await fetch(
+            `${API_BASE_URL}/business/${businessId}`,
+            {
+              method: "PUT",
 
-    console.log(
-      "Response data:",
-      data
-    );
+              headers: {
+                "Content-Type":
+                  "application/json",
 
-    if (!response.ok) {
-      throw new Error(
-        data?.detail ||
-          data?.message ||
-          `Business update failed (${response.status}).`
-      );
-    }
+                Accept:
+                  "application/json",
 
-    showPopup(
-      "Business updated successfully."
-    );
+                Authorization:
+                  `Bearer ${token}`,
+              },
 
-    setEditingBusiness(null);
-    setSelectedAction(
-      "list-businesses"
-    );
+              body:
+                JSON.stringify(
+                  payload
+                ),
+            }
+          );
 
-    await fetchBusinesses();
-    await fetchUsers();
+        const responseText =
+          await response.text();
 
-  } catch (err) {
-    console.error(
-      "UPDATE BUSINESS ERROR:",
-      err
-    );
+        let data = {};
 
-    console.error(
-      "MESSAGE:",
-      err.message
-    );
+        try {
+          data = responseText
+            ? JSON.parse(
+                responseText
+              )
+            : {};
+        } catch {
+          data = {
+            detail:
+              responseText,
+          };
+        }
 
-    console.error(
-      "STACK:",
-      err.stack
-    );
+        if (!response.ok) {
+          throw new Error(
+            data?.detail ||
+              data?.message ||
+              `Business update failed (${response.status}).`
+          );
+        }
 
-    if (err instanceof TypeError) {
-      showPopup(
-        "Failed to connect to the server. Check the API URL, backend server, and CORS."
-      );
-      return;
-    }
+        showPopup(
+          "Business updated successfully."
+        );
 
-    showPopup(
-      err.message ||
-        "Failed to update business."
-    );
-  }
-};
+        setEditingBusiness(null);
 
+        setSelectedAction(
+          "list-businesses"
+        );
 
+        await fetchBusinesses();
+        await fetchUsers();
+      } catch (err) {
+        console.error(
+          "UPDATE BUSINESS ERROR:",
+          err
+        );
+
+        if (
+          err instanceof TypeError
+        ) {
+          showPopup(
+            "Failed to connect to the server. Check the API URL, backend server, and CORS."
+          );
+          return;
+        }
+
+        showPopup(
+          err.message ||
+            "Failed to update business."
+        );
+      }
+    };
 
   /* =======================================================
      DELETE BUSINESS
@@ -1982,26 +2046,27 @@ const handleUpdateBusiness = async (event) => {
      REFRESH
   ======================================================= */
 
-  const refreshAll = async () => {
-    try {
-      await fetchUsers();
-      await fetchRoles();
+  const refreshAll =
+    async () => {
+      try {
+        await fetchUsers();
+        await fetchRoles();
 
-      if (isSuperAdmin) {
-        await fetchBusinesses();
-        await fetchLicenseStatus();
+        if (isSuperAdmin) {
+          await fetchBusinesses();
+          await fetchLicenseStatus();
+        }
+
+        showPopup(
+          "Data refreshed successfully."
+        );
+      } catch (err) {
+        console.error(
+          "Refresh error:",
+          err
+        );
       }
-
-      showPopup(
-        "Data refreshed successfully."
-      );
-    } catch (err) {
-      console.error(
-        "Refresh error:",
-        err
-      );
-    }
-  };
+    };
 
   /* =======================================================
      CLOSE EDIT USER
@@ -2090,10 +2155,34 @@ const handleUpdateBusiness = async (event) => {
 
                   if (
                     value !==
-                      "update"
+                    "update"
                   ) {
                     setLocations(
                       []
+                    );
+                  }
+
+                  /*
+                   * When opening Create User
+                   * for a normal business admin,
+                   * immediately restore the
+                   * current business.
+                   */
+                  if (
+                    value === "add" &&
+                    !isSuperAdmin
+                  ) {
+                    setNewUser(
+                      (previous) => ({
+                        ...previous,
+                        business_id:
+                          String(
+                            storedUser.business_id ||
+                              ""
+                          ),
+                        location_id:
+                          "",
+                      })
                     );
                   }
                 }}
@@ -2420,8 +2509,7 @@ const handleUpdateBusiness = async (event) => {
                       setNewUser({
                         ...newUser,
                         business_id:
-                          event
-                            .target
+                          event.target
                             .value,
                         location_id:
                           "",
@@ -2508,6 +2596,16 @@ const handleUpdateBusiness = async (event) => {
                 </select>
               </label>
 
+              {/* =================================================
+                  LOCATION
+
+                  IMPORTANT:
+                  Location is NOT controlled by role.
+
+                  It is available for every business role.
+                  It is disabled only when there is no business.
+              ================================================= */}
+
               <label>
                 Location:
 
@@ -2524,9 +2622,7 @@ const handleUpdateBusiness = async (event) => {
                     })
                   }
                   disabled={
-                    !newUser.business_id ||
-                    locations.length ===
-                      0
+                    !newUser.business_id
                   }
                 >
                   <option value="">
@@ -2553,6 +2649,14 @@ const handleUpdateBusiness = async (event) => {
                   )}
                 </select>
               </label>
+
+              {newUser.business_id &&
+                locations.length ===
+                  0 && (
+                  <small className="form-help">
+                    No locations are currently available for this business.
+                  </small>
+                )}
 
               <div className="form-buttons">
                 <button type="submit">
@@ -2623,8 +2727,7 @@ const handleUpdateBusiness = async (event) => {
                       setEditingUser({
                         ...editingUser,
                         full_name:
-                          event
-                            .target
+                          event.target
                             .value,
                       })
                     }
@@ -2646,8 +2749,7 @@ const handleUpdateBusiness = async (event) => {
                       setEditingUser({
                         ...editingUser,
                         phone:
-                          event
-                            .target
+                          event.target
                             .value,
                       })
                     }
@@ -2666,13 +2768,16 @@ const handleUpdateBusiness = async (event) => {
                         event
                       ) => {
                         setEditBusinessId(
-                          event
-                            .target
+                          event.target
                             .value
                         );
 
                         setEditLocationId(
                           ""
+                        );
+
+                        setLocations(
+                          []
                         );
                       }}
                     >
@@ -2708,7 +2813,7 @@ const handleUpdateBusiness = async (event) => {
                       type="text"
                       value={
                         editingUser.business_name ||
-                        `Business #${editingUser.business_id}`
+                        `Business #${storedUser.business_id}`
                       }
                       readOnly
                     />
@@ -2754,6 +2859,10 @@ const handleUpdateBusiness = async (event) => {
                   </select>
                 </label>
 
+                {/* =================================================
+                    LOCATION
+                ================================================= */}
+
                 <label>
                   Location:
 
@@ -2768,9 +2877,7 @@ const handleUpdateBusiness = async (event) => {
                       )
                     }
                     disabled={
-                      !editBusinessId ||
-                      locations.length ===
-                        0
+                      !editBusinessId
                     }
                   >
                     <option value="">
@@ -2797,6 +2904,14 @@ const handleUpdateBusiness = async (event) => {
                     )}
                   </select>
                 </label>
+
+                {editBusinessId &&
+                  locations.length ===
+                    0 && (
+                    <small className="form-help">
+                      No locations are currently available for this business.
+                    </small>
+                  )}
 
                 <div className="form-buttons">
                   <button type="submit">
@@ -3180,113 +3295,142 @@ const handleUpdateBusiness = async (event) => {
           ================================================= */}
 
           {isSuperAdmin &&
-          selectedAction === "edit-business" &&
-          editingBusiness && (
-            <form
-              onSubmit={handleUpdateBusiness}
-              className="edit-form compact-form"
-            >
-              <h3>Edit Business</h3>
+            selectedAction ===
+              "edit-business" &&
+            editingBusiness && (
+              <form
+                onSubmit={
+                  handleUpdateBusiness
+                }
+                className="edit-form compact-form"
+              >
+                <h3>
+                  Edit Business
+                </h3>
 
-              <label>
-                Business Name:
+                <label>
+                  Business Name:
 
-                <input
-                  type="text"
-                  value={editingBusiness.name || ""}
-                  onChange={(event) =>
-                    setEditingBusiness({
-                      ...editingBusiness,
-                      name: event.target.value,
-                    })
-                  }
-                  required
-                />
-              </label>
+                  <input
+                    type="text"
+                    value={
+                      editingBusiness.name ||
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingBusiness({
+                        ...editingBusiness,
+                        name:
+                          event.target
+                            .value,
+                      })
+                    }
+                    required
+                  />
+                </label>
 
-              
                 <label>
                   Owner Username:
 
                   <input
                     type="text"
                     value={
-                      editingBusiness.owner_username || ""
+                      editingBusiness.owner_username ||
+                      ""
                     }
                     onChange={(event) =>
                       setEditingBusiness({
                         ...editingBusiness,
                         owner_username:
-                          event.target.value,
+                          event.target
+                            .value,
                       })
                     }
                   />
                 </label>
 
+                <label>
+                  Address:
 
+                  <input
+                    type="text"
+                    value={
+                      editingBusiness.address ||
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingBusiness({
+                        ...editingBusiness,
+                        address:
+                          event.target
+                            .value,
+                      })
+                    }
+                  />
+                </label>
 
-              <label>
-                Address:
+                <label>
+                  Phone:
 
-                <input
-                  type="text"
-                  value={editingBusiness.address || ""}
-                  onChange={(event) =>
-                    setEditingBusiness({
-                      ...editingBusiness,
-                      address: event.target.value,
-                    })
-                  }
-                />
-              </label>
+                  <input
+                    type="text"
+                    value={
+                      editingBusiness.phone ||
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingBusiness({
+                        ...editingBusiness,
+                        phone:
+                          event.target
+                            .value,
+                      })
+                    }
+                  />
+                </label>
 
-              <label>
-                Phone:
+                <label>
+                  Email:
 
-                <input
-                  type="text"
-                  value={editingBusiness.phone || ""}
-                  onChange={(event) =>
-                    setEditingBusiness({
-                      ...editingBusiness,
-                      phone: event.target.value,
-                    })
-                  }
-                />
-              </label>
+                  <input
+                    type="email"
+                    value={
+                      editingBusiness.email ||
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingBusiness({
+                        ...editingBusiness,
+                        email:
+                          event.target
+                            .value,
+                      })
+                    }
+                  />
+                </label>
 
-              <label>
-                Email:
+                <div className="form-buttons">
+                  <button type="submit">
+                    💾 Save Changes
+                  </button>
 
-                <input
-                  type="email"
-                  value={editingBusiness.email || ""}
-                  onChange={(event) =>
-                    setEditingBusiness({
-                      ...editingBusiness,
-                      email: event.target.value,
-                    })
-                  }
-                />
-              </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingBusiness(
+                        null
+                      );
 
-              <div className="form-buttons">
-                <button type="submit">
-                  💾 Save Changes
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingBusiness(null);
-                    setSelectedAction("list-businesses");
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
+                      setSelectedAction(
+                        "list-businesses"
+                      );
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
 
           {/* =================================================
               LICENSE MANAGEMENT
@@ -3655,4 +3799,3 @@ const handleUpdateBusiness = async (event) => {
 };
 
 export default UserManagement;
-

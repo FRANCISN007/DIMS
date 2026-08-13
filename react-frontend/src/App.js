@@ -29,13 +29,13 @@ import ListCategory from "./components/store/ListCategory";
 import ListItem from "./components/store/ListItem";
 import CreatePurchase from "./components/store/CreatePurchase";
 import ListPurchase from "./components/store/ListPurchase";
-import IssueItems from "./components/store/IssueItems";
-import ListIssues from "./components/store/ListIssues";
+import IssueToLocation from "./components/store/IssueToLocation";
+import ListIssuesToLocation from "./components/store/ListIssuesToLocation";
 import CreateKitchen from "./components/store/CreateKitchen";
 import StockAdjustment from "./components/store/StockAdjustment";
 import ListAdjustment from "./components/store/ListAdjustment";
 import StockBalance from "./components/store/StockBalance";
-import BarBalanceStock from "./components/store/BarBalanceStock";
+import LocationBalanceStock from "./components/store/LocationBalanceStock";
 import KitchenBalanceStock from "./components/store/KitchenBalanceStock";
 import KitchenStockAdjust from "./components/store/KitchenStockAdjust";
 import KitchenAdjustmentList from "./components/store/KitchenAdjustmentList";
@@ -170,12 +170,12 @@ const App = () => {
 
           <Route
             path="issue/create"
-            element={<IssueItems />}
+            element={<IssueToLocation />}
           />
 
           <Route
             path="issue/list"
-            element={<ListIssues />}
+            element={<ListIssuesToLocation />}
           />
 
           <Route
@@ -194,8 +194,8 @@ const App = () => {
           />
 
           <Route
-            path="barstock-balance"
-            element={<BarBalanceStock />}
+            path="Locationstock-balance"
+            element={<LocationBalanceStock />}
           />
 
           <Route

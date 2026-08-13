@@ -1,11 +1,40 @@
 .issue-items-container {
-  max-width: 800px;
+  max-width: 700px;
+  max-height: 87vh;
   margin: 0 auto;
-  padding: 20px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  padding: 10px;
+  background: rgb(248, 246, 246);
+  border-radius: 12px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+
+  /* Vertical scroll */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Keeps the scrollbar from affecting the layout */
+  box-sizing: border-box;
 }
+
+
+/* Optional: make scrollbar look cleaner */
+.issue-items-container::-webkit-scrollbar {
+  width: 15px;
+}
+
+.issue-items-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.issue-items-container::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 10px;
+}
+
+.issue-items-container::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
 
 .issue-form {
   display: flex;
@@ -13,18 +42,21 @@
   gap: 1rem;
 }
 
+
 .issue-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 4px;
 }
 
+
 .issue-table th,
 .issue-table td {
-  border: 1px solid #ccc;
+  border: 1px solid #cfc0c0;
   padding: 4px;
   text-align: left;
 }
+
 
 .add-row-btn,
 .submit-btn {
@@ -36,20 +68,24 @@
   cursor: pointer;
 }
 
+
 .add-row-btn {
   background-color: #ced4ce;
   color: rgb(0, 0, 0);
 }
+
 
 .submit-btn {
   background-color: #3b82f6;
   color: white;
 }
 
+
 .issue-message {
   margin-top: 1rem;
   font-weight: bold;
 }
+
 
 .issue-form input,
 .issue-form select,
@@ -61,4 +97,3 @@
   border: 1px solid #ccc;
   border-radius: 8px;
 }
-

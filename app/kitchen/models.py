@@ -19,7 +19,7 @@ class Kitchen(Base, BusinessMixin):
 
     
     inventories = relationship("KitchenInventory", back_populates="kitchen", cascade="all, delete")
-    issues = relationship("StoreIssue", back_populates="kitchen")
+   
     stocks = relationship("KitchenStock", back_populates="kitchen")
     adjustments = relationship("KitchenInventoryAdjustment", back_populates="kitchen")
 

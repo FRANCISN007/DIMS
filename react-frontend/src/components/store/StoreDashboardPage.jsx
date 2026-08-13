@@ -105,7 +105,7 @@ const StoreDashboardPage = () => {
     {
       name: "🍶 Manage Location",
       submenu: [
-        { label: "📤 Issue to Bar", path: "issue/create" },
+        { label: "📤 Issue to Location", path: "issue/create" },
         { label: "📃 List Items", path: "issue/list" },
       ],
     },
@@ -130,7 +130,7 @@ const StoreDashboardPage = () => {
     },
 
     { name: "📊 Store Stock", path: "stock-balance" },
-    { name: "📊 Location Stock", path: "barstock-balance" },
+    { name: "📊 Location Stock", path: "Locationstock-balance" },
     /*{ name: "👨‍🍳 Kitchen Stock", path: "kitchenstock" },*/
     { name: "🏭 Manage Vendor", path: "vendor/list" },
 

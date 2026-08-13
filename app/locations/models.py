@@ -7,10 +7,21 @@ from sqlalchemy import (
     func,
     UniqueConstraint,
     Index,
+    Float,
 )
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+
+
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from app.core.mixins import BusinessMixin
+from app.core.timezone import now_wat, to_wat  # ✅ centralized WAT functions
+
+
 
 
 class Location(Base):
@@ -108,4 +119,164 @@ class Location(Base):
     users = relationship(
         "User",
         back_populates="location",
+
+    )
+
+    inventory_items = relationship(
+        "LocationInventory",
+        back_populates="location",
+        cascade="all, delete-orphan",
+
+    )
+
+
+    issues = relationship(
+        "StoreIssue",
+        back_populates="location",
+    )
+
+
+
+# ==========================================================
+# LOCATION INVENTORY
+# ==========================================================
+
+class LocationInventory(Base, BusinessMixin):
+    __tablename__ = "location_inventory"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    location_id = Column(
+        Integer,
+        ForeignKey("locations.id"),
+        nullable=False,
+    )
+
+    item_id = Column(
+        Integer,
+        ForeignKey("store_items.id"),
+        nullable=False,
+    )
+
+    quantity = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    # ======================================================
+    # UNIT PRICE
+    #
+    # Optional because the location currently consumes stock.
+    # It is NOT a selling price.
+    # ======================================================
+
+    unit_price = Column(
+        Float,
+        nullable=True,
+    )
+
+    received_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=now_wat,
+    )
+
+    note = Column(
+        String,
+        nullable=True,
+    )
+
+    # ======================================================
+    # RELATIONSHIPS
+    # ======================================================
+
+    location = relationship(
+        "Location",
+        back_populates="inventory_items",
+    )
+
+    item = relationship(
+        "StoreItem",
+    )
+
+    # ======================================================
+    # TENANT-SAFE UNIQUE CONSTRAINT
+    # ======================================================
+
+    __table_args__ = (
+        UniqueConstraint(
+            "business_id",
+            "location_id",
+            "item_id",
+            name="unique_location_item",
+        ),
+    )
+
+
+    # ----------------------------
+# Location Inventory Adjustment
+# ----------------------------
+
+# ----------------------------
+# Location Inventory Adjustment
+# ----------------------------
+class LocationInventoryAdjustment(Base, BusinessMixin):
+    __tablename__ = "location_inventory_adjustments"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    location_id = Column(
+        Integer,
+        ForeignKey("locations.id"),
+        nullable=False
+    )
+
+    item_id = Column(
+        Integer,
+        ForeignKey("store_items.id"),
+        nullable=False
+    )
+
+    quantity_adjusted = Column(
+        Integer,
+        nullable=False
+    )
+
+    reason = Column(
+        String,
+        nullable=True
+    )
+
+    adjusted_by = Column(
+        String,
+        nullable=True
+    )
+
+    adjusted_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=now_wat
+    )
+
+    
+
+    # -----------------------------------------
+    # Relationships
+    # -----------------------------------------
+
+    location = relationship(
+        "Location"
+    )
+
+    item = relationship(
+        "StoreItem"
     )

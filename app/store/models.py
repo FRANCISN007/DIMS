@@ -10,6 +10,9 @@ from app.core.mixins import BusinessMixin
 from zoneinfo import ZoneInfo
 from datetime import datetime
 
+from app.core.timezone import now_wat, to_wat  # ✅ centralized WAT functions
+
+
 WAT = ZoneInfo("Africa/Lagos")
 
 def get_local_time():
@@ -106,28 +109,59 @@ class StoreStockEntry(Base, BusinessMixin):
 # ----------------------------
 # 4. Store Issue
 # ----------------------------
+# ----------------------------
+# Store Issue
+# ----------------------------
+
 class StoreIssue(Base, BusinessMixin):
     __tablename__ = "store_issues"
 
-    id = Column(Integer, primary_key=True, index=True)
-    issue_to = Column(String, nullable=False)
-    issued_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    bar_id = Column(Integer, ForeignKey("bars.id"), nullable=True)
-    kitchen_id = Column(Integer, ForeignKey("kitchens.id"), nullable=True)
-    
-    # ✅ Timezone-aware issue_date
-    issue_date = Column(DateTime(timezone=True), default=lambda: datetime.now(WAT), nullable=False)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
+    issue_to = Column(
+        String,
+        nullable=False,
+        default="location"
+    )
+
+    issued_by_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    location_id = Column(
+        Integer,
+        ForeignKey("locations.id"),
+        nullable=False,
+        index=True
+    )
+
+    issue_date = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=now_wat
+    )
+
+    # -----------------------------------------
     # Relationships
+    # -----------------------------------------
+
     issue_items = relationship(
         "StoreIssueItem",
         back_populates="issue",
         cascade="all, delete-orphan",
         passive_deletes=True
     )
-    bar = relationship("Bar", back_populates="issues")
-    kitchen = relationship("Kitchen", back_populates="issues")
 
+    location = relationship(
+        "Location",
+        back_populates="issues"
+    )
 
 
     
@@ -135,16 +169,41 @@ class StoreIssue(Base, BusinessMixin):
 class StoreIssueItem(Base, BusinessMixin):
     __tablename__ = "store_issue_items"
 
-    id = Column(Integer, primary_key=True, index=True)
-    issue_id = Column(Integer, ForeignKey("store_issues.id", ondelete="CASCADE"), nullable=False)
-    item_id = Column(Integer, ForeignKey("store_items.id"), nullable=False)
-    quantity = Column(Integer, nullable=False)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
-    
+    issue_id = Column(
+        Integer,
+        ForeignKey(
+            "store_issues.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False
+    )
 
-    issue = relationship("StoreIssue", back_populates="issue_items")
-    item = relationship("StoreItem", back_populates="issue_items")
+    item_id = Column(
+        Integer,
+        ForeignKey("store_items.id"),
+        nullable=False
+    )
 
+    quantity = Column(
+        Integer,
+        nullable=False
+    )
+
+    issue = relationship(
+        "StoreIssue",
+        back_populates="issue_items"
+    )
+
+    item = relationship(
+        "StoreItem",
+        back_populates="issue_items"
+    )
 
 # ----------------------------
 # 5. Store Inventory Adjustment

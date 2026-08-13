@@ -9,142 +9,261 @@ const StockAdjustment = () => {
   const [quantityAdjusted, setQuantityAdjusted] = useState("");
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  let roles = [];
-
-  if (Array.isArray(storedUser.roles)) {
-    roles = storedUser.roles;
-  } else if (typeof storedUser.role === "string") {
-    roles = [storedUser.role];
-  }
-
-  roles = roles.map((r) => r.toLowerCase());
-
-  if (!(roles.includes("admin") || roles.includes("store"))) {
-    return (
-      <div className="unauthorized">
-        <h2>🚫 Access Denied</h2>
-        <p>You do not have permission to adjust store stock.</p>
-      </div>
-    );
-  }
+  // ==========================================================
+  // FETCH ITEMS
+  // ==========================================================
 
   useEffect(() => {
     fetchItems();
   }, []);
 
+  // ==========================================================
+  // AUTO-HIDE MESSAGE
+  // ==========================================================
+
   useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(""), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!message) return;
+
+    const timer = setTimeout(() => {
+      setMessage("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, [message]);
+
+  // ==========================================================
+  // GET STORE ITEMS
+  // ==========================================================
 
   const fetchItems = async () => {
     try {
       const axios = axiosWithAuth();
+
       const res = await axios.get("/store/items/simple");
 
-      // Sort items alphabetically
       const sortedItems = [...(res.data || [])].sort((a, b) =>
-        a.name.localeCompare(b.name)
+        (a.name || "").localeCompare(b.name || "")
       );
 
       setItems(sortedItems);
     } catch (error) {
       console.error("Error fetching items:", error);
+
       setItems([]);
+
+      setMessage(
+        error.response?.data?.detail ||
+          "❌ Failed to load store items."
+      );
     }
   };
 
-  // Filter items based on search
+  // ==========================================================
+  // FILTER ITEMS
+  // ==========================================================
+
   const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
+    (item.name || "")
+      .toLowerCase()
+      .includes(search.toLowerCase())
   );
+
+  // ==========================================================
+  // SUBMIT ADJUSTMENT
+  // ==========================================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!itemId || !quantityAdjusted || !reason) {
-      setMessage("⚠ Please fill in all fields.");
+    if (!itemId) {
+      setMessage("⚠ Please select an item.");
+      return;
+    }
+
+    if (
+      quantityAdjusted === "" ||
+      quantityAdjusted === null
+    ) {
+      setMessage("⚠ Please enter the adjustment quantity.");
+      return;
+    }
+
+    if (!reason.trim()) {
+      setMessage("⚠ Please enter a reason.");
+      return;
+    }
+
+    const quantity = Number(quantityAdjusted);
+
+    if (Number.isNaN(quantity)) {
+      setMessage("⚠ Please enter a valid quantity.");
+      return;
+    }
+
+    if (quantity === 0) {
+      setMessage("⚠ Adjustment cannot be zero.");
       return;
     }
 
     try {
+      setLoading(true);
+
       const axios = axiosWithAuth();
 
       await axios.post("/store/adjust", {
-        item_id: parseInt(itemId),
-        quantity_adjusted: parseInt(quantityAdjusted),
+        item_id: parseInt(itemId, 10),
+        quantity_adjusted: quantity,
         reason: reason.trim(),
       });
 
-      setMessage("✅ Stock adjustment successful!");
+      setMessage("✅ Stock adjustment successful.");
+
+      // Clear form
       setItemId("");
       setSearch("");
       setQuantityAdjusted("");
       setReason("");
     } catch (error) {
-      console.error(error);
-      setMessage(error.response?.data?.detail || "❌ Adjustment failed.");
+      console.error("Stock adjustment error:", error);
+
+      setMessage(
+        error.response?.data?.detail ||
+          "❌ Adjustment failed."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
     <div className="stock-adjustment-container">
+
       <h2>Stock Adjustment</h2>
 
-      {message && <div className="message">{message}</div>}
+      {message && (
+        <div className="message">
+          {message}
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} className="adjustment-form">
+      <form
+        onSubmit={handleSubmit}
+        className="adjustment-form"
+      >
 
-        {/* Search */}
-        <label>Search Item</label>
+        {/* =========================
+            SEARCH ITEM
+        ========================= */}
+
+        <label>
+          Search Item
+        </label>
+
         <input
           type="text"
           value={search}
           placeholder="Search by item name..."
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
         />
 
-        {/* Item Selection */}
-        <label>Item</label>
+        {/* =========================
+            ITEM
+        ========================= */}
+
+        <label>
+          Item
+        </label>
+
         <select
           value={itemId}
-          onChange={(e) => setItemId(e.target.value)}
+          onChange={(e) =>
+            setItemId(e.target.value)
+          }
         >
-          <option value="">-- Select Item --</option>
+          <option value="">
+            -- Select Item --
+          </option>
 
           {filteredItems.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name} ({item.unit}) - ₦
-              {item.unit_price?.toLocaleString("en-NG")}
+            <option
+              key={item.id}
+              value={item.id}
+            >
+              {item.name}
+              {item.unit
+                ? ` (${item.unit})`
+                : ""}
+              {item.unit_price != null
+                ? ` - ₦${Number(
+                    item.unit_price
+                  ).toLocaleString("en-NG")}`
+                : ""}
             </option>
           ))}
         </select>
 
-        {/* Quantity */}
-        <label>Quantity Adjustment</label>
+        {/* =========================
+            QUANTITY ADJUSTMENT
+        ========================= */}
+
+        <label>
+          Quantity Adjustment
+        </label>
+
         <input
           type="number"
           step="1"
           value={quantityAdjusted}
-          onChange={(e) => setQuantityAdjusted(e.target.value)}
-          placeholder="Example: -5 to add, +5 to remove"
+          onChange={(e) =>
+            setQuantityAdjusted(e.target.value)
+          }
+          placeholder="Positive = add, Negative = remove"
         />
 
-        {/* Reason */}
-        <label>Reason</label>
+        <div className="adjustment-help">
+          Positive quantity adds stock.
+          Negative quantity removes stock.
+        </div>
+
+        {/* =========================
+            REASON
+        ========================= */}
+
+        <label>
+          Reason
+        </label>
+
         <textarea
           rows="3"
           value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        ></textarea>
+          onChange={(e) =>
+            setReason(e.target.value)
+          }
+          placeholder="Enter reason for this adjustment..."
+        />
 
-        <button type="submit" className="adjust-btn">
-          Adjust Stock
+        {/* =========================
+            SUBMIT
+        ========================= */}
+
+        <button
+          type="submit"
+          className="adjust-btn"
+          disabled={loading}
+        >
+          {loading
+            ? "Processing..."
+            : "Adjust Stock"}
         </button>
+
       </form>
     </div>
   );
