@@ -105,10 +105,7 @@ import CreateLocation from "./components/locations/CreateLocation";
 import ListLocation from "./components/locations/ListLocation";
 
 
-console.log(
-  "API BASE:",
-  process.env.REACT_APP_API_BASE_URL
-);
+
 
 
 const App = () => {

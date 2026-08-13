@@ -1,8 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./ListItem.css";
-
 
 const ListItem = () => {
   const [items, setItems] = useState([]);
@@ -10,25 +8,26 @@ const ListItem = () => {
   const [categories, setCategories] = useState([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // =====================
-  // Editing states
-  // =====================
+  // =========================================================
+  // EDITING STATES
+  // =========================================================
 
   const [editingItem, setEditingItem] = useState(null);
+
   const [updateName, setUpdateName] = useState("");
   const [updateUnit, setUpdateUnit] = useState("");
   const [updateUnitPrice, setUpdateUnitPrice] = useState("");
   const [updateSellingPrice, setUpdateSellingPrice] = useState("");
   const [updateCategoryId, setUpdateCategoryId] = useState("");
   const [updateItemType, setUpdateItemType] = useState("");
+
   const [selectedSimpleItemId, setSelectedSimpleItemId] = useState("");
 
-  // =====================
-  // Creation states
-  // =====================
+  // =========================================================
+  // CREATION STATES
+  // =========================================================
 
   const [newName, setNewName] = useState("");
   const [newUnit, setNewUnit] = useState("");
@@ -37,11 +36,15 @@ const ListItem = () => {
   const [newCategoryId, setNewCategoryId] = useState("");
   const [newItemType, setNewItemType] = useState("");
 
-  // =====================
-  // Search state
-  // =====================
+  // =========================================================
+  // SEARCH
+  // =========================================================
 
   const [searchText, setSearchText] = useState("");
+
+  // =========================================================
+  // OPTIONS
+  // =========================================================
 
   const unitOptions = [
     "Carton",
@@ -59,9 +62,8 @@ const ListItem = () => {
     "general",
   ];
 
-
   // =========================================================
-  // FETCH DATA
+  // INITIAL LOAD
   // =========================================================
 
   useEffect(() => {
@@ -70,9 +72,8 @@ const ListItem = () => {
     fetchCategories();
   }, []);
 
-
   // =========================================================
-  // AUTO-CLEAR MESSAGES
+  // AUTO CLEAR MESSAGE
   // =========================================================
 
   useEffect(() => {
@@ -84,11 +85,8 @@ const ListItem = () => {
       setMessage("");
     }, 3000);
 
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [message]);
-
 
   // =========================================================
   // SAFE ERROR MESSAGE
@@ -96,26 +94,33 @@ const ListItem = () => {
 
   const safeMessage = (
     err,
-    fallback = "❌ Operation failed"
+    fallback = "❌ Operation failed."
   ) => {
-    if (!err?.response?.data?.detail) {
+    const detail = err?.response?.data?.detail;
+
+    if (!detail) {
       return fallback;
     }
 
-    return typeof err.response.data.detail === "string"
-      ? err.response.data.detail
-      : JSON.stringify(err.response.data.detail);
-  };
+    if (typeof detail === "string") {
+      return detail;
+    }
 
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      return fallback;
+    }
+  };
 
   // =========================================================
   // FETCH ITEMS
   // =========================================================
 
   const fetchItems = async (search = "") => {
-    setLoading(true);
-
     try {
+      setLoading(true);
+
       const res = await axiosWithAuth().get(
         "/store/items",
         {
@@ -130,11 +135,14 @@ const ListItem = () => {
           ? res.data
           : []
       );
+
     } catch (err) {
       console.error(
         "❌ Failed to load items:",
         err?.response?.data || err
       );
+
+      setItems([]);
 
       setMessage(
         safeMessage(
@@ -142,11 +150,11 @@ const ListItem = () => {
           "❌ Failed to load items."
         )
       );
+
     } finally {
       setLoading(false);
     }
   };
-
 
   // =========================================================
   // FETCH SIMPLE ITEMS
@@ -168,16 +176,16 @@ const ListItem = () => {
           ? res.data
           : []
       );
+
     } catch (err) {
       console.error(
         "❌ Failed to load simple items:",
-        err
+        err?.response?.data || err
       );
 
       setSimpleItems([]);
     }
   };
-
 
   // =========================================================
   // FETCH CATEGORIES
@@ -194,9 +202,10 @@ const ListItem = () => {
           ? res.data
           : []
       );
+
     } catch (err) {
       console.error(
-        "❌ Failed to fetch categories:",
+        "❌ Failed to load categories:",
         err?.response?.data || err
       );
 
@@ -211,9 +220,8 @@ const ListItem = () => {
     }
   };
 
-
   // =========================================================
-  // HANDLE SEARCH
+  // SEARCH
   // =========================================================
 
   const handleSearchChange = (e) => {
@@ -225,17 +233,16 @@ const ListItem = () => {
     fetchSimpleItems(value);
   };
 
-
   // =========================================================
   // DELETE ITEM
   // =========================================================
 
   const handleDelete = async (id) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this item?"
-      )
-    ) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this item?"
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -244,17 +251,18 @@ const ListItem = () => {
         `/store/items/${id}`
       );
 
-      setItems(
-        items.filter(
-          (i) => i.id !== id
+      setItems((prev) =>
+        prev.filter(
+          (item) => item.id !== id
         )
       );
+
+      await fetchSimpleItems(searchText);
 
       setMessage(
         "✅ Item deleted successfully."
       );
 
-      fetchSimpleItems();
     } catch (err) {
       console.error(
         "❌ Failed to delete item:",
@@ -269,7 +277,6 @@ const ListItem = () => {
       );
     }
   };
-
 
   // =========================================================
   // OPEN EDIT MODAL
@@ -295,7 +302,9 @@ const ListItem = () => {
     );
 
     setUpdateCategoryId(
-      item.category?.id || ""
+      item.category?.id
+        ? String(item.category.id)
+        : ""
     );
 
     setUpdateItemType(
@@ -303,50 +312,54 @@ const ListItem = () => {
     );
 
     setSelectedSimpleItemId(
-      item.id
+      String(item.id)
     );
   };
 
-
   // =========================================================
-  // HANDLE SIMPLE ITEM CHANGE
+  // SIMPLE ITEM CHANGE
   // =========================================================
 
   const handleSimpleItemChange = (value) => {
     setSelectedSimpleItemId(value);
 
     const selected = simpleItems.find(
-      (it) =>
-        String(it.id) === String(value)
+      (item) =>
+        String(item.id) === String(value)
     );
 
-    if (selected) {
-      setUpdateName(
-        selected.name || ""
-      );
-
-      setUpdateUnit(
-        selected.unit || ""
-      );
-
-      setUpdateUnitPrice(
-        selected.unit_price ?? ""
-      );
-
-      setUpdateSellingPrice(
-        selected.selling_price ?? ""
-      );
-
-      setUpdateCategoryId(
-        selected.category?.id || ""
-      );
-
-      setUpdateItemType(
-        selected.item_type || "All"
-      );
+    if (!selected) {
+      return;
     }
-  };
 
+    setEditingItem(selected);
+
+    setUpdateName(
+      selected.name || ""
+    );
+
+    setUpdateUnit(
+      selected.unit || ""
+    );
+
+    setUpdateUnitPrice(
+      selected.unit_price ?? ""
+    );
+
+    setUpdateSellingPrice(
+      selected.selling_price ?? ""
+    );
+
+    setUpdateCategoryId(
+      selected.category?.id
+        ? String(selected.category.id)
+        : ""
+    );
+
+    setUpdateItemType(
+      selected.item_type || "All"
+    );
+  };
 
   // =========================================================
   // UPDATE ITEM
@@ -359,65 +372,96 @@ const ListItem = () => {
       return;
     }
 
-    const unitPrice =
-      parseFloat(updateUnitPrice);
+    // ---------------------------------------------
+    // Validate basic fields
+    // ---------------------------------------------
 
-    const sellingPrice =
-      parseFloat(updateSellingPrice);
+    if (!updateName.trim()) {
+      setMessage(
+        "❌ Item name is required."
+      );
+      return;
+    }
+
+    if (!updateUnit.trim()) {
+      setMessage(
+        "❌ Unit is required."
+      );
+      return;
+    }
+
+    const unitPrice = parseFloat(
+      updateUnitPrice
+    );
+
+    if (isNaN(unitPrice)) {
+      setMessage(
+        "❌ Unit price must be a valid number."
+      );
+      return;
+    }
+
+    // ---------------------------------------------
+    // Selling price is OPTIONAL
+    // ---------------------------------------------
+
+    let sellingPrice = null;
+
+    if (
+      updateSellingPrice !== null &&
+      updateSellingPrice !== undefined &&
+      String(updateSellingPrice).trim() !== ""
+    ) {
+      sellingPrice = parseFloat(
+        updateSellingPrice
+      );
+
+      if (isNaN(sellingPrice)) {
+        setMessage(
+          "❌ Selling price must be a valid number."
+        );
+        return;
+      }
+    }
+
+    // ---------------------------------------------
+    // Category
+    // ---------------------------------------------
 
     const parsedCategoryId =
-      parseInt(updateCategoryId);
+      parseInt(updateCategoryId, 10);
 
-
-    if (
-      isNaN(unitPrice) ||
-      isNaN(sellingPrice)
-    ) {
-      setMessage(
-        "❌ Unit price and Selling price must be numbers."
-      );
-
-      return;
-    }
-
-
-    if (
-      !updateName.trim() ||
-      !updateUnit.trim()
-    ) {
-      setMessage(
-        "❌ Name and Unit are required."
-      );
-
-      return;
-    }
-
-
-    if (
-      !parsedCategoryId ||
-      isNaN(parsedCategoryId)
-    ) {
+    if (isNaN(parsedCategoryId)) {
       setMessage(
         "❌ Please select a valid category."
       );
-
       return;
     }
 
+    // ---------------------------------------------
+    // Submit
+    // ---------------------------------------------
 
     setIsSubmitting(true);
 
     try {
+      const payload = {
+        name: updateName.trim(),
+        unit: updateUnit.trim(),
+        unit_price: unitPrice,
+        selling_price: sellingPrice,
+        category_id: parsedCategoryId,
+        item_type: updateItemType || "All",
+      };
+
+      console.log(
+        "Updating item:",
+        payload
+      );
+
       await axiosWithAuth().put(
         `/store/items/${editingItem.id}`,
-        {
-          name: updateName.trim(),
-          unit: updateUnit.trim(),
-          unit_price: unitPrice,
-          selling_price: sellingPrice,
-          category_id: parsedCategoryId,
-          item_type: updateItemType,
-        }
+        payload
       );
 
       setMessage(
@@ -426,9 +470,9 @@ const ListItem = () => {
 
       setEditingItem(null);
 
+      // Refresh independently.
       await fetchItems(searchText);
       await fetchSimpleItems(searchText);
-      await fetchCategories();
 
     } catch (err) {
       console.error(
@@ -448,7 +492,6 @@ const ListItem = () => {
     }
   };
 
-
   // =========================================================
   // CREATE ITEM
   // =========================================================
@@ -460,51 +503,139 @@ const ListItem = () => {
       return;
     }
 
-    const unitPrice =
-      parseFloat(newUnitPrice);
+    // ---------------------------------------------
+    // Validate name
+    // ---------------------------------------------
 
-    const sellingPrice =
-      parseFloat(newSellingPrice);
-
-    const parsedCategoryId =
-      parseInt(newCategoryId);
-
-
-    if (
-      !newName.trim() ||
-      !newUnit.trim() ||
-      isNaN(unitPrice) ||
-      isNaN(sellingPrice) ||
-      isNaN(parsedCategoryId)
-    ) {
+    if (!newName.trim()) {
       setMessage(
-        "❌ All fields are required and must be valid."
+        "❌ Item name is required."
       );
-
       return;
     }
 
+    // ---------------------------------------------
+    // Validate unit
+    // ---------------------------------------------
+
+    if (!newUnit.trim()) {
+      setMessage(
+        "❌ Unit is required."
+      );
+      return;
+    }
+
+    // ---------------------------------------------
+    // Validate unit price
+    // ---------------------------------------------
+
+    const unitPrice = parseFloat(
+      newUnitPrice
+    );
+
+    if (isNaN(unitPrice)) {
+      setMessage(
+        "❌ Unit price is required and must be a number."
+      );
+      return;
+    }
+
+    // ---------------------------------------------
+    // Selling price is OPTIONAL
+    // ---------------------------------------------
+
+    let sellingPrice = null;
+
+    if (
+      newSellingPrice !== null &&
+      newSellingPrice !== undefined &&
+      String(newSellingPrice).trim() !== ""
+    ) {
+      sellingPrice = parseFloat(
+        newSellingPrice
+      );
+
+      if (isNaN(sellingPrice)) {
+        setMessage(
+          "❌ Selling price must be a valid number."
+        );
+        return;
+      }
+    }
+
+    // ---------------------------------------------
+    // Validate category
+    // ---------------------------------------------
+
+    const parsedCategoryId =
+      parseInt(newCategoryId, 10);
+
+    if (isNaN(parsedCategoryId)) {
+      setMessage(
+        "❌ Please select a valid category."
+      );
+      return;
+    }
+
+    // ---------------------------------------------
+    // Build payload
+    // ---------------------------------------------
+
+    const payload = {
+      name: newName.trim(),
+      unit: newUnit.trim(),
+      unit_price: unitPrice,
+
+      // null is intentionally sent when
+      // selling price is not provided.
+      selling_price: sellingPrice,
+
+      category_id: parsedCategoryId,
+      item_type: newItemType || "All",
+    };
+
+    console.log(
+      "================================"
+    );
+
+    console.log(
+      "CREATE ITEM PAYLOAD:",
+      payload
+    );
+
+    console.log(
+      "================================"
+    );
 
     setIsSubmitting(true);
 
     try {
-      await axiosWithAuth().post(
-        "/store/items",
-        {
-          name: newName.trim(),
-          unit: newUnit.trim(),
-          unit_price: unitPrice,
-          selling_price: sellingPrice,
-          category_id: parsedCategoryId,
-          item_type: newItemType || "All",
-        }
+      // =====================================================
+      // IMPORTANT:
+      // Only this request determines whether creation failed.
+      // =====================================================
+
+      const response =
+        await axiosWithAuth().post(
+          "/store/items",
+          payload
+        );
+
+      console.log(
+        "CREATE ITEM RESPONSE:",
+        response.status,
+        response.data
       );
+
+      // =====================================================
+      // SUCCESS
+      // =====================================================
 
       setMessage(
         "✅ Item created successfully."
       );
 
-
+      // Clear form
       setNewName("");
       setNewUnit("");
       setNewUnitPrice("");
@@ -512,14 +643,39 @@ const ListItem = () => {
       setNewCategoryId("");
       setNewItemType("");
 
+      // =====================================================
+      // Refresh list separately.
+      //
+      // If refresh fails, it must NOT change the
+      // successful create message.
+      // =====================================================
 
-      await fetchItems(searchText);
-      await fetchSimpleItems(searchText);
-      await fetchCategories();
+      fetchItems(searchText).catch(
+        (refreshError) => {
+          console.error(
+            "Item created, but item list refresh failed:",
+            refreshError
+          );
+        }
+      );
+
+      fetchSimpleItems(searchText).catch(
+        (refreshError) => {
+          console.error(
+            "Item created, but simple item refresh failed:",
+            refreshError
+          );
+        }
+      );
 
     } catch (err) {
+      // =====================================================
+      // THIS IS ONLY A CREATE REQUEST ERROR
+      // =====================================================
+
       console.error(
-        "❌ Failed to create item:",
+        "❌ CREATE ITEM REQUEST FAILED:",
+        err?.response?.status,
         err?.response?.data || err
       );
 
@@ -534,7 +690,6 @@ const ListItem = () => {
       setIsSubmitting(false);
     }
   };
-
 
   // =========================================================
   // RENDER
@@ -551,7 +706,6 @@ const ListItem = () => {
         </p>
       )}
 
-
       {/* =====================================================
           SEARCH
       ===================================================== */}
@@ -564,7 +718,6 @@ const ListItem = () => {
         className="search-input"
       />
 
-
       {/* =====================================================
           CREATE ITEM
       ===================================================== */}
@@ -575,6 +728,8 @@ const ListItem = () => {
         onSubmit={handleCreate}
         className="create-item-form"
       >
+
+        {/* NAME */}
 
         <label>
           Name:
@@ -590,6 +745,7 @@ const ListItem = () => {
           />
         </label>
 
+        {/* UNIT */}
 
         <label>
           Unit:
@@ -605,17 +761,18 @@ const ListItem = () => {
               Select Unit
             </option>
 
-            {unitOptions.map((u) => (
+            {unitOptions.map((unit) => (
               <option
-                key={u}
-                value={u}
+                key={unit}
+                value={unit}
               >
-                {u}
+                {unit}
               </option>
             ))}
           </select>
         </label>
 
+        {/* UNIT PRICE */}
 
         <label>
           Unit Price:
@@ -623,15 +780,19 @@ const ListItem = () => {
           <input
             type="number"
             step="0.01"
+            min="0"
             value={newUnitPrice}
             onChange={(e) =>
-              setNewUnitPrice(e.target.value)
+              setNewUnitPrice(
+                e.target.value
+              )
             }
             placeholder="e.g. 800"
             required
           />
         </label>
 
+        {/* SELLING PRICE */}
 
         <label>
           Selling Price:
@@ -639,15 +800,18 @@ const ListItem = () => {
           <input
             type="number"
             step="0.01"
+            min="0"
             value={newSellingPrice}
             onChange={(e) =>
-              setNewSellingPrice(e.target.value)
+              setNewSellingPrice(
+                e.target.value
+              )
             }
-            placeholder="e.g. 1000"
-            required
+            placeholder="Optional"
           />
         </label>
 
+        {/* CATEGORY */}
 
         <label>
           Category:
@@ -655,7 +819,9 @@ const ListItem = () => {
           <select
             value={newCategoryId}
             onChange={(e) =>
-              setNewCategoryId(e.target.value)
+              setNewCategoryId(
+                e.target.value
+              )
             }
             required
           >
@@ -663,17 +829,18 @@ const ListItem = () => {
               Select Category
             </option>
 
-            {categories.map((cat) => (
+            {categories.map((category) => (
               <option
-                key={cat.id}
-                value={cat.id}
+                key={category.id}
+                value={category.id}
               >
-                {cat.name}
+                {category.name}
               </option>
             ))}
           </select>
         </label>
 
+        {/* ITEM TYPE */}
 
         <label>
           Item Type:
@@ -681,7 +848,9 @@ const ListItem = () => {
           <select
             value={newItemType}
             onChange={(e) =>
-              setNewItemType(e.target.value)
+              setNewItemType(
+                e.target.value
+              )
             }
           >
             {itemTypeOptions.map((type) => (
@@ -695,6 +864,7 @@ const ListItem = () => {
           </select>
         </label>
 
+        {/* CREATE BUTTON */}
 
         <button
           type="submit"
@@ -708,24 +878,18 @@ const ListItem = () => {
 
       </form>
 
-
       <hr />
-
 
       {/* =====================================================
           ITEM TABLE
       ===================================================== */}
 
       {loading ? (
-        <p>
-          Loading items...
-        </p>
+        <p>Loading items...</p>
 
       ) : items.length === 0 ? (
 
-        <p>
-          No items found.
-        </p>
+        <p>No items found.</p>
 
       ) : (
 
@@ -746,87 +910,85 @@ const ListItem = () => {
               </tr>
             </thead>
 
-
             <tbody>
 
-              {items.map(
-                (item, index) => (
+              {items.map((item, index) => (
 
-                  <tr
-                    key={item.id}
-                    className={
-                      index % 2 === 0
-                        ? "even-row"
-                        : "odd-row"
-                    }
-                  >
+                <tr
+                  key={item.id}
+                  className={
+                    index % 2 === 0
+                      ? "even-row"
+                      : "odd-row"
+                  }
+                >
 
-                    <td>
-                      {item.id}
-                    </td>
+                  <td>
+                    {item.id}
+                  </td>
 
-                    <td>
-                      {item.name}
-                    </td>
+                  <td>
+                    {item.name}
+                  </td>
 
-                    <td>
-                      {item.unit}
-                    </td>
+                  <td>
+                    {item.unit}
+                  </td>
 
-                    <td>
-                      {item.unit_price}
-                    </td>
+                  <td>
+                    {item.unit_price}
+                  </td>
 
-                    <td>
-                      {item.selling_price}
-                    </td>
+                  <td>
+                    {item.selling_price !== null &&
+                    item.selling_price !== undefined &&
+                    item.selling_price !== ""
+                      ? item.selling_price
+                      : "—"}
+                  </td>
 
-                    <td>
-                      {item.category?.name}
-                    </td>
+                  <td>
+                    {item.category?.name || "—"}
+                  </td>
 
-                    <td>
-                      {item.item_type || "All"}
-                    </td>
+                  <td>
+                    {item.item_type || "All"}
+                  </td>
 
-                    <td>
+                  <td>
 
-                      <button
-                        type="button"
-                        className="edit-btn"
-                        onClick={() =>
-                          openEditModal(item)
-                        }
-                      >
-                        ✏️ Edit
-                      </button>
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      onClick={() =>
+                        openEditModal(item)
+                      }
+                    >
+                      ✏️ Edit
+                    </button>
 
+                    <button
+                      type="button"
+                      className="delete-btn"
+                      onClick={() =>
+                        handleDelete(item.id)
+                      }
+                    >
+                      🗑 Delete
+                    </button>
 
-                      <button
-                        type="button"
-                        className="delete-btn"
-                        onClick={() =>
-                          handleDelete(item.id)
-                        }
-                      >
-                        🗑 Delete
-                      </button>
+                  </td>
 
-                    </td>
+                </tr>
 
-                  </tr>
-
-                )
-              )}
+              ))}
 
             </tbody>
 
           </table>
 
         </div>
-
       )}
-
 
       {/* =====================================================
           EDIT MODAL
@@ -842,9 +1004,9 @@ const ListItem = () => {
               ✏️ Update Item
             </h3>
 
+            {/* SEARCH ITEM */}
 
             <label>
-
               Search & Select Item:
 
               <input
@@ -858,7 +1020,6 @@ const ListItem = () => {
                 className="search-input"
               />
 
-
               <select
                 value={selectedSimpleItemId}
                 onChange={(e) =>
@@ -867,33 +1028,35 @@ const ListItem = () => {
                   )
                 }
               >
-
                 <option value="">
                   -- Select Item --
                 </option>
 
-                {simpleItems.map(
-                  (it) => (
+                {simpleItems.map((item) => (
 
-                    <option
-                      key={it.id}
-                      value={it.id}
-                    >
-                      {it.name} ({it.unit}) - ₦
-                      {it.unit_price} / ₦
-                      {it.selling_price} -{" "}
-                      {it.item_type || "All"}
-                    </option>
+                  <option
+                    key={item.id}
+                    value={item.id}
+                  >
+                    {item.name} ({item.unit}) -
+                    {" "}₦{item.unit_price}
+                    {" / "}
+                    ₦
+                    {item.selling_price ??
+                      "—"}
+                    {" - "}
+                    {item.item_type ||
+                      "All"}
+                  </option>
 
-                  )
-                )}
+                ))}
 
               </select>
-
             </label>
 
-
             <form onSubmit={handleUpdate}>
+
+              {/* NAME */}
 
               <label>
                 Name:
@@ -910,6 +1073,7 @@ const ListItem = () => {
                 />
               </label>
 
+              {/* UNIT */}
 
               <label>
                 Unit:
@@ -927,21 +1091,18 @@ const ListItem = () => {
                     Select Unit
                   </option>
 
-                  {unitOptions.map(
-                    (u) => (
-                      <option
-                        key={u}
-                        value={u}
-                      >
-                        {u}
-                      </option>
-                    )
-                  )}
-
+                  {unitOptions.map((unit) => (
+                    <option
+                      key={unit}
+                      value={unit}
+                    >
+                      {unit}
+                    </option>
+                  ))}
                 </select>
-
               </label>
 
+              {/* UNIT PRICE */}
 
               <label>
                 Unit Cost Price:
@@ -949,6 +1110,7 @@ const ListItem = () => {
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={updateUnitPrice}
                   onChange={(e) =>
                     setUpdateUnitPrice(
@@ -957,9 +1119,9 @@ const ListItem = () => {
                   }
                   required
                 />
-
               </label>
 
+              {/* SELLING PRICE */}
 
               <label>
                 Selling Price:
@@ -967,17 +1129,18 @@ const ListItem = () => {
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={updateSellingPrice}
                   onChange={(e) =>
                     setUpdateSellingPrice(
                       e.target.value
                     )
                   }
-                  required
+                  placeholder="Optional"
                 />
-
               </label>
 
+              {/* CATEGORY */}
 
               <label>
                 Category:
@@ -991,28 +1154,22 @@ const ListItem = () => {
                   }
                   required
                 >
-
                   <option value="">
                     Select Category
                   </option>
 
-                  {categories.map(
-                    (cat) => (
-
-                      <option
-                        key={cat.id}
-                        value={cat.id}
-                      >
-                        {cat.name}
-                      </option>
-
-                    )
-                  )}
-
+                  {categories.map((category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                    >
+                      {category.name}
+                    </option>
+                  ))}
                 </select>
-
               </label>
 
+              {/* ITEM TYPE */}
 
               <label>
                 Item Type:
@@ -1025,24 +1182,18 @@ const ListItem = () => {
                     )
                   }
                 >
-
-                  {itemTypeOptions.map(
-                    (type) => (
-
-                      <option
-                        key={type}
-                        value={type}
-                      >
-                        {type}
-                      </option>
-
-                    )
-                  )}
-
+                  {itemTypeOptions.map((type) => (
+                    <option
+                      key={type}
+                      value={type}
+                    >
+                      {type}
+                    </option>
+                  ))}
                 </select>
-
               </label>
 
+              {/* BUTTONS */}
 
               <div className="modal-buttons">
 
@@ -1055,7 +1206,6 @@ const ListItem = () => {
                     ? "Saving..."
                     : "💾 Save"}
                 </button>
-
 
                 <button
                   type="button"
@@ -1081,6 +1231,4 @@ const ListItem = () => {
   );
 };
 
-
 export default ListItem;
-

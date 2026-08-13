@@ -1,259 +1,672 @@
 // src/pages/store/StockAdjustment/ListAdjustment.jsx
+
 import React, { useEffect, useState } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./ListAdjustment.css";
 
 const ListAdjustment = () => {
+  // ==========================================================
+  // STATE
+  // ==========================================================
+
   const [adjustments, setAdjustments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+
   const [editingAdjustment, setEditingAdjustment] = useState(null);
+
   const [items, setItems] = useState([]);
+
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {};
-  let roles = [];
+  // ==========================================================
+  // MESSAGE HELPER
+  // ==========================================================
 
-  if (Array.isArray(storedUser.roles)) {
-    roles = storedUser.roles;
-  } else if (typeof storedUser.role === "string") {
-    roles = [storedUser.role];
-  }
+  const showMessage = (msg) => {
+    setMessage(msg);
 
-  roles = roles.map((r) => r.toLowerCase());
+    setTimeout(() => {
+      setMessage("");
+    }, 3000);
+  };
 
+  // ==========================================================
+  // GET CURRENT MONTH
+  // ==========================================================
 
-  if (!(roles.includes("admin") || roles.includes("store"))) {
-  return (
-    <div className="unauthorized">
-      <h2>🚫 Access Denied</h2>
-      <p>You do not have permission to list adjustment.</p>
-    </div>
-  );
-}
-
-  // On first load, set default date range to current month
-  useEffect(() => {
+  const getCurrentMonthDates = () => {
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const firstDay = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
+    )
       .toISOString()
       .split("T")[0];
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+    const lastDay = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0
+    )
       .toISOString()
       .split("T")[0];
 
-    setStartDate(firstDay);
-    setEndDate(lastDay);
+    return {
+      firstDay,
+      lastDay,
+    };
+  };
 
-    fetchAdjustments(firstDay, lastDay);
-  }, []);
+  // ==========================================================
+  // FETCH ADJUSTMENTS
+  // ==========================================================
 
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(""), 3000);
-      return () => clearTimeout(timer); // cleanup if message changes or component unmounts
-    }
-  }, [message]);
-
-  const fetchAdjustments = async (start = startDate, end = endDate) => {
+  const fetchAdjustments = async (
+    start = startDate,
+    end = endDate
+  ) => {
     try {
+      setLoading(true);
+
       const axios = axiosWithAuth();
-      let url = "/store/adjustments";
 
-      const params = [];
-      if (start) params.push(`start_date=${start}T00:00:00`);
-      if (end) params.push(`end_date=${end}T23:59:59`);
+      const params = {};
 
-      if (params.length > 0) {
-        url += "?" + params.join("&");
+      if (start) {
+        params.start_date = `${start}T00:00:00`;
       }
 
-      const res = await axios.get(url);
-      setAdjustments(res.data || []);
+      if (end) {
+        params.end_date = `${end}T23:59:59`;
+      }
+
+      const res = await axios.get(
+        "/store/adjustments",
+        {
+          params,
+        }
+      );
+
+      setAdjustments(
+        Array.isArray(res.data)
+          ? res.data
+          : []
+      );
+
     } catch (error) {
-      console.error("Error fetching adjustments:", error);
-      setMessage("❌ Failed to load adjustments");
-      setTimeout(() => setMessage(""), 3000);
+      console.error(
+        "Error fetching adjustments:",
+        error
+      );
+
+      showMessage(
+        error.response?.data?.detail ||
+          "❌ Failed to load adjustments"
+      );
+
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this adjustment?")) return;
-    try {
-      const axios = axiosWithAuth();
-      await axios.delete(`/store/adjustments/${id}`);
-      setMessage("✅ Adjustment deleted successfully");
-      setTimeout(() => setMessage(""), 3000);
-      fetchAdjustments();
-    } catch (error) {
-      console.error(error);
-      setMessage(error.response?.data?.detail || "❌ Failed to delete");
-      setTimeout(() => setMessage(""), 3000);
-    }
-  };
+  // ==========================================================
+  // INITIAL LOAD
+  // ==========================================================
+
+  useEffect(() => {
+    const {
+      firstDay,
+      lastDay,
+    } = getCurrentMonthDates();
+
+    setStartDate(firstDay);
+    setEndDate(lastDay);
+
+    fetchAdjustments(
+      firstDay,
+      lastDay
+    );
+  }, []);
+
+  // ==========================================================
+  // FETCH STORE ITEMS
+  // ==========================================================
 
   const fetchItems = async () => {
     try {
       const axios = axiosWithAuth();
-      const res = await axios.get("/store/items/simple");
-      setItems(res.data || []);
+
+      const res = await axios.get(
+        "/store/items/simple"
+      );
+
+      setItems(
+        Array.isArray(res.data)
+          ? res.data
+          : []
+      );
+
     } catch (error) {
-      console.error("Error fetching items:", error);
+      console.error(
+        "Error fetching items:",
+        error
+      );
+
+      showMessage(
+        error.response?.data?.detail ||
+          "❌ Failed to load items"
+      );
     }
   };
 
-  const handleEditClick = (adj) => {
-    fetchItems();
+  // ==========================================================
+  // DELETE ADJUSTMENT
+  // ==========================================================
+
+  const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this adjustment?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const axios = axiosWithAuth();
+
+      await axios.delete(
+        `/store/adjustments/${id}`
+      );
+
+      showMessage(
+        "✅ Adjustment deleted successfully"
+      );
+
+      fetchAdjustments();
+
+    } catch (error) {
+      console.error(
+        "Delete adjustment failed:",
+        error
+      );
+
+      showMessage(
+        error.response?.data?.detail ||
+          "❌ Failed to delete adjustment"
+      );
+    }
+  };
+
+  // ==========================================================
+  // EDIT ADJUSTMENT
+  // ==========================================================
+
+  const handleEditClick = async (adjustment) => {
+    await fetchItems();
+
     setEditingAdjustment({
-      id: adj.id,
-      item_id: String(adj.item.id),
-      quantity_adjusted: adj.quantity_adjusted,
-      reason: adj.reason
+      id: adjustment.id,
+
+      item_id: adjustment.item?.id
+        ? String(adjustment.item.id)
+        : "",
+
+      quantity_adjusted:
+        adjustment.quantity_adjusted ?? "",
+
+      reason:
+        adjustment.reason || "",
     });
   };
 
+  // ==========================================================
+  // SAVE EDIT
+  // ==========================================================
+
   const handleEditSave = async () => {
+    if (!editingAdjustment) {
+      return;
+    }
+
+    if (!editingAdjustment.item_id) {
+      showMessage(
+        "❌ Please select an item"
+      );
+      return;
+    }
+
+    if (
+      editingAdjustment.quantity_adjusted ===
+        "" ||
+      editingAdjustment.quantity_adjusted ===
+        null
+    ) {
+      showMessage(
+        "❌ Please enter the adjustment quantity"
+      );
+      return;
+    }
+
+    if (
+      Number(
+        editingAdjustment.quantity_adjusted
+      ) === 0
+    ) {
+      showMessage(
+        "❌ Adjustment quantity cannot be zero"
+      );
+      return;
+    }
+
     try {
       const axios = axiosWithAuth();
-      await axios.put(`/store/adjustments/${editingAdjustment.id}`, {
-        item_id: parseInt(editingAdjustment.item_id),
-        quantity_adjusted: parseInt(editingAdjustment.quantity_adjusted),
-        reason: editingAdjustment.reason,
-      });
-      setMessage("✅ Adjustment updated successfully!");
-      setTimeout(() => setMessage(""), 3000);
+
+      const payload = {
+        item_id: parseInt(
+          editingAdjustment.item_id,
+          10
+        ),
+
+        quantity_adjusted: Number(
+          editingAdjustment.quantity_adjusted
+        ),
+
+        reason:
+          editingAdjustment.reason || "",
+      };
+
+      await axios.put(
+        `/store/adjustments/${editingAdjustment.id}`,
+        payload
+      );
+
+      showMessage(
+        "✅ Adjustment updated successfully!"
+      );
 
       setEditingAdjustment(null);
+
       fetchAdjustments();
+
     } catch (error) {
-      console.error(error);
-      setMessage(error.response?.data?.detail || "❌ Failed to update");
-      setTimeout(() => setMessage(""), 3000);
+      console.error(
+        "Update adjustment failed:",
+        error
+      );
+
+      showMessage(
+        error.response?.data?.detail ||
+          "❌ Failed to update adjustment"
+      );
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  // ==========================================================
+  // RESET TO CURRENT MONTH
+  // ==========================================================
+
+  const handleReset = () => {
+    const {
+      firstDay,
+      lastDay,
+    } = getCurrentMonthDates();
+
+    setStartDate(firstDay);
+    setEndDate(lastDay);
+
+    fetchAdjustments(
+      firstDay,
+      lastDay
+    );
+  };
+
+  // ==========================================================
+  // LOADING
+  // ==========================================================
+
+  if (loading) {
+    return (
+      <div className="list-adjustment-container">
+        <p>Loading adjustments...</p>
+      </div>
+    );
+  }
+
+  // ==========================================================
+  // UI
+  // ==========================================================
 
   return (
     <div className="list-adjustment-container">
-      <h2>List Adjustments</h2>
-      {message && <div className="message">{message}</div>}
 
-      {/* Date Filter */}
+      <h2>
+        📦 List Store Adjustments
+      </h2>
+
+      {/* ======================================================
+          MESSAGE
+      ====================================================== */}
+
+      {message && (
+        <div className="message">
+          {message}
+        </div>
+      )}
+
+      {/* ======================================================
+          DATE FILTER
+      ====================================================== */}
+
       <div className="filter-section">
-        <label>Start Date:</label>
+
+        <label>
+          Start Date:
+        </label>
+
         <input
           type="date"
           value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
+          onChange={(e) =>
+            setStartDate(e.target.value)
+          }
         />
 
-        <label>End Date:</label>
+        <label>
+          End Date:
+        </label>
+
         <input
           type="date"
           value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
+          onChange={(e) =>
+            setEndDate(e.target.value)
+          }
         />
 
-        <button onClick={() => fetchAdjustments(startDate, endDate)}>🔍 Search</button>
         <button
-          onClick={() => {
-            const now = new Date();
-            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-              .toISOString()
-              .split("T")[0];
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-              .toISOString()
-              .split("T")[0];
-            setStartDate(firstDay);
-            setEndDate(lastDay);
-            fetchAdjustments(firstDay, lastDay);
-          }}
+          type="button"
+          onClick={() =>
+            fetchAdjustments(
+              startDate,
+              endDate
+            )
+          }
+        >
+          🔍 Search
+        </button>
+
+        <button
+          type="button"
+          onClick={handleReset}
         >
           📅 This Month
         </button>
+
       </div>
 
+      {/* ======================================================
+          ADJUSTMENT TABLE
+      ====================================================== */}
+
       <div className="adjustment-table-wrapper">
+
         <table className="adjustment-table">
+
           <thead>
             <tr>
               <th>Date</th>
               <th>Item</th>
+              <th>Item Type</th>
               <th>Quantity</th>
               <th>Reason</th>
+              <th>Adjusted By</th>
               <th>Actions</th>
             </tr>
           </thead>
 
           <tbody>
-            {adjustments.map((adj, index) => (
-              <tr
-                key={adj.id}
-                className={index % 2 === 0 ? "even-row" : "odd-row"}
-              >
-                <td>{new Date(adj.adjusted_at).toLocaleString()}</td>
-                <td>{adj.item?.name}</td>
-                <td>{adj.quantity_adjusted}</td>
-                <td>{adj.reason}</td>
-                <td>
-                  <button onClick={() => handleEditClick(adj)}>✏ Edit</button>
-                  <button onClick={() => handleDelete(adj.id)}>🗑 Delete</button>
+
+            {adjustments.length === 0 ? (
+
+              <tr>
+                <td
+                  colSpan="7"
+                  style={{
+                    textAlign: "center",
+                  }}
+                >
+                  No adjustments found.
                 </td>
               </tr>
-            ))}
+
+            ) : (
+
+              adjustments.map(
+                (adjustment, index) => (
+
+                  <tr
+                    key={adjustment.id}
+                    className={
+                      index % 2 === 0
+                        ? "even-row"
+                        : "odd-row"
+                    }
+                  >
+
+                    {/* DATE */}
+
+                    <td>
+                      {adjustment.adjusted_at
+                        ? new Date(
+                            adjustment.adjusted_at
+                          ).toLocaleString()
+                        : "-"}
+                    </td>
+
+                    {/* ITEM */}
+
+                    <td>
+                      {adjustment.item?.name ||
+                        "Unknown Item"}
+                    </td>
+
+                    {/* ITEM TYPE */}
+
+                    <td>
+                      {adjustment.item?.item_type ||
+                        "-"}
+                    </td>
+
+                    {/* QUANTITY */}
+
+                    <td>
+                      {adjustment.quantity_adjusted}
+                    </td>
+
+                    {/* REASON */}
+
+                    <td>
+                      {adjustment.reason ||
+                        "-"}
+                    </td>
+
+                    {/* ADJUSTED BY */}
+
+                    <td>
+                      {adjustment.adjusted_by?.username ||
+                        adjustment.adjusted_by?.full_name ||
+                        adjustment.adjusted_by ||
+                        "-"}
+                    </td>
+
+                    {/* ACTIONS */}
+
+                    <td>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleEditClick(
+                            adjustment
+                          )
+                        }
+                      >
+                        ✏ Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDelete(
+                            adjustment.id
+                          )
+                        }
+                      >
+                        🗑 Delete
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                )
+              )
+
+            )}
+
           </tbody>
+
         </table>
+
       </div>
 
-      {/* Edit Form Modal */}
-      {editingAdjustment && (
-        <div className="edit-modal">
-          <div className="edit-modal-content">
-            <h3>Edit Adjustment</h3>
+      {/* ======================================================
+          EDIT MODAL
+      ====================================================== */}
 
-            <label>Item</label>
+      {editingAdjustment && (
+
+        <div className="edit-modal">
+
+          <div className="edit-modal-content">
+
+            <h3>
+              Edit Adjustment
+            </h3>
+
+            {/* ITEM */}
+
+            <label>
+              Item
+            </label>
+
             <select
-              value={editingAdjustment.item_id}
+              value={
+                editingAdjustment.item_id
+              }
               onChange={(e) =>
-                setEditingAdjustment({ ...editingAdjustment, item_id: e.target.value })
+                setEditingAdjustment({
+                  ...editingAdjustment,
+                  item_id:
+                    e.target.value,
+                })
               }
             >
-              <option value="">-- Select Item --</option>
+
+              <option value="">
+                -- Select Item --
+              </option>
+
               {items.map((item) => (
-                <option key={item.id} value={item.id}>
+
+                <option
+                  key={item.id}
+                  value={item.id}
+                >
                   {item.name}
                 </option>
+
               ))}
+
             </select>
 
-            <label>Quantity Adjusted</label>
+            {/* QUANTITY */}
+
+            <label>
+              Quantity Adjusted
+            </label>
+
             <input
               type="number"
-              value={editingAdjustment.quantity_adjusted}
+              step="1"
+              value={
+                editingAdjustment.quantity_adjusted
+              }
               onChange={(e) =>
-                setEditingAdjustment({ ...editingAdjustment, quantity_adjusted: e.target.value })
+                setEditingAdjustment({
+                  ...editingAdjustment,
+                  quantity_adjusted:
+                    e.target.value,
+                })
               }
             />
 
-            <label>Reason</label>
+            {/* REASON */}
+
+            <label>
+              Reason
+            </label>
+
             <textarea
-              value={editingAdjustment.reason}
+              value={
+                editingAdjustment.reason
+              }
               onChange={(e) =>
-                setEditingAdjustment({ ...editingAdjustment, reason: e.target.value })
+                setEditingAdjustment({
+                  ...editingAdjustment,
+                  reason:
+                    e.target.value,
+                })
               }
             />
+
+            {/* BUTTONS */}
 
             <div className="edit-buttons">
-              <button onClick={handleEditSave}>💾 Save</button>
-              <button onClick={() => setEditingAdjustment(null)}>❌ Cancel</button>
+
+              <button
+                type="button"
+                onClick={
+                  handleEditSave
+                }
+              >
+                💾 Save
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setEditingAdjustment(
+                    null
+                  )
+                }
+              >
+                ❌ Cancel
+              </button>
+
             </div>
+
           </div>
+
         </div>
+
       )}
+
     </div>
   );
 };

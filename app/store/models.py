@@ -49,7 +49,7 @@ class StoreItem(Base, BusinessMixin):
     unit = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey("store_categories.id"), nullable=True)
     unit_price = Column(Float, default=0.0, nullable=False)
-    selling_price = Column(Float, default=0.0, nullable=False)
+    selling_price = Column(Float, nullable=True)
     item_type = Column(String(20), nullable=True)
 
     # Relationship
