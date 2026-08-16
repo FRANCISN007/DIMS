@@ -151,8 +151,8 @@ app.include_router(bank_router, prefix="/bank", tags=["Banks"])
 
 app.include_router(license_router, prefix="/license", tags=["License"])
 app.include_router(store_router, prefix="/store", tags=["Store"])
-app.include_router(bar_router, prefix="/bar", tags=["Bar"])
-app.include_router(barpayment_router, prefix="/barpayment", tags=["Bar Payments"])
+#app.include_router(bar_router, prefix="/bar", tags=["Bar"])
+#app.include_router(barpayment_router, prefix="/barpayment", tags=["Bar Payments"])
 app.include_router(vendor_router, prefix="/vendor", tags=["Vendor"])
 
 

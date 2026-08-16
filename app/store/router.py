@@ -122,7 +122,7 @@ def create_category(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store"])
+        role_required(["store", "Accountant", "ops-manager"])
     ),
 ):
     # ==================================================
@@ -182,7 +182,7 @@ def create_category(
 def list_categories(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store" , "procurement"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement", "manager", "accountant"]))
 ):
     # ✅ Resolve + validate tenancy
     business_id = resolve_business_id(current_user, business_id)
@@ -208,7 +208,7 @@ def update_category(
     update_data: store_schemas.StoreCategoryCreate,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store",  "manager", "accountant"]))
 ):
 
     business_id = resolve_business_id(current_user, business_id)
@@ -254,7 +254,7 @@ def delete_category(
     category_id: int,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "manager"]))
 ):
 
     business_id = resolve_business_id(current_user, business_id)
@@ -284,7 +284,7 @@ def create_item(
     item: store_schemas.StoreItemCreate,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "manager"]))
 ):
     try:
         business_id = resolve_business_id(current_user, business_id)
@@ -327,7 +327,7 @@ def list_items(
     search: Optional[str] = None,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement", "manager"]))
 ):
     try:
         business_id = resolve_business_id(current_user, business_id)
@@ -400,7 +400,7 @@ def list_store_items(
     category: Optional[str] = None,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement", "manager"]))
 ):
 
     business_id = resolve_business_id(current_user, business_id)
@@ -424,7 +424,7 @@ def list_store_items(
 def list_items_simple(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement", "manager"]))
 ):
     try:
         business_id = resolve_business_id(current_user, business_id)
@@ -488,7 +488,7 @@ def list_items_simple_search(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store", "procurement", "camp_boss"])
+        role_required(["store", "procurement", "manager", "camp_boss"])
     )
 ):
     try:
@@ -567,7 +567,7 @@ def update_item(
     update_data: store_schemas.StoreItemCreate,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "manager"]))
 ):
     business_id = resolve_business_id(current_user, business_id)
 
@@ -613,7 +613,7 @@ def delete_item(
     item_id: int,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "manager"]))
 ):
     business_id = resolve_business_id(current_user, business_id)
 
@@ -892,7 +892,7 @@ def list_purchases(
     business_id: Optional[int] = Query(None, description="Super admin must provide business_id"),
     request: Request = None,
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement", "admin", "super_admin"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "procurement", "manager"]))
 ):
     # =========================
     # ✅ Resolve tenant context (STRICT)
@@ -1019,7 +1019,7 @@ async def update_purchase(
     attachment: UploadFile = File(None),
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "manager"]))
 ):
     """
     Update an existing purchase/stock entry with proper WAT timezone handling
@@ -1157,7 +1157,7 @@ def delete_purchase(
     entry_id: int,
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
-    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store"]))
+    current_user: user_schemas.UserDisplaySchema = Depends(role_required(["store", "manager"]))
 ):
     # Resolve business
     business_id = resolve_business_id(current_user, business_id)
@@ -2012,7 +2012,7 @@ def issue_to_location(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store"])
+        role_required(["store", "manager"])
     )
 ):
     # ==========================================================
@@ -2349,7 +2349,7 @@ def list_issues_to_location(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store", "admin"])
+        role_required(["store", "manager"])
     )
 ):
     try:
@@ -2561,7 +2561,7 @@ def get_item_stock(
     ),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store", "admin"])
+        role_required(["store", "manager", "camp_boss"])
     )
 ):
     # ==========================================================
@@ -2673,7 +2673,7 @@ def update_location_issue(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store", "admin", "super_admin"])
+        role_required(["store", "camp_boss", "manager"])
     ),
 ):
     # ==========================================================
@@ -3223,7 +3223,7 @@ def delete_location_issue(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["admin", "super_admin"])
+        role_required(["store", "manager"])
     )
 ):
     # ==========================================================
@@ -3571,7 +3571,7 @@ def adjust_store_inventory(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["admin", "super_admin"])
+        role_required(["manager"])
     )
 ):
     try:
@@ -3883,7 +3883,7 @@ def list_store_inventory_adjustments(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store", "admin", "super_admin"])
+        role_required(["store", "manager"])
     )
 ):
     try:
@@ -4046,7 +4046,7 @@ def update_adjustment(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["admin", "super_admin"])
+        role_required(["manager"])
     )
 ):
     try:
@@ -4437,7 +4437,7 @@ def delete_adjustment(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["admin", "super_admin"])
+        role_required(["manager"])
     )
 ):
     try:
@@ -4638,9 +4638,9 @@ def get_location_stock_balance(
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required([
             "store",
-            "location",
-            "admin",
-            "super_admin"
+            "camp_boss",
+            "manager",
+        
         ])
     )
 ):
@@ -5349,7 +5349,7 @@ def get_store_balances(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store", "admin", "super_admin"])
+        role_required(["store", "manager"])
     )
 ):
     try:

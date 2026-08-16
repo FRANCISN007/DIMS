@@ -9,6 +9,8 @@ from app.users.auth import get_current_user
 from app.users.schemas import UserDisplaySchema
 from app.users.permissions import role_required
 from app.core.roles import USER_MANAGEMENT_ROLES
+from app.core.roles import USER_MANAGEMENT_ROLES1
+
 from app.core.roles import SUPER_ADMIN, ADMIN
 from app.users.models import User
 from datetime import date, datetime, timedelta
@@ -49,7 +51,7 @@ def create_location(
     ),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(USER_MANAGEMENT_ROLES,)
+        role_required(["store", "camp_boss", "manager"])
     ),
 ):
     # ----------------------------------------
@@ -147,7 +149,7 @@ def list_locations(
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
         #role_required(USER_MANAGEMENT_ROLES)
-        role_required(["camp_boss", "SUPER_ADMIN", "ADMIN"])
+        role_required(["store", "camp_boss", "manager"])
     ),
 ):
     """
@@ -274,12 +276,7 @@ def get_store_items_received_by_location(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required([
-            "store",
-            "admin",
-            "super_admin",
-            "camp_boss"
-        ])
+        role_required(USER_MANAGEMENT_ROLES1)
     )
 ):
     try:
@@ -567,7 +564,9 @@ def get_store_items_received_by_location(
 def get_location(
     location_id: int,
     db: Session = Depends(get_db),
-    current_user: UserDisplaySchema = Depends(get_current_user),
+    current_user: user_schemas.UserDisplaySchema = Depends(
+            role_required(USER_MANAGEMENT_ROLES1)
+        ),
 ):
     """
     Get one location.

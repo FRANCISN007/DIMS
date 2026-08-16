@@ -35,9 +35,16 @@ BUSINESS_MANAGEMENT_ROLES = {
 USER_MANAGEMENT_ROLES = {
     SUPER_ADMIN,
     ADMIN,
+    "manager",
 }
 
-
+USER_MANAGEMENT_ROLES1 = {
+    SUPER_ADMIN,
+    ADMIN,
+    "manager",
+    "camp_boss",
+    "store",
+}
 
     
 

@@ -62,10 +62,9 @@ class StoreItemOut(BaseModel):
     name: str
     unit: str
     unit_price: float
-    selling_price: float        # ✅ new
+    selling_price: Optional[float] = None
     category_id: Optional[int] = None
     item_type: Optional[str] = None
-
 
     class Config:
         from_attributes = True

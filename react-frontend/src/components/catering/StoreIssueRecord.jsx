@@ -1,4 +1,3 @@
-
 // src/components/locations/StoreIssueRecord.jsx
 
 import React, {
@@ -27,22 +26,28 @@ const StoreIssueRecord = () => {
     useState("");
 
   // ==========================================================
-  // DEFAULT DATE = TODAY
+  // GET TODAY
   // ==========================================================
 
   const getToday = () => {
     const today = new Date();
 
     const year = today.getFullYear();
+
     const month = String(
       today.getMonth() + 1
     ).padStart(2, "0");
+
     const day = String(
       today.getDate()
     ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
   };
+
+  // ==========================================================
+  // DEFAULT DATE = TODAY
+  // ==========================================================
 
   const [dateFrom, setDateFrom] =
     useState(getToday());
@@ -198,7 +203,7 @@ const StoreIssueRecord = () => {
   ]);
 
   // ==========================================================
-  // HELPERS
+  // GET LOCATION NAME
   // ==========================================================
 
   const getLocationName = (record) => {
@@ -214,6 +219,10 @@ const StoreIssueRecord = () => {
 
     return location?.name || "-";
   };
+
+  // ==========================================================
+  // FORMAT DATE
+  // ==========================================================
 
   const formatDate = (date) => {
     if (!date) {
@@ -240,32 +249,9 @@ const StoreIssueRecord = () => {
     );
   };
 
-  const formatDateTime = (date) => {
-    if (!date) {
-      return "-";
-    }
-
-    const parsed = new Date(date);
-
-    if (
-      Number.isNaN(
-        parsed.getTime()
-      )
-    ) {
-      return date;
-    }
-
-    return parsed.toLocaleString(
-      "en-GB",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }
-    );
-  };
+  // ==========================================================
+  // FORMAT NUMBER
+  // ==========================================================
 
   const formatNumber = (value) => {
     return Number(
@@ -279,7 +265,7 @@ const StoreIssueRecord = () => {
   };
 
   // ==========================================================
-  // FILTER RECORDS
+  // FILTER RECORDS BY SEARCH
   // ==========================================================
 
   const filteredRecords = useMemo(() => {
@@ -320,7 +306,7 @@ const StoreIssueRecord = () => {
   ]);
 
   // ==========================================================
-  // SUMMARY
+  // TOTAL QUANTITY
   // ==========================================================
 
   const totalQuantity = useMemo(() => {
@@ -334,6 +320,10 @@ const StoreIssueRecord = () => {
     );
   }, [filteredRecords]);
 
+  // ==========================================================
+  // TOTAL AMOUNT
+  // ==========================================================
+
   const totalAmount = useMemo(() => {
     return filteredRecords.reduce(
       (total, record) =>
@@ -344,6 +334,10 @@ const StoreIssueRecord = () => {
       0
     );
   }, [filteredRecords]);
+
+  // ==========================================================
+  // UNIQUE ITEMS
+  // ==========================================================
 
   const uniqueItems = useMemo(() => {
     return new Set(
@@ -400,51 +394,40 @@ const StoreIssueRecord = () => {
 
         </div>
 
+        {/* ==================================================
+            SUMMARY
+        ================================================== */}
+
         <div className="store-issue-summary-container">
 
           <div className="store-issue-summary">
-
-            <span>
-              Records
-            </span>
+            <span>Records</span>
 
             <strong>
               {filteredRecords.length}
             </strong>
-
           </div>
 
           <div className="store-issue-summary">
-
-            <span>
-              Items
-            </span>
+            <span>Items</span>
 
             <strong>
               {uniqueItems}
             </strong>
-
           </div>
 
           <div className="store-issue-summary">
-
-            <span>
-              Quantity
-            </span>
+            <span>Quantity</span>
 
             <strong>
               {formatNumber(
                 totalQuantity
               )}
             </strong>
-
           </div>
 
           <div className="store-issue-summary amount-summary">
-
-            <span>
-              Amount
-            </span>
+            <span>Amount</span>
 
             <strong>
               ₦
@@ -452,7 +435,6 @@ const StoreIssueRecord = () => {
                 totalAmount
               )}
             </strong>
-
           </div>
 
         </div>
@@ -521,6 +503,7 @@ const StoreIssueRecord = () => {
               loadingLocations
             }
           >
+
             <option value="">
               All Locations
             </option>
@@ -603,7 +586,7 @@ const StoreIssueRecord = () => {
       </div>
 
       {/* ====================================================
-          CURRENT DATE DISPLAY
+          CURRENT DATE
       ==================================================== */}
 
       <div className="store-issue-date-display">
@@ -630,12 +613,16 @@ const StoreIssueRecord = () => {
 
       <div className="store-issue-record-card">
 
+        {/* ==================================================
+            IMPORTANT:
+            THIS IS THE ACTUAL VERTICAL SCROLL CONTAINER
+        ================================================== */}
+
         <div className="store-issue-table-wrapper">
 
           <table className="store-issue-record-table">
 
             <thead>
-
               <tr>
                 <th>#</th>
                 <th>Date</th>
@@ -646,12 +633,12 @@ const StoreIssueRecord = () => {
                 <th>Unit Price</th>
                 <th>Total Amount</th>
               </tr>
-
             </thead>
 
             <tbody>
 
               {loading ? (
+
                 <tr>
                   <td
                     colSpan="8"
@@ -661,8 +648,9 @@ const StoreIssueRecord = () => {
                     records...
                   </td>
                 </tr>
-              ) : filteredRecords.length ===
-                0 ? (
+
+              ) : filteredRecords.length === 0 ? (
+
                 <tr>
                   <td
                     colSpan="8"
@@ -673,25 +661,34 @@ const StoreIssueRecord = () => {
                     the selected date.
                   </td>
                 </tr>
+
               ) : (
+
                 filteredRecords.map(
                   (
                     record,
                     index
                   ) => (
+
                     <tr
                       key={`${record.item_id}-${record.issue_date}-${index}`}
                     >
 
+                      {/* NUMBER */}
+
                       <td className="store-issue-number">
                         {index + 1}
                       </td>
+
+                      {/* DATE */}
 
                       <td className="store-issue-date-cell">
                         {formatDate(
                           record.issue_date
                         )}
                       </td>
+
+                      {/* LOCATION */}
 
                       <td className="store-issue-location-cell">
 
@@ -702,6 +699,8 @@ const StoreIssueRecord = () => {
                         </strong>
 
                       </td>
+
+                      {/* ITEM */}
 
                       <td className="store-issue-item-cell">
 
@@ -721,10 +720,14 @@ const StoreIssueRecord = () => {
 
                       </td>
 
+                      {/* UNIT */}
+
                       <td>
                         {record.unit ||
                           "-"}
                       </td>
+
+                      {/* QUANTITY */}
 
                       <td className="store-issue-quantity-cell">
 
@@ -734,12 +737,14 @@ const StoreIssueRecord = () => {
 
                       </td>
 
+                      {/* UNIT PRICE */}
+
                       <td>
 
                         {record.unit_price !==
-                        null &&
+                          null &&
                         record.unit_price !==
-                        undefined
+                          undefined
                           ? `₦${formatNumber(
                               record.unit_price
                             )}`
@@ -747,12 +752,14 @@ const StoreIssueRecord = () => {
 
                       </td>
 
+                      {/* TOTAL */}
+
                       <td className="store-issue-total-cell">
 
                         {record.total_amount !==
-                        null &&
+                          null &&
                         record.total_amount !==
-                        undefined
+                          undefined
                           ? `₦${formatNumber(
                               record.total_amount
                             )}`
@@ -761,8 +768,10 @@ const StoreIssueRecord = () => {
                       </td>
 
                     </tr>
+
                   )
                 )
+
               )}
 
             </tbody>

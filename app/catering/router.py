@@ -18,6 +18,7 @@ from app.users.schemas import UserDisplaySchema
 from app.users.permissions import role_required
 from app.core.roles import USER_MANAGEMENT_ROLES
 
+from app.core.roles import USER_MANAGEMENT_ROLES1
 from app.store import schemas as store_schemas
 from app.store import models as store_models
 
@@ -178,9 +179,6 @@ def usage_to_response(
     )
 
 
-# ==========================================================
-# CREATE CATERING USAGE
-# ==========================================================
 
 # ==========================================================
 # CREATE CATERING USAGE
@@ -197,9 +195,17 @@ def create_usage(
     db: Session = Depends(get_db),
 
     current_user: UserDisplaySchema = Depends(
-        role_required(USER_MANAGEMENT_ROLES)
+        role_required(["store", "camp_boss", "manager", "admin"])
     ),
 ):
+
+    # ======================================================
+    # RESOLVE BUSINESS
+    # ======================================================
+
+    business_id = resolve_business_id(
+        current_user
+    )
 
     # ======================================================
     # CAMP BOSS LOCATION RESTRICTION
@@ -213,20 +219,19 @@ def create_usage(
 
         if current_user.location_id is None:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
                     "Camp Boss is not assigned to a location."
                 ),
             )
 
         # --------------------------------------------------
-        # IMPORTANT:
-        # Do NOT trust the location_id sent by frontend.
-        #
-        # Force the usage to the Camp Boss's location.
+        # Do NOT trust location_id from frontend
         # --------------------------------------------------
 
-        usage_data.location_id = current_user.location_id
+        usage_data.location_id = (
+            current_user.location_id
+        )
 
     # ======================================================
     # CREATE USAGE
@@ -236,6 +241,7 @@ def create_usage(
         db=db,
         usage_data=usage_data,
         current_user=current_user,
+        business_id=business_id,
     )
 
     return usage_to_response(
@@ -255,29 +261,41 @@ def create_usage(
     ],
 )
 def list_usage(
-    location_id: int | None = Query(
+    location_id: Optional[int] = Query(
         default=None
     ),
 
-    start_date: date | None = Query(
+    start_date: Optional[date] = Query(
         default=None
     ),
 
-    end_date: date | None = Query(
+    end_date: Optional[date] = Query(
         default=None
     ),
 
     db: Session = Depends(get_db),
 
     current_user: UserDisplaySchema = Depends(
-        #role_required(USER_MANAGEMENT_ROLES)
-        role_required(["camp_boss", "SUPER_ADMIN", "ADMIN"])
+        role_required(USER_MANAGEMENT_ROLES1)
     ),
 ):
+
+    # ======================================================
+    # RESOLVE BUSINESS
+    # ======================================================
+
+    business_id = resolve_business_id(
+        current_user
+    )
+
+    # ======================================================
+    # GET USAGE
+    # ======================================================
 
     usages = get_catering_usages(
         db=db,
         current_user=current_user,
+        business_id=business_id,
         location_id=location_id,
         start_date=start_date,
         end_date=end_date,
@@ -302,20 +320,33 @@ def list_usage(
 )
 def get_usage(
     usage_id: int,
+
     db: Session = Depends(get_db),
+
     current_user: UserDisplaySchema = Depends(
-        role_required(USER_MANAGEMENT_ROLES)
+        role_required(USER_MANAGEMENT_ROLES1)
     ),
 ):
+
+    # ======================================================
+    # RESOLVE BUSINESS
+    # ======================================================
+
+    business_id = resolve_business_id(
+        current_user
+    )
+
+    # ======================================================
+    # GET USAGE
+    # ======================================================
 
     usage = get_catering_usage(
         db=db,
         usage_id=usage_id,
         current_user=current_user,
+        business_id=business_id,
     )
 
-
-    
     return usage_to_response(
         usage,
         db,
@@ -332,18 +363,34 @@ def get_usage(
 )
 def update_usage(
     usage_id: int,
+
     usage_data: schemas.CateringUsageUpdate,
+
     db: Session = Depends(get_db),
+
     current_user: UserDisplaySchema = Depends(
-        role_required(USER_MANAGEMENT_ROLES)
+        role_required(USER_MANAGEMENT_ROLES1)
     ),
 ):
+
+    # ======================================================
+    # RESOLVE BUSINESS
+    # ======================================================
+
+    business_id = resolve_business_id(
+        current_user
+    )
+
+    # ======================================================
+    # UPDATE USAGE
+    # ======================================================
 
     usage = update_catering_usage(
         db=db,
         usage_id=usage_id,
         usage_data=usage_data,
         current_user=current_user,
+        business_id=business_id,
     )
 
     return usage_to_response(
@@ -352,9 +399,6 @@ def update_usage(
     )
 
 
-# ==========================================================
-# VOID CATERING USAGE
-# ==========================================================
 
 # ==========================================================
 # VOID CATERING USAGE
@@ -366,18 +410,34 @@ def update_usage(
 )
 def void_usage(
     usage_id: int,
+
     void_data: schemas.CateringUsageVoid,
+
     db: Session = Depends(get_db),
+
     current_user: UserDisplaySchema = Depends(
-        role_required(USER_MANAGEMENT_ROLES)
+        role_required(USER_MANAGEMENT_ROLES1)
     ),
 ):
+
+    # ======================================================
+    # RESOLVE BUSINESS
+    # ======================================================
+
+    business_id = resolve_business_id(
+        current_user
+    )
+
+    # ======================================================
+    # VOID USAGE
+    # ======================================================
 
     usage = void_catering_usage(
         db=db,
         usage_id=usage_id,
         reason=void_data.reason,
         current_user=current_user,
+        business_id=business_id,
     )
 
     return usage_to_response(
@@ -408,10 +468,7 @@ def adjust_location_inventory(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required([
-            "admin",
-            "super_admin"
-        ])
+        role_required(USER_MANAGEMENT_ROLES1)
     )
 ):
     try:
@@ -761,12 +818,7 @@ def list_location_inventory_adjustments(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required([
-            "store",
-            "location",
-            "admin",
-            "super_admin"
-        ])
+        role_required(USER_MANAGEMENT_ROLES1)
     )
 ):
 
@@ -1016,10 +1068,7 @@ def update_location_inventory_adjustment(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required([
-            "admin",
-            "super_admin"
-        ])
+        role_required(USER_MANAGEMENT_ROLES1)
     )
 ):
 
@@ -1491,10 +1540,7 @@ def delete_location_inventory_adjustment(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required([
-            "admin",
-            "super_admin"
-        ])
+        role_required(USER_MANAGEMENT_ROLES1)
     )
 ):
 
@@ -1760,12 +1806,7 @@ def get_location_stock_balance(
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required([
-            "store",
-            "location",
-            "admin",
-            "super_admin"
-        ])
+        role_required(USER_MANAGEMENT_ROLES1)
     )
 ):
 

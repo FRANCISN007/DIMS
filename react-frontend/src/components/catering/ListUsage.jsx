@@ -10,25 +10,69 @@ import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./ListUsage.css";
 
 const ListUsage = () => {
+  const axios = axiosWithAuth();
+
+  // ==========================================================
+  // TODAY DATE
+  // ==========================================================
+
+  const getTodayDate = () => {
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(
+      today.getMonth() + 1
+    ).padStart(2, "0");
+    const day = String(
+      today.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const today = getTodayDate();
+
+  // ==========================================================
+  // STATE
+  // ==========================================================
+
   const [usages, setUsages] = useState([]);
   const [locations, setLocations] = useState([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
+
   const [loadingLocations, setLoadingLocations] =
     useState(false);
 
-  const [message, setMessage] = useState("");
+  const [message, setMessage] =
+    useState("");
+
   const [messageType, setMessageType] =
     useState("");
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] =
+    useState("");
+
   const [locationFilter, setLocationFilter] =
     useState("");
+
   const [statusFilter, setStatusFilter] =
     useState("");
 
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  // ==========================================================
+  // DEFAULT DATE = TODAY
+  // ==========================================================
+
+  const [dateFrom, setDateFrom] =
+    useState(today);
+
+  const [dateTo, setDateTo] =
+    useState(today);
+
+  // ==========================================================
+  // MODALS
+  // ==========================================================
 
   const [selectedUsage, setSelectedUsage] =
     useState(null);
@@ -42,17 +86,27 @@ const ListUsage = () => {
   const [showVoidModal, setShowVoidModal] =
     useState(false);
 
-  const [editForm, setEditForm] = useState({
-    location_id: "",
-    usage_date: "",
-    note: "",
-    items: [],
-  });
+  // ==========================================================
+  // EDIT FORM
+  // ==========================================================
+
+  const [editForm, setEditForm] =
+    useState({
+      location_id: "",
+      usage_date: "",
+      note: "",
+      items: [],
+    });
+
+  // ==========================================================
+  // VOID
+  // ==========================================================
 
   const [voidReason, setVoidReason] =
     useState("");
 
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
 
   // ==========================================================
   // MESSAGE
@@ -80,7 +134,7 @@ const ListUsage = () => {
       setLoadingLocations(true);
 
       const response =
-        await axiosWithAuth().get(
+        await axios.get(
           "/locations/simple"
         );
 
@@ -114,10 +168,7 @@ const ListUsage = () => {
 
       const params = new URLSearchParams();
 
-      // ------------------------------------------------------
       // LOCATION
-      // ------------------------------------------------------
-
       if (locationFilter) {
         params.append(
           "location_id",
@@ -125,10 +176,7 @@ const ListUsage = () => {
         );
       }
 
-      // ------------------------------------------------------
       // START DATE
-      // ------------------------------------------------------
-
       if (dateFrom) {
         params.append(
           "start_date",
@@ -136,10 +184,7 @@ const ListUsage = () => {
         );
       }
 
-      // ------------------------------------------------------
       // END DATE
-      // ------------------------------------------------------
-
       if (dateTo) {
         params.append(
           "end_date",
@@ -155,7 +200,7 @@ const ListUsage = () => {
         : "/catering/usage";
 
       const response =
-        await axiosWithAuth().get(url);
+        await axios.get(url);
 
       setUsages(
         Array.isArray(response.data)
@@ -187,7 +232,7 @@ const ListUsage = () => {
   }, []);
 
   // ==========================================================
-  // LOAD USAGE WHEN SERVER FILTER CHANGES
+  // FETCH WHEN FILTER CHANGES
   // ==========================================================
 
   useEffect(() => {
@@ -211,11 +256,14 @@ const ListUsage = () => {
       return usage.location_name;
     }
 
-    const location = locations.find(
-      (item) =>
-        Number(item.id) ===
-        Number(usage?.location_id)
-    );
+    const location =
+      locations.find(
+        (item) =>
+          Number(item.id) ===
+          Number(
+            usage?.location_id
+          )
+      );
 
     return location?.name || "-";
   };
@@ -225,17 +273,23 @@ const ListUsage = () => {
       item?.item?.name ||
       item?.item_name ||
       item?.name ||
-      `Item #${item?.item_id ?? "-"}`
+      `Item #${
+        item?.item_id ?? "-"
+      }`
     );
   };
 
   const getItems = (usage) => {
-    return Array.isArray(usage?.items)
+    return Array.isArray(
+      usage?.items
+    )
       ? usage.items
       : [];
   };
 
-  const getTotalQuantity = (usage) => {
+  const getTotalQuantity = (
+    usage
+  ) => {
     return getItems(usage).reduce(
       (total, item) =>
         total +
@@ -246,7 +300,9 @@ const ListUsage = () => {
     );
   };
 
-  const getTotalAmount = (usage) => {
+  const getTotalAmount = (
+    usage
+  ) => {
     return getItems(usage).reduce(
       (total, item) =>
         total +
@@ -257,10 +313,13 @@ const ListUsage = () => {
     );
   };
 
-  const formatDate = (date) => {
+  const formatDate = (
+    date
+  ) => {
     if (!date) return "-";
 
-    const parsed = new Date(date);
+    const parsed =
+      new Date(date);
 
     if (
       Number.isNaN(
@@ -280,10 +339,13 @@ const ListUsage = () => {
     );
   };
 
-  const formatDateTime = (date) => {
+  const formatDateTime = (
+    date
+  ) => {
     if (!date) return "-";
 
-    const parsed = new Date(date);
+    const parsed =
+      new Date(date);
 
     if (
       Number.isNaN(
@@ -305,7 +367,9 @@ const ListUsage = () => {
     );
   };
 
-  const formatNumber = (value) => {
+  const formatNumber = (
+    value
+  ) => {
     return Number(
       value || 0
     ).toLocaleString(
@@ -317,66 +381,80 @@ const ListUsage = () => {
   };
 
   // ==========================================================
-  // FRONTEND SEARCH / STATUS FILTER
+  // SEARCH + STATUS FILTER
   // ==========================================================
 
-  const filteredUsages = useMemo(() => {
-    const value = search
-      .trim()
-      .toLowerCase();
+  const filteredUsages =
+    useMemo(() => {
+      const value =
+        search
+          .trim()
+          .toLowerCase();
 
-    return usages.filter((usage) => {
-      const items = getItems(usage);
+      return usages.filter(
+        (usage) => {
+          const items =
+            getItems(usage);
 
-      const itemText = items
-        .map((item) =>
-          getItemName(item)
-        )
-        .join(" ");
+          const itemText =
+            items
+              .map((item) =>
+                getItemName(
+                  item
+                )
+              )
+              .join(" ");
 
-      const locationName =
-        getLocationName(usage);
+          const locationName =
+            getLocationName(
+              usage
+            );
 
-      const searchText = [
-        usage?.id,
-        usage?.usage_date,
-        locationName,
-        itemText,
-        usage?.note,
-        usage?.status,
-      ]
-        .join(" ")
-        .toLowerCase();
+          const searchText = [
+            usage?.id,
+            usage?.usage_date,
+            locationName,
+            itemText,
+            usage?.note,
+            usage?.status,
+          ]
+            .join(" ")
+            .toLowerCase();
 
-      const matchesSearch =
-        !value ||
-        searchText.includes(value);
+          const matchesSearch =
+            !value ||
+            searchText.includes(
+              value
+            );
 
-      const matchesStatus =
-        !statusFilter ||
-        usage?.status ===
-          statusFilter;
+          const matchesStatus =
+            !statusFilter ||
+            usage?.status ===
+              statusFilter;
 
-      return (
-        matchesSearch &&
-        matchesStatus
+          return (
+            matchesSearch &&
+            matchesStatus
+          );
+        }
       );
-    });
-  }, [
-    usages,
-    search,
-    statusFilter,
-    locations,
-  ]);
+    }, [
+      usages,
+      search,
+      statusFilter,
+      locations,
+    ]);
 
   // ==========================================================
   // VIEW
   // ==========================================================
 
-  const handleView = async (usage) => {
+  const handleView = async (
+    usage
+  ) => {
     try {
       const response =
-        await axiosWithAuth().get(
+        await axios.get(
           `/catering/usage/${usage.id}`
         );
 
@@ -400,9 +478,12 @@ const ListUsage = () => {
   // EDIT
   // ==========================================================
 
-  const handleEdit = async (usage) => {
+  const handleEdit = async (
+    usage
+  ) => {
     if (
-      usage.status === "voided"
+      usage.status ===
+      "voided"
     ) {
       showMessage(
         "A voided catering usage cannot be edited.",
@@ -414,7 +495,7 @@ const ListUsage = () => {
 
     try {
       const response =
-        await axiosWithAuth().get(
+        await axios.get(
           `/catering/usage/${usage.id}`
         );
 
@@ -425,7 +506,8 @@ const ListUsage = () => {
 
       setEditForm({
         location_id:
-          data.location_id || "",
+          data.location_id ||
+          "",
 
         usage_date:
           data.usage_date
@@ -438,7 +520,9 @@ const ListUsage = () => {
           data.note || "",
 
         items:
-          (data.items || []).map(
+          (
+            data.items || []
+          ).map(
             (item) => ({
               item_id:
                 item.item_id,
@@ -461,7 +545,9 @@ const ListUsage = () => {
           ),
       });
 
-      setShowEditModal(true);
+      setShowEditModal(
+        true
+      );
     } catch (error) {
       console.error(error);
 
@@ -474,7 +560,7 @@ const ListUsage = () => {
   };
 
   // ==========================================================
-  // EDIT ITEM QUANTITY
+  // EDIT QUANTITY
   // ==========================================================
 
   const handleEditQuantity = (
@@ -502,22 +588,26 @@ const ListUsage = () => {
     });
   };
 
-    // ==========================================================
-    // REMOVE EDIT ITEM
-    // ==========================================================
+  // ==========================================================
+  // REMOVE ITEM
+  // ==========================================================
 
-    const handleRemoveEditItem = (index) => {
+  const handleRemoveEditItem = (
+    index
+  ) => {
     setEditForm((prev) => {
-        const items = [...prev.items];
+      const items = [
+        ...prev.items,
+      ];
 
-        items.splice(index, 1);
+      items.splice(index, 1);
 
-        return {
+      return {
         ...prev,
         items,
-        };
+      };
     });
-    };
+  };
 
   // ==========================================================
   // SAVE EDIT
@@ -537,7 +627,6 @@ const ListUsage = () => {
         "Please select a location.",
         "error"
       );
-
       return;
     }
 
@@ -546,7 +635,6 @@ const ListUsage = () => {
         "Please select the usage date.",
         "error"
       );
-
       return;
     }
 
@@ -555,7 +643,6 @@ const ListUsage = () => {
         "At least one item is required.",
         "error"
       );
-
       return;
     }
 
@@ -573,7 +660,6 @@ const ListUsage = () => {
         "All item quantities must be greater than zero.",
         "error"
       );
-
       return;
     }
 
@@ -581,22 +667,25 @@ const ListUsage = () => {
       setSaving(true);
 
       const payload = {
-        location_id: Number(
-          editForm.location_id
-        ),
+        location_id:
+          Number(
+            editForm.location_id
+          ),
 
         usage_date:
           editForm.usage_date,
 
         note:
-          editForm.note || null,
+          editForm.note ||
+          null,
 
         items:
           editForm.items.map(
             (item) => ({
-              item_id: Number(
-                item.item_id
-              ),
+              item_id:
+                Number(
+                  item.item_id
+                ),
 
               quantity_used:
                 Number(
@@ -606,13 +695,18 @@ const ListUsage = () => {
           ),
       };
 
-      await axiosWithAuth().put(
+      await axios.put(
         `/catering/usage/${selectedUsage.id}`,
         payload
       );
 
-      setShowEditModal(false);
-      setSelectedUsage(null);
+      setShowEditModal(
+        false
+      );
+
+      setSelectedUsage(
+        null
+      );
 
       showMessage(
         "Catering usage updated successfully.",
@@ -637,14 +731,15 @@ const ListUsage = () => {
   };
 
   // ==========================================================
-  // VOID
+  // OPEN VOID
   // ==========================================================
 
   const openVoidModal = (
     usage
   ) => {
     if (
-      usage.status === "voided"
+      usage.status ===
+      "voided"
     ) {
       showMessage(
         "This catering usage has already been voided.",
@@ -654,9 +749,15 @@ const ListUsage = () => {
       return;
     }
 
-    setSelectedUsage(usage);
+    setSelectedUsage(
+      usage
+    );
+
     setVoidReason("");
-    setShowVoidModal(true);
+
+    setShowVoidModal(
+      true
+    );
   };
 
   // ==========================================================
@@ -677,13 +778,19 @@ const ListUsage = () => {
           null,
       };
 
-      await axiosWithAuth().post(
+      await axios.post(
         `/catering/usage/${selectedUsage.id}/void`,
         payload
       );
 
-      setShowVoidModal(false);
-      setSelectedUsage(null);
+      setShowVoidModal(
+        false
+      );
+
+      setSelectedUsage(
+        null
+      );
+
       setVoidReason("");
 
       showMessage(
@@ -713,34 +820,53 @@ const ListUsage = () => {
   // ==========================================================
 
   const closeViewModal = () => {
-    setShowViewModal(false);
-    setSelectedUsage(null);
+    setShowViewModal(
+      false
+    );
+
+    setSelectedUsage(
+      null
+    );
   };
 
   const closeEditModal = () => {
     if (saving) return;
 
-    setShowEditModal(false);
-    setSelectedUsage(null);
+    setShowEditModal(
+      false
+    );
+
+    setSelectedUsage(
+      null
+    );
   };
 
   const closeVoidModal = () => {
     if (saving) return;
 
-    setShowVoidModal(false);
-    setSelectedUsage(null);
+    setShowVoidModal(
+      false
+    );
+
+    setSelectedUsage(
+      null
+    );
+
     setVoidReason("");
   };
 
   // ==========================================================
   // CLEAR FILTERS
+  //
+  // IMPORTANT:
+  // Clear resets dates to TODAY, not blank.
   // ==========================================================
 
   const clearFilters = () => {
     setSearch("");
     setLocationFilter("");
-    setDateFrom("");
-    setDateTo("");
+    setDateFrom(today);
+    setDateTo(today);
     setStatusFilter("");
   };
 
@@ -779,11 +905,13 @@ const ListUsage = () => {
         <div className="usage-summary">
 
           <span>
-            Total Records
+            Records
           </span>
 
           <strong>
-            {filteredUsages.length}
+            {
+              filteredUsages.length
+            }
           </strong>
 
         </div>
@@ -797,7 +925,8 @@ const ListUsage = () => {
       {message && (
         <div
           className={`usage-list-message ${
-            messageType === "error"
+            messageType ===
+            "error"
               ? "error-message"
               : "success-message"
           }`}
@@ -842,7 +971,9 @@ const ListUsage = () => {
           </label>
 
           <select
-            value={locationFilter}
+            value={
+              locationFilter
+            }
             onChange={(e) =>
               setLocationFilter(
                 e.target.value
@@ -866,11 +997,12 @@ const ListUsage = () => {
                     location.id
                   }
                 >
-                  {location.name}
+                  {
+                    location.name
+                  }
                 </option>
               )
             )}
-
           </select>
 
         </div>
@@ -928,7 +1060,9 @@ const ListUsage = () => {
           </label>
 
           <select
-            value={statusFilter}
+            value={
+              statusFilter
+            }
             onChange={(e) =>
               setStatusFilter(
                 e.target.value
@@ -946,7 +1080,6 @@ const ListUsage = () => {
             <option value="voided">
               Voided
             </option>
-
           </select>
 
         </div>
@@ -967,16 +1100,16 @@ const ListUsage = () => {
 
       {/* ====================================================
           TABLE
+          THIS IS THE IMPORTANT SCROLL CONTAINER
       ==================================================== */}
 
       <div className="usage-list-card">
 
-        <div className="usage-list-table-wrapper">
+        <div className="usage-table-scroll-container">
 
           <table className="usage-list-table">
 
             <thead>
-
               <tr>
                 <th>#</th>
                 <th>Usage Date</th>
@@ -988,7 +1121,6 @@ const ListUsage = () => {
                 <th>Note</th>
                 <th>Actions</th>
               </tr>
-
             </thead>
 
             <tbody>
@@ -999,7 +1131,8 @@ const ListUsage = () => {
                     colSpan="9"
                     className="usage-table-loading"
                   >
-                    Loading catering usage...
+                    Loading catering
+                    usage...
                   </td>
                 </tr>
               ) : filteredUsages.length ===
@@ -1009,7 +1142,9 @@ const ListUsage = () => {
                     colSpan="9"
                     className="usage-table-empty"
                   >
-                    No catering usage found.
+                    No catering usage
+                    found for the
+                    selected date.
                   </td>
                 </tr>
               ) : (
@@ -1093,8 +1228,10 @@ const ListUsage = () => {
                                 2 && (
                                 <small>
                                   +
-                                  {items.length -
-                                    2}{" "}
+                                  {
+                                    items.length -
+                                      2
+                                  }{" "}
                                   more
                                 </small>
                               )}
@@ -1131,15 +1268,19 @@ const ListUsage = () => {
                                 : "status-active"
                             }`}
                           >
-                            {usage.status ||
-                              "active"}
+                            {
+                              usage.status ||
+                              "active"
+                            }
                           </span>
 
                         </td>
 
                         <td className="usage-note-cell">
-                          {usage.note ||
-                            "-"}
+                          {
+                            usage.note ||
+                            "-"
+                          }
                         </td>
 
                         <td>
@@ -1340,7 +1481,8 @@ const ListUsage = () => {
                             }
                           >
                             <td>
-                              {index + 1}
+                              {index +
+                                1}
                             </td>
 
                             <td>
@@ -1453,7 +1595,8 @@ const ListUsage = () => {
 
                 <div>
                   <h3>
-                    Edit Catering Usage #
+                    Edit Catering
+                    Usage #
                     {
                       selectedUsage.id
                     }
@@ -1505,7 +1648,6 @@ const ListUsage = () => {
                         )
                       }
                     >
-
                       <option value="">
                         Select Location
                       </option>
@@ -1528,7 +1670,6 @@ const ListUsage = () => {
                           </option>
                         )
                       )}
-
                     </select>
 
                   </div>
@@ -1558,7 +1699,7 @@ const ListUsage = () => {
 
                   </div>
 
-                  <div className="usage-edit-group edit-note-group">
+                  <div className="usage-edit-group">
 
                     <label>
                       Note
@@ -1608,7 +1749,8 @@ const ListUsage = () => {
                       }{" "}
                       item
                       {editForm.items
-                        .length !== 1
+                        .length !==
+                      1
                         ? "s"
                         : ""}
                     </strong>
@@ -1621,18 +1763,20 @@ const ListUsage = () => {
 
                       <thead>
                         <tr>
-                            <th>#</th>
-                            <th>
+                          <th>
+                            #
+                          </th>
+                          <th>
                             Item
-                            </th>
-                            <th>
+                          </th>
+                          <th>
                             Quantity Used
-                            </th>
-                            <th>
+                          </th>
+                          <th>
                             Action
-                            </th>
+                          </th>
                         </tr>
-                        </thead>
+                      </thead>
 
                       <tbody>
 
@@ -1664,33 +1808,45 @@ const ListUsage = () => {
 
                               <td>
 
-                            <input
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                value={item.quantity_used}
-                                onChange={(e) =>
-                                handleEditQuantity(
-                                    index,
-                                    e.target.value
-                                )
-                                }
-                            />
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={
+                                    item.quantity_used
+                                  }
+                                  onChange={(
+                                    e
+                                  ) =>
+                                    handleEditQuantity(
+                                      index,
+                                      e
+                                        .target
+                                        .value
+                                    )
+                                  }
+                                />
 
-                            </td>
+                              </td>
 
-                            <td>
-                            <button
-                                type="button"
-                                className="edit-remove-item-btn"
-                                onClick={() =>
-                                handleRemoveEditItem(index)
-                                }
-                                disabled={saving}
-                            >
-                                Remove
-                            </button>
-                            </td>
+                              <td>
+
+                                <button
+                                  type="button"
+                                  className="edit-remove-item-btn"
+                                  onClick={() =>
+                                    handleRemoveEditItem(
+                                      index
+                                    )
+                                  }
+                                  disabled={
+                                    saving
+                                  }
+                                >
+                                  Remove
+                                </button>
+
+                              </td>
 
                             </tr>
                           )
@@ -1754,7 +1910,8 @@ const ListUsage = () => {
 
                 <div>
                   <h3>
-                    Void Catering Usage
+                    Void Catering
+                    Usage
                   </h3>
 
                   <span>
@@ -1784,21 +1941,26 @@ const ListUsage = () => {
                 </strong>
 
                 <p>
-                  Voiding this usage
-                  will restore all
+                  Voiding this
+                  usage will
+                  restore all
                   used quantities
-                  back to the selected
-                  location's inventory.
+                  back to the
+                  selected
+                  location's
+                  inventory.
                 </p>
 
                 <p>
-                  The usage record will
-                  not be deleted. It will
+                  The usage record
+                  will not be
+                  deleted. It will
                   be marked as{" "}
                   <b>
                     voided
                   </b>{" "}
-                  for audit purposes.
+                  for audit
+                  purposes.
                 </p>
 
               </div>

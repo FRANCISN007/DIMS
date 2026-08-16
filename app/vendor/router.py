@@ -168,7 +168,7 @@ def list_vendors_simple(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(["store"])
+        role_required(["store", "manager"])
     ),
 ):
     """
@@ -228,7 +228,7 @@ def list_vendors(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(["store", "procurement"])
+        role_required(["store", "procurement", "manager"])
     ),
 ):
     """
@@ -280,7 +280,7 @@ def get_vendor(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(["store"])
+        role_required(["store", "manager"])
     ),
 ):
     """
@@ -326,7 +326,7 @@ def update_vendor(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(["store"])
+        role_required(["store", "manager"])
     ),
 ):
     """
@@ -412,7 +412,7 @@ def delete_vendor(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(["store"])
+        role_required(["store", "manager"])
     ),
 ):
     """

@@ -10,6 +10,8 @@ from app.catering.models import (
     CateringUsageAudit,
 )
 
+from app.catering import models as catering_models
+
 from app.catering.schemas import (
     CateringUsageDisplay,
     CateringUsageItemDisplay,
@@ -125,9 +127,10 @@ def build_usage_snapshot(usage):
 # ==========================================================
 
 def create_catering_usage(
-    db: Session,
+    db,
     usage_data,
     current_user,
+    business_id,
 ):
     """
     Create catering usage.
@@ -433,11 +436,12 @@ from datetime import date, datetime, timedelta
 # ==========================================================
 
 def get_catering_usages(
-    db: Session,
+    db,
     current_user,
-    location_id: int | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
+    business_id,
+    location_id=None,
+    start_date=None,
+    end_date=None,
 ):
     """
     Return catering usage history for the current business.
@@ -570,6 +574,7 @@ def get_catering_usage(
     db: Session,
     usage_id: int,
     current_user,
+    business_id,
 ):
     business_id = current_user.business_id
 
@@ -641,7 +646,15 @@ def get_catering_usage(
     # GET USAGE
     # ------------------------------------------------------
 
-    usage = query.first()
+    usage = (
+        db.query(catering_models.CateringUsage)
+        .filter(
+            catering_models.CateringUsage.id == usage_id,
+            catering_models.CateringUsage.business_id
+            == business_id,
+        )
+        .first()
+    )
 
     if not usage:
         raise HTTPException(
@@ -662,6 +675,7 @@ def update_catering_usage(
     usage_id: int,
     usage_data,
     current_user,
+    business_id,
 ):
     """
     Edit an existing catering usage.
