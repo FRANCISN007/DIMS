@@ -306,8 +306,8 @@ const UserManagement = () => {
      LICENSE
   ======================================================= */
 
-  const [licenseStatus, setLicenseStatus] =
-    useState(null);
+  const [licenseStatuses, setLicenseStatuses] =
+  useState([]);
 
   const emptyLicense = {
     license_password: "",
@@ -628,64 +628,64 @@ const UserManagement = () => {
       [token, showPopup]
     );
 
-  /* =======================================================
-     FETCH LICENSE
-  ======================================================= */
-
   const fetchLicenseStatus =
-    useCallback(async () => {
-      if (
-        !token ||
-        !isSuperAdmin
-      ) {
-        return;
-      }
+  useCallback(async () => {
+    if (
+      !token ||
+      !isSuperAdmin
+    ) {
+      return;
+    }
 
-      try {
-        const response =
-          await fetch(
-            `${API_BASE_URL}/license/check`,
-            {
-              headers: {
-                Authorization:
-                  `Bearer ${token}`,
-                Accept:
-                  "application/json",
-              },
-            }
-          );
-
-        const data =
-          await parseJsonResponse(
-            response
-          );
-
-        if (!response.ok) {
-          throw new Error(
-            data.detail ||
-              "Failed to load license status."
-          );
-        }
-
-        setLicenseStatus(data);
-      } catch (err) {
-        console.error(
-          "License status error:",
-          err
+    try {
+      const response =
+        await fetch(
+          `${API_BASE_URL}/license/management`,
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+              Accept:
+                "application/json",
+            },
+          }
         );
 
-        setLicenseStatus(null);
+      const data =
+        await parseJsonResponse(
+          response
+        );
 
-        showPopup(
-          err.message ||
-            "Could not load license status."
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+            "Failed to load license information."
         );
       }
-    }, [
-      token,
-      isSuperAdmin,
-      showPopup,
-    ]);
+
+      setLicenseStatuses(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "License management error:",
+        err
+      );
+
+      setLicenseStatuses([]);
+
+      showPopup(
+        err.message ||
+          "Could not load license information."
+      );
+    }
+  }, [
+    token,
+    isSuperAdmin,
+    showPopup,
+  ]);
 
   /* =======================================================
      INITIAL LOAD
@@ -3437,89 +3437,93 @@ const UserManagement = () => {
           ================================================= */}
 
           {isSuperAdmin &&
-            selectedAction ===
-              "license-management" && (
-              <div className="license-management">
-                <div className="section-header">
-                  <h3>
-                    License Management
-                  </h3>
+          selectedAction ===
+            "license-management" && (
+            <div className="license-management">
+              <div className="section-header">
+                <h3>
+                  License Management
+                </h3>
 
-                  <button
-                    className="btn create"
-                    type="button"
-                    onClick={() =>
-                      setSelectedAction(
-                        "generate-license"
-                      )
-                    }
-                  >
-                    + Generate License
-                  </button>
+                <button
+                  className="btn create"
+                  type="button"
+                  onClick={() =>
+                    setSelectedAction(
+                      "generate-license"
+                    )
+                  }
+                >
+                  + Generate License
+                </button>
+              </div>
+
+              <div className="user-table compact">
+                <div className="table-header">
+                  <div>Business</div>
+                  <div>Status</div>
+                  <div>Start Date</div>
+                  <div>Expiration Date</div>
+                  <div>Days Remaining</div>
                 </div>
 
-                <div className="license-status-card">
-                  <h4>
-                    Current License Status
-                  </h4>
-
-                  {licenseStatus ? (
-                    <div className="license-info">
-                      <div>
-                        <strong>
-                          Status:
-                        </strong>{" "}
-                        {licenseStatus.active ||
-                        licenseStatus.license_active ? (
-                          <span className="status-active">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="status-inactive">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-
-                      <div>
-                        <strong>
-                          Business:
-                        </strong>{" "}
-                        {licenseStatus.business_name ||
-                          "—"}
-                      </div>
-
-                      <div>
-                        <strong>
-                          Expiration:
-                        </strong>{" "}
-                        {licenseStatus.expiration_date
-                          ? new Date(
-                              licenseStatus.expiration_date
-                            ).toLocaleDateString()
-                          : "—"}
-                      </div>
-
-                      {licenseStatus.days_remaining !==
-                        undefined && (
+                {licenseStatuses.length === 0 ? (
+                  <div className="no-data">
+                    No license information found.
+                  </div>
+                ) : (
+                  licenseStatuses.map(
+                    (license) => (
+                      <div
+                        className="table-row"
+                        key={
+                          license.business_id
+                        }
+                      >
                         <div>
-                          <strong>
-                            Days Remaining:
-                          </strong>{" "}
                           {
-                            licenseStatus.days_remaining
+                            license.business_name
                           }
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p>
-                      No license information available.
-                    </p>
-                  )}
-                </div>
+
+                        <div>
+                          {license.is_active ? (
+                            <span className="status-active">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="status-inactive">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          {license.start_date
+                            ? new Date(
+                                license.start_date
+                              ).toLocaleDateString()
+                            : "—"}
+                        </div>
+
+                        <div>
+                          {license.expiration_date
+                            ? new Date(
+                                license.expiration_date
+                              ).toLocaleDateString()
+                            : "—"}
+                        </div>
+
+                        <div>
+                          {license.days_left}
+                        </div>
+                      </div>
+                    )
+                  )
+                )}
               </div>
-            )}
+            </div>
+          )}
 
           {/* =================================================
               GENERATE LICENSE

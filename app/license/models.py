@@ -16,7 +16,13 @@ class LicenseKey(Base, BusinessMixin):
     # License control flags
     is_active = Column(Boolean, default=True, index=True)  # manual deactivation possible
     #created_at = Column(DateTime, default=datetime.utcnow)
-    created_at = datetime.now(ZoneInfo("Africa/Lagos"))
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(
+            ZoneInfo("Africa/Lagos")
+        ),
+        nullable=False,
+    )
 
     
 

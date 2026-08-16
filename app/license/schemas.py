@@ -28,3 +28,17 @@ class LicenseStatusResponse(BaseModel):
     message: Optional[str] = None
     warning: Optional[bool] = False
     days_left: Optional[int] = None
+
+
+
+
+class LicenseManagementResponse(BaseModel):
+    business_id: int
+    business_name: str
+    is_active: bool
+    start_date: datetime
+    expiration_date: datetime
+    days_left: int | None = None
+
+    class Config:
+        from_attributes = True

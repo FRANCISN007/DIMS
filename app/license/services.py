@@ -166,3 +166,5 @@ def verify_license_key(db: Session, key: str, business_id: int) -> dict:
         "warning": warning,
         "days_left": days_left
     }
+
+

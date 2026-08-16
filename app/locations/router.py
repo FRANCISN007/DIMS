@@ -276,7 +276,6 @@ def get_store_items_received_by_location(
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required([
             "store",
-            "location",
             "admin",
             "super_admin",
             "camp_boss"

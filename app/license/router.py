@@ -295,3 +295,123 @@ def check_license_status(
     services.save_license_file(data)
 
     return data
+
+
+
+@router.get(
+    "/management",
+    response_model=list[schemas.LicenseManagementResponse],
+)
+def get_license_management(
+    current_user: UserDisplaySchema = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Super Admin license management.
+
+    Returns the latest license for every business.
+    """
+
+    # --------------------------------------------------
+    # SUPER ADMIN CHECK
+    # --------------------------------------------------
+    if current_user.role_code != SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super admin can view license management.",
+        )
+
+    # --------------------------------------------------
+    # GET BUSINESSES
+    # --------------------------------------------------
+    businesses = (
+        db.query(Business)
+        .order_by(Business.name.asc())
+        .all()
+    )
+
+    results = []
+
+    now = now_wat()
+
+    for business in businesses:
+
+        # ----------------------------------------------
+        # GET LATEST LICENSE FOR BUSINESS
+        # ----------------------------------------------
+        license_record = (
+            db.query(license_models.LicenseKey)
+            .filter(
+                license_models.LicenseKey.business_id
+                == business.id
+            )
+            .order_by(
+                license_models.LicenseKey.expiration_date.desc()
+            )
+            .first()
+        )
+
+        # ----------------------------------------------
+        # NO LICENSE
+        # ----------------------------------------------
+        if not license_record:
+            results.append(
+                {
+                    "business_id": business.id,
+                    "business_name": business.name,
+                    "is_active": False,
+                    "start_date": now,
+                    "expiration_date": now,
+                    "days_left": 0,
+                }
+            )
+
+            continue
+
+        # ----------------------------------------------
+        # TIMEZONE
+        # ----------------------------------------------
+        start_date = to_wat(
+            license_record.created_at
+        )
+
+        expiration_date = to_wat(
+            license_record.expiration_date
+        )
+
+        # ----------------------------------------------
+        # CALCULATE STATUS
+        # ----------------------------------------------
+        if (
+            license_record.is_active
+            and expiration_date > now
+        ):
+            delta_seconds = (
+                expiration_date - now
+            ).total_seconds()
+
+            days_left = ceil(
+                delta_seconds / 86400
+            )
+
+            is_active = True
+
+        else:
+            days_left = 0
+            is_active = False
+
+        # ----------------------------------------------
+        # ADD RESULT
+        # ----------------------------------------------
+        results.append(
+            {
+                "business_id": business.id,
+                "business_name": business.name,
+                "is_active": is_active,
+                "start_date": start_date,
+                "expiration_date": expiration_date,
+                "days_left": days_left,
+            }
+        )
+
+    return results
