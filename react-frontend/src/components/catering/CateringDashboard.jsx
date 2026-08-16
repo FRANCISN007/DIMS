@@ -4,9 +4,9 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 //import { FaFileExcel, FaPrint } from "react-icons/fa";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
-import "./BarDashboardPage.css";
+import "./CateringDashboard.css";
 
-const BarDashboardPage = () => {
+const CateringDashboard = () => {
   const storedUser = JSON.parse(localStorage.getItem("user")) || {};
   const businessName = storedUser.business?.name || "DIMS";
 
@@ -19,21 +19,29 @@ const BarDashboardPage = () => {
     visible: false,
   });
 
-  const barMenu = [
+  const CateringMenu = [
     
     
-    { name: "📊 Usage", path: "/bar/stock-balance" },
+    {
+      name: "🛠️ Catering Usage",
+      submenu: [
+        { label: "➕ Create Usage", path: "/catering/usage/create" },
+        { label: "📃 List Usage", path: "/catering/usage/list" },
+      ],
+    },
+
+     
       
     
-    { name: "📊 Location Balance", path: "/bar/stock-balance" },
+    { name: "📊 Stock Balance", path: "/catering/stock-balance" },
     {
       name: "🛠️ Stock Adjustment",
       submenu: [
-        { label: "🔧 Adjust Stock", path: "/bar/adjustment/create" },
-        { label: "📃 List Adjustment", path: "/bar/adjustment/list" },
+        { label: "🔧 Adjust Stock", path: "/catering/adjustment/create" },
+        { label: "📃 List Adjustment", path: "/catering/adjustment/list" },
       ],
     },
-    { name: "🏪 Store Issues", path: "/bar/store-issues" },
+    { name: "🏪 Store Issues", path: "/catering/store-issues" },
   ];
 
   const openSubmenu = (e, item) => {
@@ -103,7 +111,7 @@ const BarDashboardPage = () => {
       <aside className="sidebars1">
         <h2 className="sidebar-title">MENU</h2>
 
-        {barMenu.map((item) => (
+        {CateringMenu.map((item) => (
           <div key={item.name} className="sidebar-item-wrapper">
             <button
               className="sidebars1-button"
@@ -133,7 +141,7 @@ const BarDashboardPage = () => {
 
       <main className="main-content">
         <header className="header">
-          <h1 className="header-title">👨‍🍳 Catering Management Dashboard</h1>
+          <h1 className="header-title">👨‍🍳 Location Management Dashboard</h1>
 
           <div style={{ display: "flex", gap: "10px" }}>
             <button onClick={exportToExcel} className="action-button1">
@@ -193,4 +201,4 @@ const BarDashboardPage = () => {
   );
 };
 
-export default BarDashboardPage;
+export default CateringDashboard;

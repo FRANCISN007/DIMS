@@ -420,6 +420,7 @@ const ListAdjustment = () => {
           <thead>
             <tr>
               <th>Date</th>
+              <th>ID</th>
               <th>Item</th>
               <th>Item Type</th>
               <th>Quantity</th>
@@ -466,6 +467,11 @@ const ListAdjustment = () => {
                             adjustment.adjusted_at
                           ).toLocaleString()
                         : "-"}
+                    </td>
+
+                    <td>
+                      {adjustment.id ||
+                        "Unknown Item"}
                     </td>
 
                     {/* ITEM */}

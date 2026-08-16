@@ -17,6 +17,8 @@ from app.users.routers import router as user_router
 from app.roles.router import router as role_router
 from app.locations.router import router as location_router
 
+from app.catering.router import router as catering_router
+
 from app.rooms.router import router as rooms_router
 from app.bookings.router import router as bookings_router
 from app.payments.router import router as payments_router
@@ -140,6 +142,8 @@ app.include_router(user_router, prefix="/users", tags=["Users"])
 app.include_router(role_router, prefix="/roles", tags=["Roles"])
 app.include_router(location_router, prefix="/locations", tags=["Location"])
 
+app.include_router(catering_router, prefix="/catering", tags=["Catering Services"])
+
 
 app.include_router(bank_router, prefix="/bank", tags=["Banks"])
 
@@ -261,6 +265,7 @@ async def spa_fallback(request: Request, call_next):
         "/bar",
         "/roles",
         "/locations",
+        "/catering",
         "/vendor",
         "/kitchen",
         "/restaurant",

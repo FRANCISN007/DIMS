@@ -263,6 +263,8 @@ const StockBalance = () => {
               Type
             </label>
 
+            
+
             <select
               value={selectedItemType}
               onChange={(e) =>
@@ -275,20 +277,20 @@ const StockBalance = () => {
                 All Types
               </option>
 
-              <option value="store">
-                Store
+              <option value="food stuff">
+                Food Stuff
               </option>
 
-              <option value="kitchen">
-                Kitchen
+              <option value="protein">
+                Protein
               </option>
 
-              <option value="bar">
-                Bar
+              <option value="ingredients">
+                Ingredients
               </option>
 
-              <option value="restaurant">
-                Restaurant
+              <option value="general">
+                General
               </option>
 
             </select>

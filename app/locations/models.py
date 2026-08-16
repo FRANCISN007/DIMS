@@ -137,10 +137,6 @@ class Location(Base):
 
 
 
-# ==========================================================
-# LOCATION INVENTORY
-# ==========================================================
-
 class LocationInventory(Base, BusinessMixin):
     __tablename__ = "location_inventory"
 
@@ -162,8 +158,14 @@ class LocationInventory(Base, BusinessMixin):
         nullable=False,
     )
 
+    opening_quantity = Column(
+        Float,
+        default=0,
+        nullable=False,
+    )
+
     quantity = Column(
-        Integer,
+        Float,
         default=0,
         nullable=False,
     )
@@ -217,66 +219,3 @@ class LocationInventory(Base, BusinessMixin):
         ),
     )
 
-
-    # ----------------------------
-# Location Inventory Adjustment
-# ----------------------------
-
-# ----------------------------
-# Location Inventory Adjustment
-# ----------------------------
-class LocationInventoryAdjustment(Base, BusinessMixin):
-    __tablename__ = "location_inventory_adjustments"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True
-    )
-
-    location_id = Column(
-        Integer,
-        ForeignKey("locations.id"),
-        nullable=False
-    )
-
-    item_id = Column(
-        Integer,
-        ForeignKey("store_items.id"),
-        nullable=False
-    )
-
-    quantity_adjusted = Column(
-        Integer,
-        nullable=False
-    )
-
-    reason = Column(
-        String,
-        nullable=True
-    )
-
-    adjusted_by = Column(
-        String,
-        nullable=True
-    )
-
-    adjusted_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=now_wat
-    )
-
-    
-
-    # -----------------------------------------
-    # Relationships
-    # -----------------------------------------
-
-    location = relationship(
-        "Location"
-    )
-
-    item = relationship(
-        "StoreItem"
-    )

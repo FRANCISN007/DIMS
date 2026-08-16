@@ -50,13 +50,13 @@ const ListItem = () => {
     "Carton",
     "Kg",
     "Basket",
+    "crates",
     "Piece",
   ];
 
   const itemTypeOptions = [
     "All",
-    "bar",
-    "kitchen",
+    "ingredients",
     "food stuff",
     "protein",
     "general",
@@ -529,15 +529,23 @@ const ListItem = () => {
     // Validate unit price
     // ---------------------------------------------
 
-    const unitPrice = parseFloat(
-      newUnitPrice
-    );
+    let unitPrice = null;
 
-    if (isNaN(unitPrice)) {
-      setMessage(
-        "❌ Unit price is required and must be a number."
+    if (
+      newUnitPrice !== null &&
+      newUnitPrice !== undefined &&
+      String(newUnitPrice).trim() !== ""
+    ) {
+      unitPrice = parseFloat(
+        newUnitPrice
       );
-      return;
+
+      if (isNaN(unitPrice)) {
+        setMessage(
+          "❌ Unit price must be a valid number."
+        );
+        return;
+      }
     }
 
     // ---------------------------------------------
@@ -779,7 +787,7 @@ const ListItem = () => {
 
           <input
             type="number"
-            step="0.01"
+            step="1"
             min="0"
             value={newUnitPrice}
             onChange={(e) =>
@@ -787,8 +795,8 @@ const ListItem = () => {
                 e.target.value
               )
             }
-            placeholder="e.g. 800"
-            required
+            placeholder="Optional"
+            
           />
         </label>
 
@@ -799,7 +807,7 @@ const ListItem = () => {
 
           <input
             type="number"
-            step="0.01"
+            step="1"
             min="0"
             value={newSellingPrice}
             onChange={(e) =>
@@ -1109,7 +1117,7 @@ const ListItem = () => {
 
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   min="0"
                   value={updateUnitPrice}
                   onChange={(e) =>
@@ -1117,7 +1125,7 @@ const ListItem = () => {
                       e.target.value
                     )
                   }
-                  required
+                  
                 />
               </label>
 
@@ -1128,7 +1136,7 @@ const ListItem = () => {
 
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   min="0"
                   value={updateSellingPrice}
                   onChange={(e) =>

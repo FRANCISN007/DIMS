@@ -44,7 +44,7 @@ class StoreCategoryDisplay(StoreCategoryBase):
 class StoreItemBase(BaseModel):
     name: str
     unit: str
-    unit_price: float
+    unit_price: Optional[float] = None
     selling_price: Optional[float] = None
     category_id: Optional[int] = None
     item_type: Optional[str] = None
@@ -78,7 +78,7 @@ class StoreItemDisplay(BaseModel):
     unit: str
     category: Optional[StoreCategoryDisplay]
     item_type: Optional[str] = None
-    unit_price: float
+    unit_price: Optional[float] = None
     selling_price: Optional[float] = None
     created_at: datetime
     

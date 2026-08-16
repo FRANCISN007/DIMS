@@ -11,66 +11,244 @@ def role_required(
     allowed_roles: Iterable[str],
     bypass_admin: bool = True,
 ):
-    """
-    Ensures the current user has one of the allowed roles.
-
-    Supports both role_name and role_code.
-
-    Super Admin / Admin bypass permission checking when
-    bypass_admin=True.
-    """
-
     allowed_set = {
-        role.lower().strip()
+        str(role).lower().strip()
         for role in allowed_roles
     }
 
     def wrapper(
-        current_user: UserDisplaySchema = Depends(get_current_user),
+        current_user: UserDisplaySchema = Depends(
+            get_current_user
+        ),
     ):
 
-        # --------------------------------------------------
-        # Normalize role name and role code
-        # --------------------------------------------------
+        # ======================================================
+        # DEBUG
+        # ======================================================
 
-        role_name = (
-            current_user.role_name.lower().strip()
-            if current_user.role_name
-            else ""
+        print("\n================ ROLE DEBUG ================")
+
+        print(
+            "CURRENT USER:",
+            current_user
         )
 
-        role_code = (
-            current_user.role_code.lower().strip()
-            if current_user.role_code
-            else ""
+        print(
+            "roles:",
+            getattr(current_user, "roles", None)
         )
 
-        # --------------------------------------------------
-        # Super Admin / Admin bypass
-        # --------------------------------------------------
+        print(
+            "role_name:",
+            getattr(current_user, "role_name", None)
+        )
+
+        print(
+            "role_name TYPE:",
+            type(
+                getattr(current_user, "role_name", None)
+            )
+        )
+
+        print(
+            "role_code:",
+            getattr(current_user, "role_code", None)
+        )
+
+        print(
+            "role_code TYPE:",
+            type(
+                getattr(current_user, "role_code", None)
+            )
+        )
+
+        print("============================================\n")
+
+        # ======================================================
+        # COLLECT ROLES
+        # ======================================================
+
+        user_role_names = set()
+        user_role_codes = set()
+
+        roles = getattr(
+            current_user,
+            "roles",
+            []
+        ) or []
+
+        for role in roles:
+
+            print(
+                "ROLE OBJECT:",
+                role
+            )
+
+            print(
+                "ROLE TYPE:",
+                type(role)
+            )
+
+            name = getattr(
+                role,
+                "name",
+                None
+            )
+
+            code = getattr(
+                role,
+                "code",
+                None
+            )
+
+            print(
+                "ROLE NAME:",
+                name,
+                "TYPE:",
+                type(name)
+            )
+
+            print(
+                "ROLE CODE:",
+                code,
+                "TYPE:",
+                type(code)
+            )
+
+            if isinstance(name, str):
+                user_role_names.add(
+                    name.lower().strip()
+                )
+
+            if isinstance(code, str):
+                user_role_codes.add(
+                    code.lower().strip()
+                )
+
+        # ======================================================
+        # LEGACY ROLE NAME
+        # ======================================================
+
+        role_name = getattr(
+            current_user,
+            "role_name",
+            None
+        )
+
+        if isinstance(role_name, str):
+
+            user_role_names.add(
+                role_name.lower().strip()
+            )
+
+        elif role_name is not None:
+
+            # Handle RoleSimple safely
+
+            name = getattr(
+                role_name,
+                "name",
+                None
+            )
+
+            code = getattr(
+                role_name,
+                "code",
+                None
+            )
+
+            if isinstance(name, str):
+
+                user_role_names.add(
+                    name.lower().strip()
+                )
+
+            if isinstance(code, str):
+
+                user_role_codes.add(
+                    code.lower().strip()
+                )
+
+        # ======================================================
+        # LEGACY ROLE CODE
+        # ======================================================
+
+        role_code = getattr(
+            current_user,
+            "role_code",
+            None
+        )
+
+        if isinstance(role_code, str):
+
+            user_role_codes.add(
+                role_code.lower().strip()
+            )
+
+        elif role_code is not None:
+
+            code = getattr(
+                role_code,
+                "code",
+                None
+            )
+
+            name = getattr(
+                role_code,
+                "name",
+                None
+            )
+
+            if isinstance(code, str):
+
+                user_role_codes.add(
+                    code.lower().strip()
+                )
+
+            if isinstance(name, str):
+
+                user_role_names.add(
+                    name.lower().strip()
+                )
+
+        # ======================================================
+        # ADMIN BYPASS
+        # ======================================================
 
         if bypass_admin:
 
-            if role_name in {
-                ADMIN.lower(),
-                SUPER_ADMIN.lower(),
-            }:
+            if (
+                ADMIN.lower().strip()
+                in user_role_names
+                or
+                SUPER_ADMIN.lower().strip()
+                in user_role_names
+            ):
                 return current_user
 
-            if role_code in {
-                ADMIN.lower(),
-                SUPER_ADMIN.lower(),
-            }:
+            if (
+                ADMIN.lower().strip()
+                in user_role_codes
+                or
+                SUPER_ADMIN.lower().strip()
+                in user_role_codes
+            ):
                 return current_user
 
-        # --------------------------------------------------
-        # Permission check
-        # --------------------------------------------------
+        # ======================================================
+        # PERMISSION
+        # ======================================================
 
-        if (
-            role_name not in allowed_set
-            and role_code not in allowed_set
+        if not (
+            user_role_names.intersection(
+                allowed_set
+            )
+            or
+            user_role_codes.intersection(
+                allowed_set
+            )
         ):
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions.",

@@ -399,7 +399,7 @@ const DashboardPage = () => {
 
     
     { name: "🏭Store Control", path: "/store" },
-    { name: "🍽️Catering Services", path: "/bar" },
+    { name: "🍽️Catering Services", path: "/catering" },
     
   ];
 

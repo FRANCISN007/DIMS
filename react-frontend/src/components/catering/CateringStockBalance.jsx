@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
-import "./LocationBalanceStock.css";
+import "./CateringStockBalance.css";
 
 const LocationBalanceStock = () => {
   /* ==========================================================

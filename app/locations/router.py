@@ -11,6 +11,17 @@ from app.users.permissions import role_required
 from app.core.roles import USER_MANAGEMENT_ROLES
 from app.core.roles import SUPER_ADMIN, ADMIN
 from app.users.models import User
+from datetime import date, datetime, timedelta
+from app.store import models as store_models
+from app.locations import models as location_models
+
+from app.users import schemas as user_schemas
+from typing import Optional, List
+
+from app.core.tenant import resolve_business_id
+
+from app.locations.models import Location
+
 
 
 
@@ -38,7 +49,7 @@ def create_location(
     ),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(USER_MANAGEMENT_ROLES)
+        role_required(USER_MANAGEMENT_ROLES,)
     ),
 ):
     # ----------------------------------------
@@ -135,7 +146,8 @@ def list_locations(
     ),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(USER_MANAGEMENT_ROLES)
+        #role_required(USER_MANAGEMENT_ROLES)
+        role_required(["camp_boss", "SUPER_ADMIN", "ADMIN"])
     ),
 ):
     """
@@ -243,6 +255,310 @@ def list_simple_locations(
         .order_by(Location.name.asc())
         .all()
     )
+
+
+
+# ----------------------------
+# Store Issue Control (Location) - Multi-Tenant
+# ----------------------------
+@router.get(
+    "/location-issue-control",
+    response_model=List[dict]
+)
+def get_store_items_received_by_location(
+    location_id: Optional[int] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    business_id: Optional[int] = Query(None),
+
+    db: Session = Depends(get_db),
+
+    current_user: user_schemas.UserDisplaySchema = Depends(
+        role_required([
+            "store",
+            "location",
+            "admin",
+            "super_admin",
+            "camp_boss"
+        ])
+    )
+):
+    try:
+
+        # ==========================================================
+        # 1. RESOLVE BUSINESS
+        # ==========================================================
+
+        effective_business_id = resolve_business_id(
+            current_user,
+            business_id
+        )
+
+        # ==========================================================
+        # 2. VALIDATE LOCATION
+        # ==========================================================
+
+        if location_id:
+
+            location = (
+                db.query(
+                    location_models.Location
+                )
+                .filter(
+                    location_models.Location.id
+                    == location_id,
+
+                    location_models.Location.business_id
+                    == effective_business_id
+                )
+                .first()
+            )
+
+            if not location:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Location not found"
+                )
+
+        # ==========================================================
+        # 3. LATEST UNIT PRICE SUBQUERY
+        # ==========================================================
+        #
+        # Get the latest purchase price from the central store
+        # for each item.
+        #
+        # This is the same approach used by the Bar
+        # Store Issue Control endpoint.
+        #
+        # ==========================================================
+
+        latest_price_subquery = (
+            db.query(
+                store_models.StoreStockEntry.item_id,
+                store_models.StoreStockEntry.unit_price
+            )
+            .filter(
+                store_models.StoreStockEntry.business_id
+                == effective_business_id
+            )
+            .order_by(
+                store_models.StoreStockEntry.item_id,
+
+                store_models.StoreStockEntry.purchase_date.desc(),
+
+                store_models.StoreStockEntry.id.desc()
+            )
+            .distinct(
+                store_models.StoreStockEntry.item_id
+            )
+            .subquery()
+        )
+
+        # ==========================================================
+        # 4. MAIN QUERY
+        # ==========================================================
+
+        query = (
+            db.query(
+                store_models.StoreIssueItem.item_id,
+
+                store_models.StoreItem.name,
+
+                store_models.StoreItem.unit,
+
+                store_models.StoreIssue.location_id.label(
+                    "location_id"
+                ),
+
+                location_models.Location.name.label(
+                    "location_name"
+                ),
+
+                store_models.StoreIssue.issue_date,
+
+                store_models.StoreIssueItem.quantity,
+
+                latest_price_subquery.c.unit_price
+            )
+
+            # ------------------------------------------------------
+            # Store Issue
+            # ------------------------------------------------------
+
+            .join(
+                store_models.StoreIssue,
+
+                store_models.StoreIssue.id
+                == store_models.StoreIssueItem.issue_id
+            )
+
+            # ------------------------------------------------------
+            # Store Item
+            # ------------------------------------------------------
+
+            .join(
+                store_models.StoreItem,
+
+                store_models.StoreItem.id
+                == store_models.StoreIssueItem.item_id
+            )
+
+            # ------------------------------------------------------
+            # Location
+            # ------------------------------------------------------
+
+            .join(
+                location_models.Location,
+
+                location_models.Location.id
+                == store_models.StoreIssue.location_id
+            )
+
+            # ------------------------------------------------------
+            # Latest price
+            # ------------------------------------------------------
+
+            .outerjoin(
+                latest_price_subquery,
+
+                latest_price_subquery.c.item_id
+                == store_models.StoreIssueItem.item_id
+            )
+
+            # ======================================================
+            # TENANT + DESTINATION FILTERS
+            # ======================================================
+
+            .filter(
+
+                # Only issues sent to locations
+                store_models.StoreIssue.issue_to
+                == "location",
+
+                # Store issue belongs to current business
+                store_models.StoreIssue.business_id
+                == effective_business_id,
+
+                # Store issue item belongs to current business
+                store_models.StoreIssueItem.business_id
+                == effective_business_id,
+
+                # Store item belongs to current business
+                store_models.StoreItem.business_id
+                == effective_business_id,
+
+                # Location belongs to current business
+                location_models.Location.business_id
+                == effective_business_id
+            )
+        )
+
+        # ==========================================================
+        # 5. LOCATION FILTER
+        # ==========================================================
+
+        if location_id:
+
+            query = query.filter(
+                store_models.StoreIssue.location_id
+                == location_id
+            )
+
+        # ==========================================================
+        # 6. START DATE FILTER
+        # ==========================================================
+
+        if start_date:
+
+            query = query.filter(
+                store_models.StoreIssue.issue_date
+                >= start_date
+            )
+
+        # ==========================================================
+        # 7. END DATE FILTER
+        # ==========================================================
+
+        if end_date:
+
+            query = query.filter(
+                store_models.StoreIssue.issue_date
+                < end_date + timedelta(days=1)
+            )
+
+        # ==========================================================
+        # 8. ORDER
+        # ==========================================================
+
+        results = (
+            query
+            .order_by(
+                store_models.StoreIssue.issue_date.desc(),
+
+                store_models.StoreIssue.id.desc(),
+
+                store_models.StoreIssueItem.id.desc()
+            )
+            .all()
+        )
+
+        # ==========================================================
+        # 9. RESPONSE
+        # ==========================================================
+
+        return [
+            {
+                "item_id": r.item_id,
+
+                "item_name": r.name,
+
+                "unit": r.unit,
+
+                "location_id": r.location_id,
+
+                "location_name": r.location_name,
+
+                "issue_date": r.issue_date,
+
+                "quantity": float(
+                    r.quantity or 0
+                ),
+
+                "unit_price": (
+                    float(r.unit_price)
+                    if r.unit_price is not None
+                    else None
+                ),
+
+                "total_amount": (
+                    round(
+                        float(r.quantity or 0)
+                        * float(r.unit_price),
+                        2
+                    )
+                    if r.unit_price is not None
+                    else None
+                )
+            }
+
+            for r in results
+        ]
+
+    except HTTPException:
+        # Preserve intended 404/400 responses
+        raise
+
+    except Exception as e:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Failed to retrieve store issue "
+                f"control for locations: {str(e)}"
+            )
+        )
 
 
 @router.get(

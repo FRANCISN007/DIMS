@@ -35,7 +35,9 @@ import CreateKitchen from "./components/store/CreateKitchen";
 import StockAdjustment from "./components/store/StockAdjustment";
 import ListAdjustment from "./components/store/ListAdjustment";
 import StockBalance from "./components/store/StockBalance";
+
 import LocationBalanceStock from "./components/store/LocationBalanceStock";
+
 import KitchenBalanceStock from "./components/store/KitchenBalanceStock";
 import KitchenStockAdjust from "./components/store/KitchenStockAdjust";
 import KitchenAdjustmentList from "./components/store/KitchenAdjustmentList";
@@ -44,6 +46,8 @@ import KitchenIssueList from "./components/store/KitchenIssueList";
 
 // ================= BAR =================
 import BarDashboardPage from "./components/bar/BarDashboardPage";
+
+
 import ListBar from "./components/bar/ListBar";
 import BarStockBalance from "./components/bar/BarStockBalance";
 import StoreToBarControl from "./components/bar/StoreToBarControl";
@@ -105,6 +109,16 @@ import CreateLocation from "./components/locations/CreateLocation";
 import ListLocation from "./components/locations/ListLocation";
 
 
+// ================= CATERING =================
+import CateringDashboard from "./components/catering/CateringDashboard";
+import CreateUsage from "./components/catering/CreateUsage";
+import ListUsage from "./components/catering/ListUsage";
+import CateringStockBalance from "./components/catering/CateringStockBalance";
+
+import CreateCateringAdjustment from "./components/catering/CreateCateringAdjustment";
+import ListCateringAdjustment from "./components/catering/ListCateringAdjustment";
+
+import StoreIssueRecord from "./components/catering/StoreIssueRecord";
 
 
 
@@ -244,6 +258,9 @@ const App = () => {
             element={<ListBar />}
           />
 
+
+          
+
           <Route
             path="stock-balance"
             element={<BarStockBalance />}
@@ -288,6 +305,59 @@ const App = () => {
             path="payment/list"
             element={<ListBarPayment />}
           />
+        </Route>
+
+
+
+        {/* =====================================================
+            CATERING
+        ===================================================== */}
+
+        <Route
+          path="/catering"
+          element={
+            <ProtectedRoute>
+              <CateringDashboard />
+            </ProtectedRoute>
+          }
+        >
+
+
+        <Route
+          path="usage/create"
+          element={<CreateUsage />}
+        />
+
+
+        <Route
+          path="usage/list"
+          element={<ListUsage />}
+        />
+
+        
+        <Route
+          path="stock-balance"
+          element={<CateringStockBalance />}
+        />
+        
+
+        <Route
+          path="adjustment/create"
+          element={<CreateCateringAdjustment />}
+        />
+
+        
+        <Route
+          path="adjustment/list"
+          element={<ListCateringAdjustment />}
+        />
+
+        <Route
+              path="store-issues"
+              element={<StoreIssueRecord />}
+            />
+
+
         </Route>
 
 
@@ -545,7 +615,7 @@ const App = () => {
 
 
           {/* ===================================================
-              ROLES
+            LOCATIONS
           =================================================== */}
 
           <Route path="locations">
@@ -561,6 +631,8 @@ const App = () => {
               element={<CreateLocation />}
             />
 
+            
+            
             
 
           </Route>

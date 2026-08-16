@@ -1,8 +1,8 @@
 /* ================= CONTAINER ================= */
-.stock-balance-container3 {
+.stock-balance-container1 {
   padding: 8px;
   font-family: Arial, sans-serif;
-  max-width: 1200px;
+  max-width: 1320px;
   width: 100%;
   margin: 0 auto;
   background: #fafafa;
@@ -27,37 +27,37 @@
 }
 
 /* ================= FILTER FRAME ================= */
-.filter-frame3 {
+.filter-frame1 {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;                    /* Reduced gap */
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 9px 10px;
   background: #ffffff;
   border-radius: 6px;
   box-shadow: 0px 1px 4px rgba(0,0,0,0.08);
   width: 100%;
-  align-items: center;
+  align-items: flex-start;     /* Better vertical alignment */
   box-sizing: border-box;
 }
 
-.filter-group3 {
+.filter-group1 {
   display: flex;
   flex-direction: column;
   gap: 2px;
   flex: 1;
-  min-width: 105px;            /* Smaller minimum width */
-  max-width: 160px;            /* Added max-width to prevent stretching */
+  min-width: 110px;
+  max-width: 165px;
 }
 
-.filter-group3 label {
+.filter-group1 label {
   font-size: 11.5px;
   font-weight: 600;
   color: #333;
   margin-bottom: 1px;
 }
 
-.filter-group3 input,
-.filter-group3 select {
+.filter-group1 input,
+.filter-group1 select {
   padding: 4px 6px;
   border-radius: 4px;
   border: 1px solid #ccc;
@@ -65,24 +65,33 @@
   background: #fafafa;
   width: 100%;
   box-sizing: border-box;
-  height: 28px;                /* Consistent height */
+  height: 28px;
 }
 
-.filter-group3 input:focus,
-.filter-group3 select:focus {
+.filter-group1 input:focus,
+.filter-group1 select:focus {
   border-color: #007bff;
   outline: none;
   background: #fff;
 }
 
-/* Specific filter widths */
-.category-filter { min-width: 125px; }
-.type-filter { min-width: 110px; }
-.search-filter { min-width: 135px; }
-.item-filter { min-width: 125px; }
+/* ================= Specific Filter Adjustments ================= */
+.bar-filter {
+  min-width: 140px;        /* More space for Bar names */
+  max-width: 190px;
+  flex-shrink: 0;          /* Important: Prevent shrinking */
+}
+
+.search-filter {
+  min-width: 135px;
+}
+
+.item-filter {
+  min-width: 125px;
+}
 
 /* ================= TOTAL ================= */
-.total-stock3 {
+.total-stock1 {
   display: flex;
   gap: 15px;
   font-size: 14px;
@@ -103,29 +112,29 @@
   background: #fff;
 }
 
-.stock-balance-container3 table {
+.stock-balance-container1 table {
   width: 100%;
   border-collapse: collapse;
   table-layout: auto;
   margin: 0;
 }
 
-.stock-balance-container3 thead {
+.stock-balance-container1 thead {
   position: sticky;
   top: 0;
   z-index: 10;
   background-color: #293552;
 }
 
-.stock-balance-container3 th,
-.stock-balance-container3 td {
+.stock-balance-container1 th,
+.stock-balance-container1 td {
   padding: 4px 6px;
   border: 1px solid #ccc;
   font-size: 12px;
   text-align: left;
 }
 
-.stock-balance-container3 th {
+.stock-balance-container1 th {
   color: #fff;
   font-weight: 600;
   font-size: 13px;
@@ -146,44 +155,28 @@
   font-size: 12px;
 }
 
-
-.clear-filter-btn {
-  background: #8abcdd;
-  color: white;
-  padding: 7px 5px;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-
-.clear-filter-btn:hover {
-  background: #2980b9;
-}
-
-
 /* ================= RESPONSIVE ================= */
 @media (max-width: 992px) {
-  .stock-balance-container3 { 
-    width: 98%; 
+  .stock-balance-container1 {
+    width: 98%;
     padding: 6px;
   }
   
-  .filter-frame3 { 
-    flex-direction: column; 
-    align-items: stretch; 
-    gap: 6px;
+  .filter-frame1 {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     padding: 8px;
   }
 
-  .filter-group3 {
+  .filter-group1,
+  .bar-filter {
     min-width: auto;
     max-width: none;
+    flex-shrink: 1;
   }
 
-  .table-scroll-container { 
-    max-height: 55vh; 
+  .table-scroll-container {
+    max-height: 55vh;
   }
 }

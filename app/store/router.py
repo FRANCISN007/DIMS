@@ -62,7 +62,7 @@ import shutil
 
 from app.core.db import db_dependency
 #from app.users.auth import role_required
-from app.core.business import resolve_business_id
+
 
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
@@ -71,6 +71,28 @@ from datetime import datetime, timezone
 from app.core.timezone import now_wat, to_wat  # ✅ centralized WAT functions
 
 from zoneinfo import ZoneInfo
+
+
+from typing import Optional
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+)
+
+
+
+from app.locations import models as location_models
+from app.locations import schemas as location_schemas
+
+
+from app.catering import models as catering_models
+
+from app.core.tenant import resolve_business_id
+
+
 
 
 
@@ -466,7 +488,7 @@ def list_items_simple_search(
     business_id: Optional[int] = Query(None),
     db: Session = Depends(db_dependency),
     current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required(["store", "procurement"])
+        role_required(["store", "procurement", "camp_boss"])
     )
 ):
     try:
@@ -4567,284 +4589,52 @@ def delete_adjustment(
 
 
 
-@router.post(
-    "/location/adjust",
-    response_model=location_schemas.LocationInventoryAdjustmentDisplay
-)
-def adjust_location_inventory(
-    adjustment_data:
-        location_schemas.LocationInventoryAdjustmentCreate,
 
-    business_id: Optional[int] = Query(None),
 
-    db: Session = Depends(get_db),
 
-    current_user: user_schemas.UserDisplaySchema = Depends(
-        role_required([
-            "admin",
-            "super_admin"
-        ])
-    )
-):
-    try:
-
-        # ==========================================================
-        # 1. RESOLVE BUSINESS
-        # ==========================================================
-
-        effective_business_id = resolve_business_id(
-            current_user,
-            business_id
-        )
-
-        location_id = adjustment_data.location_id
-        item_id = adjustment_data.item_id
-
-        qty = int(
-            adjustment_data.quantity_adjusted
-        )
-
-        # ==========================================================
-        # 2. VALIDATE QUANTITY
-        # ==========================================================
-
-        if qty == 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Adjustment cannot be zero."
-            )
-
-        # ==========================================================
-        # 3. VALIDATE LOCATION
-        # ==========================================================
-
-        location = (
-            db.query(
-                location_models.Location
-            )
-            .filter(
-                location_models.Location.id
-                == location_id,
-
-                location_models.Location.business_id
-                == effective_business_id,
-
-                location_models.Location.status
-                == "active"
-            )
-            .first()
-        )
-
-        if not location:
-            raise HTTPException(
-                status_code=404,
-                detail="Location not found or inactive."
-            )
-
-        # ==========================================================
-        # 4. VALIDATE ITEM
-        # ==========================================================
-
-        item = (
-            db.query(
-                store_models.StoreItem
-            )
-            .filter(
-                store_models.StoreItem.id
-                == item_id,
-
-                store_models.StoreItem.business_id
-                == effective_business_id
-            )
-            .first()
-        )
-
-        if not item:
-            raise HTTPException(
-                status_code=404,
-                detail="Item not found."
-            )
-
-        # ==========================================================
-        # 5. GET CURRENT LOCATION INVENTORY
-        # ==========================================================
-
-        inventory = (
-            db.query(
-                location_models.LocationInventory
-            )
-            .filter(
-                location_models.LocationInventory.location_id
-                == location_id,
-
-                location_models.LocationInventory.item_id
-                == item_id,
-
-                location_models.LocationInventory.business_id
-                == effective_business_id
-            )
-            .first()
-        )
-
-        # ==========================================================
-        # 6. NEGATIVE ADJUSTMENT
-        #
-        # Example:
-        #
-        # quantity_adjusted = -10
-        #
-        # Remove 10 from location stock.
-        # ==========================================================
-
-        if qty < 0:
-
-            remove_quantity = abs(qty)
-
-            current_quantity = (
-                float(inventory.quantity)
-                if inventory
-                else 0
-            )
-
-            if current_quantity < remove_quantity:
-
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"Cannot remove {remove_quantity} "
-                        f"units. Current location stock is "
-                        f"{current_quantity}."
-                    )
-                )
-
-            inventory.quantity = (
-                current_quantity
-                - remove_quantity
-            )
-
-        # ==========================================================
-        # 7. POSITIVE ADJUSTMENT
-        #
-        # Example:
-        #
-        # quantity_adjusted = +10
-        #
-        # Add 10 to location stock.
-        # ==========================================================
-
-        else:
-
-            if inventory:
-
-                inventory.quantity = (
-                    float(inventory.quantity or 0)
-                    + qty
-                )
-
-            else:
-
-                inventory = (
-                    location_models.LocationInventory(
-                        business_id=effective_business_id,
-
-                        location_id=location_id,
-
-                        item_id=item_id,
-
-                        quantity=qty,
-
-                        unit_price=item.unit_price,
-
-                        received_at=now_wat(),
-
-                        note=(
-                            "Created through "
-                            "location inventory adjustment"
-                        )
-                    )
-                )
-
-                db.add(inventory)
-
-        # ==========================================================
-        # 8. CREATE ADJUSTMENT RECORD
-        # ==========================================================
-
-        adjustment = (
-            location_models.LocationInventoryAdjustment(
-                business_id=effective_business_id,
-
-                location_id=location_id,
-
-                item_id=item_id,
-
-                quantity_adjusted=qty,
-
-                reason=adjustment_data.reason,
-
-                adjusted_by=current_user.username,
-
-                adjusted_at=now_wat()
-            )
-        )
-
-        db.add(adjustment)
-
-        # ==========================================================
-        # 9. COMMIT
-        # ==========================================================
-
-        db.commit()
-
-        db.refresh(adjustment)
-
-        return adjustment
-
-    except HTTPException:
-
-        db.rollback()
-        raise
-
-    except Exception as e:
-
-        db.rollback()
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"Location adjustment failed: "
-                f"{str(e)}"
-            )
-        )
-
+# ==========================================================
+# LOCATION STOCK BALANCE
+# ==========================================================
 
 @router.get(
     "/location-balance-stock",
-    response_model=list[location_schemas.LocationStockBalance]
+    response_model=list[
+        location_schemas.LocationStockBalance
+    ]
 )
 def get_location_stock_balance(
     location_id: Optional[int] = Query(
         None,
         description="Filter by location"
     ),
+
     item_id: Optional[int] = Query(
         None,
         description="Filter by item"
     ),
+
     category_id: Optional[int] = Query(
         None,
         description="Filter by category"
     ),
+
     item_type: Optional[str] = Query(
         None,
         description="Filter by item type"
     ),
+
     search: Optional[str] = Query(
         None,
-        description="Search by item or category"
+        description="Search by item, category or location"
     ),
-    business_id: Optional[int] = Query(None),
+
+    business_id: Optional[int] = Query(
+        None,
+        description="Business ID (Super Admin only)"
+    ),
+
     db: Session = Depends(get_db),
+
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required([
             "store",
@@ -4854,198 +4644,693 @@ def get_location_stock_balance(
         ])
     )
 ):
+
     try:
 
         # ==========================================================
         # 1. RESOLVE BUSINESS
+        #
+        # Do NOT use resolve_business_id() here because your
+        # current user.roles contains RoleSimple objects.
+        #
+        # Business users are automatically restricted to their
+        # own business.
+        #
+        # Super Admin has business_id == None and must provide
+        # business_id when viewing a specific business.
         # ==========================================================
 
-        effective_business_id = resolve_business_id(
-            current_user,
-            business_id
-        )
+        if current_user.business_id is not None:
+
+            effective_business_id = current_user.business_id
+
+        else:
+
+            if business_id is None:
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "business_id is required for "
+                        "Super Admin."
+                    )
+                )
+
+            effective_business_id = business_id
 
         # ==========================================================
-        # 2. BASE LOCATION INVENTORY QUERY
+        # 2. OPENING STOCK
+        #
+        # Opening stock is now stored directly on
+        # LocationInventory.opening_quantity.
+        #
+        # We keep it per:
+        #
+        #     location + item
         # ==========================================================
 
-        query = (
+        opening_query = (
             db.query(
-                location_models.LocationInventory,
-                store_models.StoreItem,
-                store_models.StoreCategory,
-                location_models.Location
-            )
-            .join(
-                store_models.StoreItem,
-                store_models.StoreItem.id
-                == location_models.LocationInventory.item_id
-            )
-            .outerjoin(
-                store_models.StoreCategory,
-                store_models.StoreCategory.id
-                == store_models.StoreItem.category_id
-            )
-            .join(
-                location_models.Location,
-                location_models.Location.id
-                == location_models.LocationInventory.location_id
+                location_models.LocationInventory.location_id,
+
+                location_models.LocationInventory.item_id,
+
+                func.coalesce(
+                    location_models.LocationInventory.opening_quantity,
+                    0
+                ).label(
+                    "opening_stock"
+                )
             )
             .filter(
                 location_models.LocationInventory.business_id
-                == effective_business_id,
+                == effective_business_id
+            )
+            .all()
+        )
 
-                store_models.StoreItem.business_id
-                == effective_business_id,
+        opening_map = {
 
-                location_models.Location.business_id
+            (
+                row.location_id,
+                row.item_id
+            ): float(
+                row.opening_stock or 0
+            )
+
+            for row in opening_query
+        }
+
+        # ==========================================================
+        # 3. TOTAL RECEIVED
+        #
+        # Stock received by the location from the central store.
+        #
+        # StoreIssue
+        #     -> StoreIssueItem
+        #
+        # Every quantity issued to a location is received by that
+        # location.
+        # ==========================================================
+
+        received_query = (
+            db.query(
+
+                store_models.StoreIssue.location_id.label(
+                    "location_id"
+                ),
+
+                store_models.StoreIssueItem.item_id.label(
+                    "item_id"
+                ),
+
+                func.coalesce(
+                    func.sum(
+                        store_models.StoreIssueItem.quantity
+                    ),
+                    0
+                ).label(
+                    "total_received"
+                )
+            )
+
+            .join(
+                store_models.StoreIssue,
+
+                store_models.StoreIssue.id
+                ==
+                store_models.StoreIssueItem.issue_id
+            )
+
+            .filter(
+                store_models.StoreIssue.business_id
+                == effective_business_id
+            )
+
+            .group_by(
+                store_models.StoreIssue.location_id,
+
+                store_models.StoreIssueItem.item_id
+            )
+
+            .all()
+        )
+
+        received_map = {
+
+            (
+                row.location_id,
+                row.item_id
+            ): float(
+                row.total_received or 0
+            )
+
+            for row in received_query
+        }
+
+        # ==========================================================
+        # 4. TOTAL ADJUSTED
+        #
+        # Adjustment convention:
+        #
+        #   +10 = ADD 10 STOCK
+        #   -10 = REMOVE 10 STOCK
+        #
+        # Therefore SUM(quantity_adjusted) gives the NET
+        # adjustment effect.
+        # ==========================================================
+
+        adjustment_query = (
+            db.query(
+
+                catering_models
+                .LocationInventoryAdjustment
+                .location_id
+                .label("location_id"),
+
+                catering_models
+                .LocationInventoryAdjustment
+                .item_id
+                .label("item_id"),
+
+                func.coalesce(
+                    func.sum(
+                        catering_models
+                        .LocationInventoryAdjustment
+                        .quantity_adjusted
+                    ),
+                    0
+                ).label(
+                    "total_adjusted"
+                )
+            )
+
+            .filter(
+                catering_models
+                .LocationInventoryAdjustment
+                .business_id
+                == effective_business_id
+            )
+
+            .group_by(
+                catering_models
+                .LocationInventoryAdjustment
+                .location_id,
+
+                catering_models
+                .LocationInventoryAdjustment
+                .item_id
+            )
+
+            .all()
+        )
+
+        adjustment_map = {
+
+            (
+                row.location_id,
+                row.item_id
+            ): float(
+                row.total_adjusted or 0
+            )
+
+            for row in adjustment_query
+        }
+
+        # ==========================================================
+        # 5. TOTAL USED / CONSUMED
+        #
+        # Catering usage represents stock consumed at a location.
+        #
+        # Only non-voided usage is counted.
+        # ==========================================================
+
+        usage_query = (
+            db.query(
+
+                catering_models
+                .CateringUsageItem
+                .location_id
+                .label("location_id"),
+
+                catering_models
+                .CateringUsageItem
+                .item_id
+                .label("item_id"),
+
+                func.coalesce(
+                    func.sum(
+                        catering_models
+                        .CateringUsageItem
+                        .quantity_used
+                    ),
+                    0
+                ).label(
+                    "total_used"
+                )
+            )
+
+            .join(
+                catering_models.CateringUsage,
+
+                catering_models.CateringUsage.id
+                ==
+                catering_models.CateringUsageItem.usage_id
+            )
+
+            .filter(
+                catering_models
+                .CateringUsage
+                .business_id
+                ==
+                effective_business_id,
+
+                catering_models
+                .CateringUsage
+                .status
+                !=
+                "voided"
+            )
+
+            .group_by(
+                catering_models
+                .CateringUsageItem
+                .location_id,
+
+                catering_models
+                .CateringUsageItem
+                .item_id
+            )
+
+            .all()
+        )
+
+        used_map = {
+
+            (
+                row.location_id,
+                row.item_id
+            ): float(
+                row.total_used or 0
+            )
+
+            for row in usage_query
+        }
+
+        # ==========================================================
+        # 6. GET LOCATION INVENTORY
+        #
+        # This gives:
+        #
+        # - current quantity
+        # - location unit price
+        # - opening quantity
+        #
+        # We primarily use opening_quantity for the balance
+        # calculation and current quantity as a reference.
+        # ==========================================================
+
+        inventory_query = (
+            db.query(
+                location_models.LocationInventory
+            )
+            .filter(
+                location_models.LocationInventory.business_id
                 == effective_business_id
             )
         )
 
-        # ==========================================================
-        # 3. FILTER LOCATION
-        # ==========================================================
+        if location_id is not None:
 
-        if location_id:
-            query = query.filter(
-                location_models.LocationInventory.location_id
-                == location_id
+            inventory_query = inventory_query.filter(
+                location_models
+                .LocationInventory
+                .location_id
+                ==
+                location_id
             )
 
-        # ==========================================================
-        # 4. FILTER ITEM
-        # ==========================================================
+        if item_id is not None:
 
-        if item_id:
-            query = query.filter(
-                location_models.LocationInventory.item_id
-                == item_id
+            inventory_query = inventory_query.filter(
+                location_models
+                .LocationInventory
+                .item_id
+                ==
+                item_id
             )
 
+        inventories = inventory_query.all()
+
+        inventory_map = {
+
+            (
+                inventory.location_id,
+                inventory.item_id
+            ): inventory
+
+            for inventory in inventories
+        }
+
         # ==========================================================
-        # 5. FILTER CATEGORY
+        # 7. GET LOCATIONS
         # ==========================================================
 
-        if category_id:
-            query = query.filter(
+        locations_query = (
+            db.query(
+                location_models.Location
+            )
+            .filter(
+                location_models.Location.business_id
+                ==
+                effective_business_id
+            )
+        )
+
+        if location_id is not None:
+
+            locations_query = locations_query.filter(
+                location_models.Location.id
+                ==
+                location_id
+            )
+
+        locations = (
+            locations_query
+            .order_by(
+                location_models.Location.name.asc()
+            )
+            .all()
+        )
+
+        # ==========================================================
+        # 8. GET STORE ITEMS
+        # ==========================================================
+
+        items_query = (
+            db.query(
+
+                store_models.StoreItem.id.label(
+                    "item_id"
+                ),
+
+                store_models.StoreItem.name.label(
+                    "item_name"
+                ),
+
+                store_models.StoreItem.unit.label(
+                    "unit"
+                ),
+
+                store_models.StoreItem.item_type.label(
+                    "item_type"
+                ),
+
+                store_models.StoreItem.unit_price.label(
+                    "default_unit_price"
+                ),
+
+                store_models.StoreCategory.name.label(
+                    "category_name"
+                )
+            )
+
+            .outerjoin(
+                store_models.StoreCategory,
+
                 store_models.StoreItem.category_id
-                == category_id
+                ==
+                store_models.StoreCategory.id
             )
 
+            .filter(
+                store_models.StoreItem.business_id
+                ==
+                effective_business_id
+            )
+        )
+
         # ==========================================================
-        # 6. FILTER ITEM TYPE
+        # 9. ITEM FILTERS
         # ==========================================================
+
+        if category_id is not None:
+
+            items_query = items_query.filter(
+                store_models.StoreItem.category_id
+                ==
+                category_id
+            )
 
         if item_type:
-            query = query.filter(
+
+            items_query = items_query.filter(
                 func.lower(
                     store_models.StoreItem.item_type
-                ) == item_type.lower()
+                )
+                ==
+                item_type.lower()
             )
 
-        # ==========================================================
-        # 7. SEARCH
-        # ==========================================================
+        if item_id is not None:
+
+            items_query = items_query.filter(
+                store_models.StoreItem.id
+                ==
+                item_id
+            )
 
         if search:
 
             search_value = f"%{search}%"
 
-            query = query.filter(
+            items_query = items_query.filter(
+
                 store_models.StoreItem.name.ilike(
                     search_value
                 )
+
                 |
+
                 store_models.StoreCategory.name.ilike(
-                    search_value
-                )
-                |
-                location_models.Location.name.ilike(
                     search_value
                 )
             )
 
-        # ==========================================================
-        # 8. ORDER
-        # ==========================================================
-
-        query = query.order_by(
-            location_models.Location.name.asc(),
-            store_models.StoreItem.name.asc()
+        items = (
+            items_query
+            .order_by(
+                store_models.StoreItem.name.asc()
+            )
+            .all()
         )
 
-        rows = query.all()
-
         # ==========================================================
-        # 9. BUILD RESPONSE
+        # 10. BUILD RESPONSE
         # ==========================================================
 
         response = []
 
-        for inventory, item, category, location in rows:
+        for location in locations:
 
-            quantity = float(
-                inventory.quantity or 0
-            )
+            for item in items:
 
-            unit_price = float(
-                inventory.unit_price
-                if inventory.unit_price is not None
-                else item.unit_price or 0
-            )
+                key = (
+                    location.id,
+                    item.item_id
+                )
 
-            total_value = round(
-                quantity * unit_price,
-                2
-            )
+                inventory = inventory_map.get(key)
 
-            response.append(
-                location_schemas.LocationStockBalance(
-                    location_id=location.id,
-                    location_name=location.name,
+                # ==================================================
+                # 10.1 MOVEMENT TOTALS
+                # ==================================================
 
-                    item_id=item.id,
-                    item_name=item.name,
+                opening_stock = opening_map.get(
+                    key,
+                    0
+                )
 
-                    category_name=(
-                        category.name
-                        if category
-                        else "Uncategorized"
-                    ),
+                total_received = received_map.get(
+                    key,
+                    0
+                )
 
-                    item_type=item.item_type,
-                    unit=item.unit,
+                total_used = used_map.get(
+                    key,
+                    0
+                )
 
-                    quantity=quantity,
+                total_adjusted = adjustment_map.get(
+                    key,
+                    0
+                )
 
-                    unit_price=unit_price,
+                # ==================================================
+                # 10.2 ONLY SHOW ITEMS WITH ACTIVITY
+                #
+                # This prevents every StoreItem from appearing
+                # under every location.
+                # ==================================================
 
-                    total_amount=total_value,
+                has_activity = (
 
-                    received_at=(
-                        to_wat(inventory.received_at)
-                        if inventory.received_at
-                        else None
+                    inventory is not None
+
+                    or opening_stock != 0
+
+                    or total_received != 0
+
+                    or total_used != 0
+
+                    or total_adjusted != 0
+                )
+
+                if not has_activity:
+
+                    continue
+
+                # ==================================================
+                # 10.3 CURRENT UNIT PRICE
+                #
+                # First use the location inventory price.
+                # Otherwise use the StoreItem default price.
+                # ==================================================
+
+                if (
+                    inventory
+                    and inventory.unit_price is not None
+                ):
+
+                    current_unit_price = float(
+                        inventory.unit_price
+                    )
+
+                else:
+
+                    current_unit_price = float(
+                        item.default_unit_price or 0
+                    )
+
+                # ==================================================
+                # 10.4 TRUE CURRENT BALANCE
+                #
+                # Opening
+                # + Received
+                # + Adjustments
+                # - Used
+                # = Balance
+                # ==================================================
+
+                balance = (
+                    opening_stock
+                    + total_received
+                    + total_adjusted
+                    - total_used
+                )
+
+                # ==================================================
+                # 10.5 PREVENT NEGATIVE DISPLAY
+                # ==================================================
+
+                if abs(balance) < 0.000001:
+
+                    balance = 0
+
+                if balance < 0:
+
+                    balance = 0
+
+                # ==================================================
+                # 10.6 TOTAL BALANCE VALUE
+                # ==================================================
+
+                balance_total_amount = round(
+                    balance
+                    *
+                    current_unit_price,
+                    2
+                )
+
+                # ==================================================
+                # 10.7 RESPONSE
+                # ==================================================
+
+                response.append(
+
+                    location_schemas.LocationStockBalance(
+
+                        location_id=location.id,
+
+                        location_name=location.name,
+
+                        item_id=item.item_id,
+
+                        item_name=item.item_name,
+
+                        category_name=(
+                            item.category_name
+                            or "Uncategorized"
+                        ),
+
+                        item_type=item.item_type,
+
+                        unit=item.unit,
+
+                        opening_stock=round(
+                            opening_stock,
+                            4
+                        ),
+
+                        total_received=round(
+                            total_received,
+                            4
+                        ),
+
+                        total_used=round(
+                            total_used,
+                            4
+                        ),
+
+                        total_adjusted=round(
+                            total_adjusted,
+                            4
+                        ),
+
+                        balance=round(
+                            balance,
+                            4
+                        ),
+
+                        current_unit_price=(
+                            current_unit_price
+                        ),
+
+                        balance_total_amount=(
+                            balance_total_amount
+                        ),
                     )
                 )
-            )
+
+        # ==========================================================
+        # 11. RETURN
+        # ==========================================================
 
         return response
 
     except HTTPException:
+
         raise
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=(
-                f"Failed to retrieve location "
-                f"stock balance: {str(e)}"
+                "Failed to retrieve location stock "
+                f"balance: {str(e)}"
             )
         )
-
-
 
 
 # ==========================================================

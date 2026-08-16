@@ -1,0 +1,969 @@
+/* ==========================================================
+   MAIN CONTAINER
+   ========================================================== */
+
+.create-usage-container {
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+
+  padding: 12px 18px;
+  border-radius: 10px;
+
+  box-sizing: border-box;
+
+  background: #f2f3f8;
+
+  font-family: Arial, sans-serif;
+
+  /*
+   * MAIN VERTICAL SCROLLBAR
+   * -----------------------
+   * The entire Create Usage page scrolls.
+   * The table itself does NOT scroll vertically.
+   */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  position: relative;
+}
+
+
+/* ==========================================================
+   MAIN CONTAINER SCROLLBAR
+   ========================================================== */
+
+.create-usage-container::-webkit-scrollbar {
+  width: 9px;
+}
+
+.create-usage-container::-webkit-scrollbar-track {
+  background: #e9ecef;
+  border-radius: 10px;
+}
+
+.create-usage-container::-webkit-scrollbar-thumb {
+  background: #aeb4bb;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
+}
+
+.create-usage-container::-webkit-scrollbar-thumb:hover {
+  background: #858c94;
+}
+
+
+/* Firefox */
+
+.create-usage-container {
+  scrollbar-width: thin;
+  scrollbar-color: #aeb4bb #e9ecef;
+}
+
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+
+.create-usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 10px;
+}
+
+.create-usage-header h2 {
+  margin: 0;
+
+  font-size: 20px;
+  font-weight: 600;
+
+  color: #222;
+}
+
+.create-usage-header p {
+  margin: 3px 0 0;
+
+  color: #777;
+
+  font-size: 12px;
+}
+
+
+/* ==========================================================
+   MESSAGE
+   ========================================================== */
+
+.usage-message {
+  padding: 7px 11px;
+
+  margin-bottom: 10px;
+
+  border-radius: 5px;
+
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.success-message {
+  background: #e7f6ec;
+  color: #18743a;
+  border: 1px solid #b9e4c6;
+}
+
+.error-message {
+  background: #fdeaea;
+  color: #b42318;
+  border: 1px solid #f3bcbc;
+}
+
+
+/* ==========================================================
+   FORM
+   ========================================================== */
+
+.create-usage-form {
+  width: 100%;
+}
+
+
+/* ==========================================================
+   FORM SECTION
+   ========================================================== */
+
+.usage-form-section {
+  background: #fff;
+
+  border: 1px solid #ddd;
+  border-radius: 6px;
+
+  padding: 11px;
+
+  margin-bottom: 10px;
+
+  position: relative;
+}
+
+
+/*
+ * IMPORTANT
+ * ----------
+ * Never hide overflow on the items section.
+ *
+ * This allows the item search dropdown to appear
+ * outside the table row.
+ */
+
+.usage-items-section {
+  overflow: visible;
+}
+
+
+/* ==========================================================
+   SECTION TITLE
+   ========================================================== */
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #333;
+
+  margin: 0 0 9px;
+}
+
+
+/* ==========================================================
+   FORM GRID
+   ========================================================== */
+
+.usage-form-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(180px, 1fr)
+    minmax(150px, 200px)
+    minmax(220px, 1.5fr);
+
+  gap: 10px;
+}
+
+.usage-form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.usage-form-group label {
+  font-size: 12px;
+  font-weight: 600;
+
+  color: #444;
+
+  margin-bottom: 3px;
+}
+
+.usage-form-group label span {
+  color: #d92d20;
+}
+
+.usage-form-group input,
+.usage-form-group select {
+  width: 100%;
+  height: 32px;
+
+  padding: 5px 8px;
+
+  border: 1px solid #cfcfcf;
+  border-radius: 4px;
+
+  background: #fff;
+
+  font-size: 12px;
+
+  box-sizing: border-box;
+  outline: none;
+}
+
+.usage-form-group input:focus,
+.usage-form-group select:focus {
+  border-color: #2684ff;
+
+  box-shadow:
+    0 0 0 2px rgba(38, 132, 255, 0.08);
+}
+
+
+/* ==========================================================
+   ITEMS HEADER
+   ========================================================== */
+
+.items-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 6px;
+}
+
+.items-header .section-title {
+  margin: 0;
+}
+
+
+/* ==========================================================
+   ADD ITEM BUTTON
+   ========================================================== */
+
+.add-item-btn {
+  border: none;
+
+  background: #198754;
+  color: #fff;
+
+  padding: 6px 11px;
+
+  border-radius: 4px;
+
+  cursor: pointer;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.add-item-btn:hover {
+  background: #157347;
+}
+
+
+/* ==========================================================
+   ITEMS TABLE WRAPPER
+   ========================================================== */
+
+/*
+ * IMPORTANT
+ * ----------
+ * NO vertical scrollbar here.
+ *
+ * The page/container handles vertical scrolling.
+ *
+ * This prevents the table scrollbar from interfering
+ * with the autocomplete dropdown.
+ */
+
+.usage-items-table-wrapper {
+  width: 100%;
+
+  margin-top: 3px;
+
+  border: 1px solid #ddd;
+  border-radius: 5px;
+
+  position: relative;
+
+  overflow: visible;
+}
+
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+.usage-items-table {
+  width: 100%;
+
+  border-collapse: separate;
+  border-spacing: 0;
+
+  min-width: 650px;
+
+  position: relative;
+}
+
+
+/* ==========================================================
+   TABLE HEADER
+   ========================================================== */
+
+.usage-items-table thead {
+  background: #f1f3f5;
+}
+
+.usage-items-table th {
+  padding: 5px 6px;
+
+  text-align: left;
+
+  font-size: 13px;
+  font-weight: 650;
+
+  color: #444;
+
+  border-bottom: 1px solid #d9d9d9;
+
+  white-space: nowrap;
+}
+
+.usage-items-table th:first-child {
+  border-top-left-radius: 5px;
+}
+
+.usage-items-table th:last-child {
+  border-top-right-radius: 5px;
+}
+
+
+/* ==========================================================
+   TABLE BODY
+   ========================================================== */
+
+.usage-items-table tbody {
+  position: relative;
+}
+
+.usage-items-table tr {
+  position: relative;
+}
+
+.usage-items-table td {
+  padding: 4px 6px;
+
+  border-bottom: 1px solid #e8e8e8;
+
+  font-size: 12px;
+
+  vertical-align: middle;
+
+  background: #fff;
+}
+
+.usage-items-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.usage-items-table tbody tr:hover td {
+  background: #fafafa;
+}
+
+
+/* ==========================================================
+   ACTIVE SEARCH ROW
+   ========================================================== */
+
+.usage-items-table tbody tr.search-row-active {
+  z-index: 10000;
+}
+
+.usage-items-table tbody tr.search-row-active td {
+  background: #fff;
+
+  position: relative;
+}
+
+
+/* ==========================================================
+   COLUMN WIDTHS
+   ========================================================== */
+
+.number-column {
+  width: 2px;
+}
+
+.item-column {
+  width: 45%;
+}
+
+.quantity-column {
+  width: 110px;
+}
+
+.unit-column {
+  width: 90px;
+}
+
+.action-column {
+  width: 55px;
+}
+
+
+/* ==========================================================
+   ROW NUMBER
+   ========================================================== */
+
+.row-number {
+  width: 2px;
+
+  text-align: left;
+
+  color: #777;
+
+  font-weight: 600;
+}
+
+
+/* ==========================================================
+   ITEM CELL
+   ========================================================== */
+
+.item-cell {
+  position: relative;
+
+  overflow: visible;
+}
+
+
+/* ==========================================================
+   NORMAL INPUTS
+   ========================================================== */
+
+.usage-items-table input {
+  width: 100%;
+
+  height: 30px;
+
+  box-sizing: border-box;
+
+  padding: 4px 7px;
+
+  border: 1px solid #ccc;
+
+  border-radius: 4px;
+
+  font-size: 12px;
+
+  outline: none;
+
+  background: #fff;
+}
+
+.usage-items-table input:focus {
+  border-color: #2684ff;
+
+  box-shadow:
+    0 0 0 2px rgba(38, 132, 255, 0.07);
+}
+
+
+/* ==========================================================
+   AUTOCOMPLETE CONTAINER
+   ========================================================== */
+
+.usage-autocomplete {
+  position: relative;
+
+  width: 100%;
+
+  overflow: visible;
+
+  z-index: 10001;
+}
+
+
+/* ==========================================================
+   SEARCH INPUT
+   ========================================================== */
+
+.item-search-input {
+  width: 100%;
+
+  height: 30px;
+
+  box-sizing: border-box;
+
+  padding: 4px 8px;
+
+  border: 1px solid #ccc;
+
+  border-radius: 4px;
+
+  background: #fff;
+
+  font-size: 12px;
+
+  color: #333;
+
+  outline: none;
+}
+
+.item-search-input::placeholder {
+  color: #999;
+}
+
+.item-search-input:focus {
+  border-color: #2684ff;
+
+  box-shadow:
+    0 0 0 2px rgba(38, 132, 255, 0.08);
+}
+
+
+/* ==========================================================
+   SEARCH DROPDOWN
+   ========================================================== */
+
+/*
+ * The dropdown floats above the table.
+ *
+ * It is NOT part of the table height.
+ *
+ * It is NOT affected by the page/table row layout.
+ */
+
+.usage-search-dropdown {
+  position: absolute;
+
+  top: calc(100% + 2px);
+  left: 0;
+
+  width: 100%;
+
+  min-width: 250px;
+
+  max-height: 220px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  background: #fff;
+
+  border: 1px solid #c8c8c8;
+
+  border-radius: 5px;
+
+  box-shadow:
+    0 5px 15px rgba(0, 0, 0, 0.18);
+
+  z-index: 999999;
+
+  box-sizing: border-box;
+}
+
+
+/* ==========================================================
+   MAIN CONTAINER SCROLLBAR
+========================================================== */
+
+.create-usage-container::-webkit-scrollbar {
+  width: 16px;
+}
+
+.create-usage-container::-webkit-scrollbar-track {
+  background: #e1e4e8;
+  border-radius: 10px;
+}
+
+.create-usage-container::-webkit-scrollbar-thumb {
+  background: #9aa1a9;
+  border-radius: 10px;
+
+  /* Gives the thumb some space around it */
+  border: 3px solid #e1e4e8;
+}
+
+.create-usage-container::-webkit-scrollbar-thumb:hover {
+  background: #737b84;
+}
+
+
+/* Firefox */
+
+.create-usage-container {
+  scrollbar-width: auto;
+  scrollbar-color: #9aa1a9 #e1e4e8;
+}
+
+/* ==========================================================
+   SEARCH RESULTS
+   ========================================================== */
+
+.usage-search-results {
+  width: 100%;
+  
+
+}
+
+
+/* ==========================================================
+   SEARCH OPTION
+   ========================================================== */
+
+.usage-search-option {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+
+  min-height: 32px;
+
+  padding: 6px 8px;
+
+  box-sizing: border-box;
+
+  background: #fff;
+
+  color: #333;
+
+  border: none;
+
+  border-bottom: 1px solid #eeeeee;
+
+  cursor: pointer;
+
+  font-size: 12px;
+
+  text-align: left;
+}
+
+.usage-search-option:last-child {
+  border-bottom: none;
+}
+
+.usage-search-option:hover {
+  background: #f1f6ff;
+}
+
+
+/* ==========================================================
+   SEARCH ITEM NAME
+   ========================================================== */
+
+.usage-search-item-name {
+  flex: 1;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  font-weight: 700;
+  
+  
+}
+
+
+/* ==========================================================
+   SEARCH ITEM UNIT
+   ========================================================== */
+
+.usage-search-item-unit {
+  margin-left: 10px;
+
+  color: #777;
+
+  font-size: 11px;
+
+  white-space: nowrap;
+}
+
+
+/* ==========================================================
+   SEARCH STATUS
+   ========================================================== */
+
+.usage-search-status {
+  padding: 9px;
+
+  text-align: center;
+
+  color: #777;
+
+  font-size: 11px;
+
+  background: #fff;
+}
+
+
+/* ==========================================================
+   UNIT DISPLAY
+   ========================================================== */
+
+.unit-display {
+  min-width: 70px;
+
+  color: #555;
+
+  font-weight: 500;
+
+  font-size: 12px;
+}
+
+
+/* ==========================================================
+   REMOVE BUTTON
+   ========================================================== */
+
+.remove-item-btn {
+  width: 28px;
+  height: 28px;
+
+  border: none;
+
+  border-radius: 4px;
+
+  background: #dc3545;
+
+  color: #fff;
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  font-weight: bold;
+
+  padding: 0;
+}
+
+.remove-item-btn:hover {
+  background: #bb2d3b;
+}
+
+
+/* ==========================================================
+   DISABLED
+   ========================================================== */
+
+.add-item-btn:disabled,
+.remove-item-btn:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+/* ==========================================================
+   FORM ACTIONS
+   ========================================================== */
+
+.usage-form-actions {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  margin-top: 8px;
+}
+
+
+/* ==========================================================
+   RESET / SAVE BUTTONS
+   ========================================================== */
+
+.reset-usage-btn,
+.save-usage-btn {
+  min-width: 100px;
+
+  height: 34px;
+
+  padding: 0 13px;
+
+  border-radius: 4px;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+
+/* ==========================================================
+   CLEAR BUTTON
+   ========================================================== */
+
+.reset-usage-btn {
+  background: #fff;
+
+  border: 1px solid #aaa;
+
+  color: #444;
+}
+
+.reset-usage-btn:hover {
+  background: #f2f2f2;
+}
+
+
+/* ==========================================================
+   SAVE BUTTON
+   ========================================================== */
+
+.save-usage-btn {
+  background: #0d6efd;
+
+  border: 1px solid #0d6efd;
+
+  color: #fff;
+}
+
+.save-usage-btn:hover {
+  background: #0b5ed7;
+}
+
+
+/* ==========================================================
+   DISABLED BUTTONS
+   ========================================================== */
+
+.save-usage-btn:disabled,
+.reset-usage-btn:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+/* ==========================================================
+   LOADING
+   ========================================================== */
+
+.usage-loading {
+  padding: 30px;
+
+  text-align: center;
+
+  color: #666;
+
+  font-size: 13px;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 900px) {
+
+  .usage-form-grid {
+    grid-template-columns: 1fr 1fr;
+
+    gap: 8px;
+  }
+
+  .usage-note-group {
+    grid-column: 1 / -1;
+  }
+
+}
+
+
+/* ==========================================================
+   TABLE SMALL SCREEN
+   ========================================================== */
+
+@media (max-width: 700px) {
+
+  /*
+   * Horizontal scrolling is allowed only on small
+   * screens because the table needs its minimum width.
+   *
+   * Vertical scrolling still belongs to the
+   * create-usage-container.
+   */
+
+  .usage-items-table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .usage-items-table {
+    min-width: 650px;
+  }
+
+}
+
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media (max-width: 600px) {
+
+  .create-usage-container {
+    padding: 10px;
+
+    /*
+     * Keep the main container as the vertical
+     * scrolling area.
+     */
+    overflow-y: auto;
+  }
+
+  .usage-form-section {
+    padding: 9px;
+  }
+
+  .usage-form-grid {
+    grid-template-columns: 1fr;
+
+    gap: 7px;
+  }
+
+  .usage-note-group {
+    grid-column: auto;
+  }
+
+  .create-usage-header h2 {
+    font-size: 18px;
+  }
+
+  .create-usage-header p {
+    font-size: 11px;
+  }
+
+  .usage-form-actions {
+    justify-content: stretch;
+  }
+
+  .reset-usage-btn,
+  .save-usage-btn {
+    flex: 1;
+  }
+
+}
