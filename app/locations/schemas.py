@@ -68,6 +68,8 @@ class LocationStockBalance(BaseModel):
     item_id: int
     item_name: str
 
+    category_id: Optional[int] = None
+
     category_name: Optional[str] = None
     item_type: Optional[str] = None
     unit: Optional[str] = None

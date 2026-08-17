@@ -33,7 +33,7 @@ const CateringDashboard = () => {
      
       
     
-    { name: "📊 Stock Balance", path: "/catering/stock-balance" },
+    { name: "📊 Stock Balance", path: "/catering/cateringstock-balance" },
     {
       name: "🛠️ Stock Adjustment",
       submenu: [
@@ -41,7 +41,7 @@ const CateringDashboard = () => {
         { label: "📃 List Adjustment", path: "/catering/adjustment/list" },
       ],
     },
-    { name: "🏪 Store Issues", path: "/catering/store-issues" },
+    { name: "🏪 Items Received", path: "/catering/store-issues" },
   ];
 
   const openSubmenu = (e, item) => {

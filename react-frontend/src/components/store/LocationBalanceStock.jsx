@@ -8,26 +8,143 @@ const LocationBalanceStock = () => {
   ========================================================== */
 
   const [balances, setBalances] = useState([]);
+
   const [locations, setLocations] = useState([]);
 
+  const [categories, setCategories] = useState([]);
+
   const [selectedLocation, setSelectedLocation] = useState("");
+
   const [selectedItemId, setSelectedItemId] = useState("");
+
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+
   const [selectedItemType, setSelectedItemType] = useState("");
 
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(true);
+
   const [message, setMessage] = useState("");
 
   const axios = axiosWithAuth();
+
+  /* ==========================================================
+     ERROR MESSAGE HELPER
+     
+     IMPORTANT:
+     Never render FastAPI validation objects directly.
+  ========================================================== */
+
+  const getApiErrorMessage = (err) => {
+    const data = err?.response?.data;
+
+    const detail = data?.detail;
+
+    /* ----------------------------------------------------------
+       FastAPI validation error array
+    ---------------------------------------------------------- */
+
+    if (Array.isArray(detail)) {
+      return detail
+        .map((error) => {
+          if (typeof error === "string") {
+            return error;
+          }
+
+          if (
+            error &&
+            typeof error === "object"
+          ) {
+            const msg =
+              error.msg ||
+              error.message ||
+              "Invalid request.";
+
+            const location =
+              Array.isArray(error.loc)
+                ? error.loc.join(" → ")
+                : "";
+
+            if (location) {
+              return `${location}: ${msg}`;
+            }
+
+            return String(msg);
+          }
+
+          return "Invalid request.";
+        })
+        .join(", ");
+    }
+
+    /* ----------------------------------------------------------
+       Object detail
+    ---------------------------------------------------------- */
+
+    if (
+      detail &&
+      typeof detail === "object"
+    ) {
+      if (detail.msg) {
+        return String(detail.msg);
+      }
+
+      if (detail.message) {
+        return String(detail.message);
+      }
+
+      return "Invalid request.";
+    }
+
+    /* ----------------------------------------------------------
+       String detail
+    ---------------------------------------------------------- */
+
+    if (typeof detail === "string") {
+      return detail;
+    }
+
+    /* ----------------------------------------------------------
+       API message
+    ---------------------------------------------------------- */
+
+    if (
+      typeof data?.message === "string"
+    ) {
+      return data.message;
+    }
+
+    /* ----------------------------------------------------------
+       Axios message
+    ---------------------------------------------------------- */
+
+    if (
+      typeof err?.message === "string"
+    ) {
+      return err.message;
+    }
+
+    return "❌ An unexpected error occurred.";
+  };
 
   /* ==========================================================
      MESSAGE HELPER
   ========================================================== */
 
   const showMessage = (msg) => {
-    setMessage(msg);
+    const safeMessage =
+      typeof msg === "string"
+        ? msg
+        : getApiErrorMessage({
+            response: {
+              data: {
+                detail: msg,
+              },
+            },
+          });
+
+    setMessage(safeMessage);
 
     setTimeout(() => {
       setMessage("");
@@ -41,15 +158,21 @@ const LocationBalanceStock = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await axios.get("/locations/simple");
+        const res = await axios.get(
+          "/locations/simple"
+        );
 
-        console.log("Locations response:", res.data);
+        console.log(
+          "Locations response:",
+          res.data
+        );
 
         setLocations(
           Array.isArray(res.data)
             ? res.data
             : []
         );
+
       } catch (err) {
         console.error(
           "Failed to fetch locations:",
@@ -57,13 +180,80 @@ const LocationBalanceStock = () => {
         );
 
         showMessage(
-          err.response?.data?.detail ||
-            "❌ Failed to load locations"
+          getApiErrorMessage(err)
         );
       }
     };
 
     fetchLocations();
+  }, []);
+
+  /* ==========================================================
+     FETCH CATEGORIES
+     
+     IMPORTANT:
+     Categories now come from their own endpoint.
+     
+     They are NOT built from balances.
+  ========================================================== */
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(
+          "/store/categories/simple"
+        );
+
+        console.log(
+          "Categories response:",
+          res.data
+        );
+
+        const data =
+          Array.isArray(res.data)
+            ? res.data
+            : [];
+
+        const cleanCategories = data
+          .filter(
+            (category) =>
+              category &&
+              category.id !== null &&
+              category.id !== undefined &&
+              category.name
+          )
+          .map((category) => ({
+            id: Number(category.id),
+            name: String(category.name),
+          }))
+          .sort((a, b) =>
+            a.name.localeCompare(b.name)
+          );
+
+        setCategories(
+          cleanCategories
+        );
+
+      } catch (err) {
+        console.error(
+          "Failed to fetch categories:",
+          err
+        );
+
+        console.error(
+          "Category response:",
+          err?.response?.data
+        );
+
+        setCategories([]);
+
+        showMessage(
+          getApiErrorMessage(err)
+        );
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   /* ==========================================================
@@ -101,7 +291,7 @@ const LocationBalanceStock = () => {
       if (selectedLocation) {
         params.append(
           "location_id",
-          selectedLocation
+          String(selectedLocation)
         );
       }
 
@@ -112,18 +302,21 @@ const LocationBalanceStock = () => {
       if (selectedItemId) {
         params.append(
           "item_id",
-          selectedItemId
+          String(selectedItemId)
         );
       }
 
       /* ------------------------------------------------------
          CATEGORY
+         
+         IMPORTANT:
+         Send CATEGORY ID.
       ------------------------------------------------------ */
 
       if (selectedCategoryId) {
         params.append(
           "category_id",
-          selectedCategoryId
+          String(selectedCategoryId)
         );
       }
 
@@ -134,7 +327,7 @@ const LocationBalanceStock = () => {
       if (selectedItemType) {
         params.append(
           "item_type",
-          selectedItemType
+          String(selectedItemType)
         );
       }
 
@@ -149,17 +342,14 @@ const LocationBalanceStock = () => {
         );
       }
 
-      const queryString = params.toString();
+      const queryString =
+        params.toString();
 
       const url = queryString
-        ? `/store/location-balance-stock?${queryString}`
-        : "/store/location-balance-stock";
+        ? `/catering/location-balance-stock?${queryString}`
+        : "/catering/location-balance-stock";
 
-      console.log(
-        "Fetching location stock:",
-        url
-      );
-
+      
       const res = await axios.get(url);
 
       console.log(
@@ -181,14 +371,13 @@ const LocationBalanceStock = () => {
 
       console.error(
         "Response:",
-        err.response?.data
+        err?.response?.data
       );
 
       setBalances([]);
 
       showMessage(
-        err.response?.data?.detail ||
-          "❌ Failed to load location stock balance"
+        getApiErrorMessage(err)
       );
 
     } finally {
@@ -199,44 +388,32 @@ const LocationBalanceStock = () => {
   /* ==========================================================
      ITEM OPTIONS
      
-     Build unique items from current balance result.
+     Items come from the current result.
   ========================================================== */
 
   const itemOptions = Array.from(
     new Map(
-      balances.map((item) => [
-        item.item_id,
-        {
-          id: item.item_id,
-          name: item.item_name,
-        },
-      ])
-    ).values()
-  ).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-
-  /* ==========================================================
-     CATEGORY OPTIONS
-  ========================================================== */
-
-  const categoryOptions = Array.from(
-    new Map(
       balances
         .filter(
           (item) =>
-            item.category_name &&
-            item.category_name !== "Uncategorized"
+            item &&
+            item.item_id !== null &&
+            item.item_id !== undefined
         )
         .map((item) => [
-          item.category_name,
+          item.item_id,
           {
-            name: item.category_name,
+            id: item.item_id,
+            name:
+              item.item_name ||
+              `Item ${item.item_id}`,
           },
         ])
     ).values()
   ).sort((a, b) =>
-    a.name.localeCompare(b.name)
+    String(a.name).localeCompare(
+      String(b.name)
+    )
   );
 
   /* ==========================================================
@@ -246,77 +423,51 @@ const LocationBalanceStock = () => {
   const itemTypeOptions = Array.from(
     new Set(
       balances
-        .map((item) => item.item_type)
-        .filter(Boolean)
+        .map(
+          (item) =>
+            item?.item_type
+        )
+        .filter(
+          (type) =>
+            type !== null &&
+            type !== undefined &&
+            String(type).trim() !== ""
+        )
     )
-  ).sort();
+  ).sort((a, b) =>
+    String(a).localeCompare(
+      String(b)
+    )
+  );
 
   /* ==========================================================
      TOTAL BALANCE
   ========================================================== */
 
-  const totalBalance = balances.reduce(
-    (sum, item) =>
-      sum + Number(item.balance || 0),
-    0
-  );
+  const totalBalance =
+    balances.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item?.balance || 0
+        ),
+      0
+    );
 
   /* ==========================================================
      TOTAL VALUE
   ========================================================== */
 
-  const totalValue = balances.reduce(
-    (sum, item) =>
-      sum +
-      Number(
-        item.balance_total_amount || 0
-      ),
-    0
-  );
-
-  /* ==========================================================
-     TOTAL OPENING STOCK
-  ========================================================== */
-
-  const totalOpening = balances.reduce(
-    (sum, item) =>
-      sum +
-      Number(item.opening_stock || 0),
-    0
-  );
-
-  /* ==========================================================
-     TOTAL RECEIVED
-  ========================================================== */
-
-  const totalReceived = balances.reduce(
-    (sum, item) =>
-      sum +
-      Number(item.total_received || 0),
-    0
-  );
-
-  /* ==========================================================
-     TOTAL USED
-  ========================================================== */
-
-  const totalUsed = balances.reduce(
-    (sum, item) =>
-      sum +
-      Number(item.total_used || 0),
-    0
-  );
-
-  /* ==========================================================
-     TOTAL ADJUSTED
-  ========================================================== */
-
-  const totalAdjusted = balances.reduce(
-    (sum, item) =>
-      sum +
-      Number(item.total_adjusted || 0),
-    0
-  );
+  const totalValue =
+    balances.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item?.balance_total_amount ||
+            0
+        ),
+      0
+    );
 
   /* ==========================================================
      CLEAR FILTERS
@@ -335,7 +486,15 @@ const LocationBalanceStock = () => {
   ========================================================== */
 
   const formatQuantity = (value) => {
-    return Number(value || 0).toLocaleString(
+    const number = Number(
+      value || 0
+    );
+
+    if (Number.isNaN(number)) {
+      return "0";
+    }
+
+    return number.toLocaleString(
       undefined,
       {
         minimumFractionDigits: 0,
@@ -349,7 +508,15 @@ const LocationBalanceStock = () => {
   ========================================================== */
 
   const formatMoney = (value) => {
-    return Number(value || 0).toLocaleString(
+    const number = Number(
+      value || 0
+    );
+
+    if (Number.isNaN(number)) {
+      return "0.00";
+    }
+
+    return number.toLocaleString(
       undefined,
       {
         minimumFractionDigits: 2,
@@ -381,9 +548,9 @@ const LocationBalanceStock = () => {
 
         <div className="filter-frame1">
 
-          {/* --------------------------------------------------
+          {/* ==================================================
               LOCATION
-          -------------------------------------------------- */}
+          ================================================== */}
 
           <div className="filter-group1">
 
@@ -406,22 +573,30 @@ const LocationBalanceStock = () => {
                 All Locations
               </option>
 
-              {locations.map((location) => (
-                <option
-                  key={location.id}
-                  value={location.id}
-                >
-                  {location.name}
-                </option>
-              ))}
+              {locations.map(
+                (location) => (
+                  <option
+                    key={String(
+                      location.id
+                    )}
+                    value={String(
+                      location.id
+                    )}
+                  >
+                    {String(
+                      location.name || ""
+                    )}
+                  </option>
+                )
+              )}
 
             </select>
 
           </div>
 
-          {/* --------------------------------------------------
+          {/* ==================================================
               CATEGORY
-          -------------------------------------------------- */}
+          ================================================== */}
 
           <div className="filter-group1">
 
@@ -432,8 +607,17 @@ const LocationBalanceStock = () => {
             <select
               value={selectedCategoryId}
               onChange={(e) => {
+
+                const value =
+                  e.target.value;
+
+                console.log(
+                  "CATEGORY SELECTED:",
+                  value
+                );
+
                 setSelectedCategoryId(
-                  e.target.value
+                  value
                 );
 
                 setSelectedItemId("");
@@ -444,15 +628,19 @@ const LocationBalanceStock = () => {
                 All Categories
               </option>
 
-              {categoryOptions.map(
+              {categories.map(
                 (category) => (
                   <option
-                    key={category.name}
-                    value={
-                      category.name
-                    }
+                    key={String(
+                      category.id
+                    )}
+                    value={String(
+                      category.id
+                    )}
                   >
-                    {category.name}
+                    {String(
+                      category.name
+                    )}
                   </option>
                 )
               )}
@@ -461,9 +649,9 @@ const LocationBalanceStock = () => {
 
           </div>
 
-          {/* --------------------------------------------------
+          {/* ==================================================
               ITEM TYPE
-          -------------------------------------------------- */}
+          ================================================== */}
 
           <div className="filter-group1">
 
@@ -474,6 +662,7 @@ const LocationBalanceStock = () => {
             <select
               value={selectedItemType}
               onChange={(e) => {
+
                 setSelectedItemType(
                   e.target.value
                 );
@@ -489,10 +678,10 @@ const LocationBalanceStock = () => {
               {itemTypeOptions.map(
                 (type) => (
                   <option
-                    key={type}
-                    value={type}
+                    key={String(type)}
+                    value={String(type)}
                   >
-                    {type}
+                    {String(type)}
                   </option>
                 )
               )}
@@ -501,9 +690,9 @@ const LocationBalanceStock = () => {
 
           </div>
 
-          {/* --------------------------------------------------
+          {/* ==================================================
               ITEM
-          -------------------------------------------------- */}
+          ================================================== */}
 
           <div className="filter-group1">
 
@@ -527,22 +716,24 @@ const LocationBalanceStock = () => {
                 All Items
               </option>
 
-              {itemOptions.map((item) => (
-                <option
-                  key={item.id}
-                  value={item.id}
-                >
-                  {item.name}
-                </option>
-              ))}
+              {itemOptions.map(
+                (item) => (
+                  <option
+                    key={String(item.id)}
+                    value={String(item.id)}
+                  >
+                    {String(item.name)}
+                  </option>
+                )
+              )}
 
             </select>
 
           </div>
 
-          {/* --------------------------------------------------
+          {/* ==================================================
               SEARCH
-          -------------------------------------------------- */}
+          ================================================== */}
 
           <div className="filter-group1 search-filter">
 
@@ -555,6 +746,7 @@ const LocationBalanceStock = () => {
               placeholder="Search item or category..."
               value={search}
               onChange={(e) => {
+
                 setSearch(
                   e.target.value
                 );
@@ -565,9 +757,9 @@ const LocationBalanceStock = () => {
 
           </div>
 
-          {/* --------------------------------------------------
+          {/* ==================================================
               CLEAR
-          -------------------------------------------------- */}
+          ================================================== */}
 
           <div className="filter-group1">
 
@@ -592,11 +784,6 @@ const LocationBalanceStock = () => {
         ==================================================== */}
 
         <div className="total-stock1">
-
-          
-
-          
-          
 
           <div>
             Stock Balance:{" "}
@@ -627,7 +814,7 @@ const LocationBalanceStock = () => {
 
       {message && (
         <div className="message">
-          {message}
+          {String(message)}
         </div>
       )}
 
@@ -642,10 +829,6 @@ const LocationBalanceStock = () => {
         </div>
 
       ) : (
-
-        /* ====================================================
-           TABLE
-        ==================================================== */
 
         <div className="table-scroll-container">
 
@@ -716,11 +899,14 @@ const LocationBalanceStock = () => {
                   <td
                     colSpan="12"
                     style={{
-                      textAlign: "center",
-                      padding: "20px",
+                      textAlign:
+                        "center",
+                      padding:
+                        "20px",
                     }}
                   >
-                    No location stock balance found.
+                    No location stock
+                    balance found.
                   </td>
 
                 </tr>
@@ -731,7 +917,7 @@ const LocationBalanceStock = () => {
                   (item, idx) => (
 
                     <tr
-                      key={`${item.location_id}-${item.item_id}`}
+                      key={`${item.location_id}-${item.item_id}-${idx}`}
                       className={
                         idx % 2 === 0
                           ? "even-row"
@@ -739,54 +925,40 @@ const LocationBalanceStock = () => {
                       }
                     >
 
-                      {/* ------------------------------------------------
-                          LOCATION
-                      ------------------------------------------------ */}
-
                       <td>
-                        {item.location_name ||
-                          "-"}
+                        {String(
+                          item.location_name ||
+                            "-"
+                        )}
                       </td>
 
-                      {/* ------------------------------------------------
-                          ITEM
-                      ------------------------------------------------ */}
-
                       <td>
-                        {item.item_name ||
-                          "-"}
+                        {String(
+                          item.item_name ||
+                            "-"
+                        )}
                       </td>
 
-                      {/* ------------------------------------------------
-                          UNIT
-                      ------------------------------------------------ */}
-
                       <td>
-                        {item.unit ||
-                          "-"}
+                        {String(
+                          item.unit ||
+                            "-"
+                        )}
                       </td>
 
-                      {/* ------------------------------------------------
-                          CATEGORY
-                      ------------------------------------------------ */}
-
                       <td>
-                        {item.category_name ||
-                          "Uncategorized"}
+                        {String(
+                          item.category_name ||
+                            "Uncategorized"
+                        )}
                       </td>
 
-                      {/* ------------------------------------------------
-                          ITEM TYPE
-                      ------------------------------------------------ */}
-
                       <td>
-                        {item.item_type ||
-                          "-"}
+                        {String(
+                          item.item_type ||
+                            "-"
+                        )}
                       </td>
-
-                      {/* ------------------------------------------------
-                          OPENING
-                      ------------------------------------------------ */}
 
                       <td>
                         {formatQuantity(
@@ -794,19 +966,11 @@ const LocationBalanceStock = () => {
                         )}
                       </td>
 
-                      {/* ------------------------------------------------
-                          RECEIVED
-                      ------------------------------------------------ */}
-
                       <td>
                         {formatQuantity(
                           item.total_received
                         )}
                       </td>
-
-                      {/* ------------------------------------------------
-                          ADJUSTED
-                      ------------------------------------------------ */}
 
                       <td>
                         {formatQuantity(
@@ -814,19 +978,11 @@ const LocationBalanceStock = () => {
                         )}
                       </td>
 
-                      {/* ------------------------------------------------
-                          USED
-                      ------------------------------------------------ */}
-
                       <td>
                         {formatQuantity(
                           item.total_used
                         )}
                       </td>
-
-                      {/* ------------------------------------------------
-                          BALANCE
-                      ------------------------------------------------ */}
 
                       <td>
                         <strong>
@@ -836,20 +992,12 @@ const LocationBalanceStock = () => {
                         </strong>
                       </td>
 
-                      {/* ------------------------------------------------
-                          CURRENT UNIT PRICE
-                      ------------------------------------------------ */}
-
                       <td>
                         ₦
                         {formatMoney(
                           item.current_unit_price
                         )}
                       </td>
-
-                      {/* ------------------------------------------------
-                          BALANCE TOTAL AMOUNT
-                      ------------------------------------------------ */}
 
                       <td>
                         ₦

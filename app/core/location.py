@@ -9,52 +9,306 @@ from app.locations.models import Location
 
 
 # ==========================================================
-# LOCATION ACCESS HELPERS
+# NORMALIZE ROLE
 # ==========================================================
 
-def is_camp_boss(current_user) -> bool:
-    """
-    Check whether the current user has the Camp Boss role.
-    """
+def _normalize_role(value) -> Optional[str]:
 
-    roles = getattr(current_user, "roles", []) or []
+    if value is None:
+        return None
 
-    for role in roles:
+    # ------------------------------------------
+    # String
+    # ------------------------------------------
 
-        if isinstance(role, str):
-            role_name = role
+    if isinstance(value, str):
 
-        else:
-            role_name = getattr(
-                role,
-                "code",
-                None
-            ) or getattr(
-                role,
-                "name",
-                None
+        value = (
+            value
+            .strip()
+            .lower()
+            .replace("-", "_")
+            .replace(" ", "_")
+        )
+
+        return value or None
+
+    # ------------------------------------------
+    # Object with code
+    # ------------------------------------------
+
+    code = getattr(
+        value,
+        "code",
+        None,
+    )
+
+    if isinstance(code, str):
+
+        code = (
+            code
+            .strip()
+            .lower()
+            .replace("-", "_")
+            .replace(" ", "_")
+        )
+
+        if code:
+            return code
+
+    # ------------------------------------------
+    # Object with name
+    # ------------------------------------------
+
+    name = getattr(
+        value,
+        "name",
+        None,
+    )
+
+    if isinstance(name, str):
+
+        name = (
+            name
+            .strip()
+            .lower()
+            .replace("-", "_")
+            .replace(" ", "_")
+        )
+
+        if name:
+            return name
+
+    return None
+
+
+# ==========================================================
+# GET ALL USER ROLES
+# ==========================================================
+
+def get_user_roles(current_user):
+
+    roles = set()
+
+    # ======================================================
+    # 1. current_user.roles
+    # ======================================================
+
+    user_roles = getattr(
+        current_user,
+        "roles",
+        None,
+    ) or []
+
+    if isinstance(
+        user_roles,
+        (list, tuple, set),
+    ):
+
+        for role in user_roles:
+
+            normalized = _normalize_role(
+                role
             )
 
-        if role_name:
-            role_name = role_name.lower().replace(" ", "_")
+            if normalized:
+                roles.add(normalized)
 
-            if role_name == "camp_boss":
-                return True
+    elif isinstance(
+        user_roles,
+        str,
+    ):
 
-    return False
+        for role in user_roles.split(","):
+
+            normalized = _normalize_role(
+                role
+            )
+
+            if normalized:
+                roles.add(normalized)
+
+    # ======================================================
+    # 2. role_name
+    # ======================================================
+
+    role_name = _normalize_role(
+        getattr(
+            current_user,
+            "role_name",
+            None,
+        )
+    )
+
+    if role_name:
+        roles.add(role_name)
+
+    # ======================================================
+    # 3. role_code
+    # ======================================================
+
+    role_code = _normalize_role(
+        getattr(
+            current_user,
+            "role_code",
+            None,
+        )
+    )
+
+    if role_code:
+        roles.add(role_code)
+
+    return roles
 
 
-def get_user_location_id(current_user) -> Optional[int]:
-    """
-    Return the location assigned to the current user.
-    """
+# ==========================================================
+# IS CAMP BOSS
+# ==========================================================
+
+def is_camp_boss(
+    current_user,
+) -> bool:
+
+    roles = get_user_roles(
+        current_user
+    )
+
+    print(
+        "\n========== LOCATION ROLE CHECK =========="
+    )
+
+    print(
+        "USERNAME:",
+        getattr(
+            current_user,
+            "username",
+            None,
+        )
+    )
+
+    print(
+        "USER LOCATION:",
+        getattr(
+            current_user,
+            "location_id",
+            None,
+        )
+    )
+
+    print(
+        "ROLES FOUND:",
+        roles,
+    )
+
+    print(
+        "IS CAMP BOSS:",
+        "camp_boss" in roles,
+    )
+
+    print(
+        "=========================================\n"
+    )
+
+    return (
+        "camp_boss" in roles
+        or "campboss" in roles
+    )
+
+
+# ==========================================================
+# GET USER LOCATION
+# ==========================================================
+
+def get_user_location_id(
+    current_user,
+) -> Optional[int]:
 
     return getattr(
         current_user,
         "location_id",
-        None
+        None,
     )
 
+
+# ==========================================================
+# RESOLVE LOCATION FOR CURRENT USER
+# ==========================================================
+
+def resolve_location_id(
+    current_user,
+    requested_location_id: Optional[int] = None,
+):
+    """
+    Resolve and validate the location requested by the user.
+
+    Camp Boss:
+        - Must have an assigned location.
+        - If a location is supplied, it MUST match
+          the Camp Boss's assigned location.
+        - Never silently changes the requested location.
+        - Different location = 403 Forbidden.
+
+    Other users:
+        - Requested location is respected.
+    """
+
+    # ======================================================
+    # CAMP BOSS
+    # ======================================================
+
+    if is_camp_boss(current_user):
+
+        user_location_id = get_user_location_id(
+            current_user
+        )
+
+        # --------------------------------------------------
+        # Camp Boss must have a location
+        # --------------------------------------------------
+
+        if user_location_id is None:
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Camp Boss is not assigned "
+                    "to a location."
+                ),
+            )
+
+        # --------------------------------------------------
+        # If frontend supplied a location, it MUST match
+        # --------------------------------------------------
+
+        if (
+            requested_location_id is not None
+            and int(requested_location_id)
+            != int(user_location_id)
+        ):
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "You cannot create catering usage "
+                    "for another location."
+                ),
+            )
+
+        # --------------------------------------------------
+        # No location supplied
+        # --------------------------------------------------
+
+        return user_location_id
+
+    # ======================================================
+    # OTHER USERS
+    # ======================================================
+
+    return requested_location_id
+
+# ==========================================================
+# VALIDATE LOCATION ACCESS
+# ==========================================================
 
 def validate_location_access(
     db: Session,
@@ -62,20 +316,10 @@ def validate_location_access(
     location_id: int,
     business_id: int,
 ):
-    """
-    Validate that the current user is allowed to access
-    the specified location.
 
-    Camp Boss:
-        Can ONLY access their assigned location.
-
-    Other authorized roles:
-        Can access locations within their business.
-    """
-
-    # ------------------------------------------------------
-    # Validate location belongs to the business
-    # ------------------------------------------------------
+    # ======================================================
+    # LOCATION MUST BELONG TO BUSINESS
+    # ======================================================
 
     location = (
         db.query(Location)
@@ -94,14 +338,18 @@ def validate_location_access(
             detail="Location not found or inactive.",
         )
 
-    # ------------------------------------------------------
-    # CAMP BOSS RESTRICTION
-    # ------------------------------------------------------
+    # ======================================================
+    # CAMP BOSS
+    # ======================================================
 
-    if is_camp_boss(current_user):
+    if is_camp_boss(
+        current_user
+    ):
 
-        user_location_id = get_user_location_id(
-            current_user
+        user_location_id = (
+            get_user_location_id(
+                current_user
+            )
         )
 
         if user_location_id is None:
@@ -114,75 +362,37 @@ def validate_location_access(
                 ),
             )
 
-        if user_location_id != location_id:
+        if int(user_location_id) != int(location_id):
 
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
-                    "You do not have access to "
-                    "this location."
+                    "You do not have access "
+                    "to this location."
                 ),
             )
 
     return location
 
 
-def resolve_location_id(
-    current_user,
-    requested_location_id: Optional[int],
-):
-    """
-    Resolve the location that should actually be used.
-
-    Camp Boss:
-        Always uses their assigned location.
-        Frontend location_id is ignored.
-
-    Other roles:
-        Requested location is respected.
-    """
-
-    if is_camp_boss(current_user):
-
-        user_location_id = get_user_location_id(
-            current_user
-        )
-
-        if user_location_id is None:
-
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    "Camp Boss is not assigned "
-                    "to a location."
-                ),
-            )
-
-        return user_location_id
-
-    return requested_location_id
-
+# ==========================================================
+# APPLY LOCATION ACCESS FILTER
+# ==========================================================
 
 def apply_location_access_filter(
     query,
     model,
     current_user,
 ):
-    """
-    Apply the Camp Boss location restriction directly
-    to a SQLAlchemy query.
 
-    Camp Boss:
-        query is restricted to current_user.location_id.
+    if is_camp_boss(
+        current_user
+    ):
 
-    Other roles:
-        query remains unchanged.
-    """
-
-    if is_camp_boss(current_user):
-
-        user_location_id = get_user_location_id(
-            current_user
+        user_location_id = (
+            get_user_location_id(
+                current_user
+            )
         )
 
         if user_location_id is None:
@@ -196,7 +406,8 @@ def apply_location_access_filter(
             )
 
         query = query.filter(
-            model.location_id == user_location_id
+            model.location_id
+            == user_location_id
         )
 
     return query

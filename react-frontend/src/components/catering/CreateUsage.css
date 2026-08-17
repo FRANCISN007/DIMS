@@ -508,7 +508,8 @@
   width: 100%;
 
   height: 30px;
-
+  
+  
   box-sizing: border-box;
 
   padding: 4px 8px;
@@ -564,10 +565,11 @@
 
   overflow-y: auto;
   overflow-x: hidden;
+  
 
-  background: #fff;
+  background: #222020;
 
-  border: 1px solid #c8c8c8;
+  border: 1px solid #bebaba;
 
   border-radius: 5px;
 
@@ -578,6 +580,8 @@
 
   box-sizing: border-box;
 }
+
+
 
 
 /* ==========================================================
@@ -636,9 +640,9 @@
 
   width: 100%;
 
-  min-height: 32px;
+  min-height: 42px;
 
-  padding: 6px 8px;
+  padding: 9px 12px;
 
   box-sizing: border-box;
 
@@ -652,7 +656,7 @@
 
   cursor: pointer;
 
-  font-size: 12px;
+  font-size: 19px;
 
   text-align: left;
 }
@@ -664,7 +668,6 @@
 .usage-search-option:hover {
   background: #f1f6ff;
 }
-
 
 /* ==========================================================
    SEARCH ITEM NAME
@@ -681,26 +684,28 @@
 
   white-space: nowrap;
 
-  font-weight: 700;
-  
-  
-}
+  font-size: 15px;
 
+  font-weight: 700;
+
+  color: #222;
+}
 
 /* ==========================================================
    SEARCH ITEM UNIT
    ========================================================== */
 
 .usage-search-item-unit {
-  margin-left: 10px;
+  margin-left: 12px;
 
-  color: #777;
+  color: #666;
 
-  font-size: 11px;
+  font-size: 13px;
+
+  font-weight: 500;
 
   white-space: nowrap;
 }
-
 
 /* ==========================================================
    SEARCH STATUS
@@ -966,4 +971,118 @@
     flex: 1;
   }
 
+}
+
+
+
+/* ==========================================================
+   FORCE LARGE ITEM SEARCH DROPDOWN TEXT
+   ========================================================== */
+
+.usage-autocomplete .usage-search-dropdown {
+  font-size: 12px !important;
+}
+
+.usage-autocomplete .usage-search-dropdown
+.usage-search-option {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  width: 100% !important;
+  min-height: 48px !important;
+
+  padding: 10px 14px !important;
+
+  box-sizing: border-box !important;
+
+  background: #fff !important;
+  color: #222 !important;
+
+  border: none !important;
+  border-bottom: 1px solid #eeeeee !important;
+
+  cursor: pointer !important;
+
+  font-family: Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+
+  line-height: 1.0 !important;
+
+  text-align: left !important;
+}
+
+.usage-autocomplete .usage-search-dropdown
+.usage-search-option:hover {
+  background: #f1f6ff !important;
+}
+
+
+/* ==========================================================
+   ITEM NAME
+   ========================================================== */
+
+.usage-autocomplete .usage-search-dropdown
+.usage-search-option
+.usage-search-item-name {
+  display: block !important;
+
+  flex: 1 !important;
+  min-width: 0 !important;
+
+  color: #222 !important;
+
+  font-family: Arial, sans-serif !important;
+
+  font-size: 12px !important;
+  font-weight: 500 !important;
+
+  line-height: 1.0 !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+
+/* ==========================================================
+   UNIT
+   ========================================================== */
+
+.usage-autocomplete .usage-search-dropdown
+.usage-search-option
+.usage-search-item-unit {
+  display: block !important;
+
+  margin-left: 14px !important;
+
+  color: #666 !important;
+
+  font-family: Arial, sans-serif !important;
+
+  font-size: 12px !important;
+  font-weight: 500 !important;
+
+  line-height: 1.0 !important;
+
+  white-space: nowrap !important;
+}
+
+
+/* ==========================================================
+   SEARCH STATUS
+   ========================================================== */
+
+.usage-autocomplete .usage-search-dropdown
+.usage-search-status {
+  padding: 12px !important;
+
+  background: #fff !important;
+
+  color: #555 !important;
+
+  font-size: 12px !important;
+
+  line-height: 1.0 !important;
 }

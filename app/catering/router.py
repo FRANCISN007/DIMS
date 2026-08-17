@@ -31,7 +31,7 @@ from app.store import models as store_models
 from app.catering import schemas
 from typing import Optional
 from app.users import schemas as user_schemas
-from app.core.business import resolve_business_id
+
 
 from app.locations.models import Location
 from app.store.models import StoreItem
@@ -53,6 +53,20 @@ from app.catering.crud import (
     get_catering_usage,
     update_catering_usage,
     void_catering_usage,
+
+)
+
+from app.core.tenant import (
+    resolve_business_id,
+    
+)
+
+
+from app.core.location import (
+    is_camp_boss,
+    resolve_location_id,
+    validate_location_access,
+    apply_location_access_filter,
 )
 
 router = APIRouter()
@@ -190,17 +204,25 @@ def usage_to_response(
     status_code=status.HTTP_201_CREATED,
 )
 def create_usage(
+
     usage_data: schemas.CateringUsageCreate,
 
     db: Session = Depends(get_db),
 
     current_user: UserDisplaySchema = Depends(
-        role_required(["store", "camp_boss", "manager", "admin"])
+        role_required(
+            [
+                "store",
+                "camp_boss",
+                "manager",
+                "admin",
+            ]
+        )
     ),
 ):
 
     # ======================================================
-    # RESOLVE BUSINESS
+    # 1. RESOLVE TENANT
     # ======================================================
 
     business_id = resolve_business_id(
@@ -208,33 +230,7 @@ def create_usage(
     )
 
     # ======================================================
-    # CAMP BOSS LOCATION RESTRICTION
-    # ======================================================
-
-    if "camp_boss" in current_user.roles:
-
-        # --------------------------------------------------
-        # Camp Boss must have a location
-        # --------------------------------------------------
-
-        if current_user.location_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Camp Boss is not assigned to a location."
-                ),
-            )
-
-        # --------------------------------------------------
-        # Do NOT trust location_id from frontend
-        # --------------------------------------------------
-
-        usage_data.location_id = (
-            current_user.location_id
-        )
-
-    # ======================================================
-    # CREATE USAGE
+    # 2. CREATE USAGE
     # ======================================================
 
     usage = create_catering_usage(
@@ -244,10 +240,16 @@ def create_usage(
         business_id=business_id,
     )
 
+    # ======================================================
+    # 3. RESPONSE
+    # ======================================================
+
     return usage_to_response(
         usage,
         db,
     )
+
+
 
 
 # ==========================================================
@@ -280,6 +282,9 @@ def list_usage(
     ),
 ):
 
+
+
+
     # ======================================================
     # RESOLVE BUSINESS
     # ======================================================
@@ -289,17 +294,40 @@ def list_usage(
     )
 
     # ======================================================
+    # RESOLVE LOCATION ACCESS
+    # ======================================================
+
+    location_id = resolve_location_id(
+        current_user,
+        location_id,
+    )
+
+    # ======================================================
+    # VALIDATE SELECTED LOCATION
+    # ======================================================
+
+    if location_id is not None:
+
+        validate_location_access(
+            db=db,
+            current_user=current_user,
+            location_id=location_id,
+            business_id=business_id,
+        )
+
+
+    # ======================================================
     # GET USAGE
     # ======================================================
 
     usages = get_catering_usages(
-        db=db,
-        current_user=current_user,
-        business_id=business_id,
-        location_id=location_id,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    db=db,
+    current_user=current_user,
+    business_id=business_id,
+    location_id=location_id,
+    start_date=start_date,
+    end_date=end_date,
+)
 
     return [
         usage_to_response(
@@ -451,6 +479,10 @@ def void_usage(
 # CREATE LOCATION INVENTORY ADJUSTMENT
 # ==========================================================
 
+# ==========================================================
+# CREATE LOCATION INVENTORY ADJUSTMENT
+# ==========================================================
+
 @router.post(
     "/location/adjust",
     response_model=location_schemas.LocationInventoryAdjustmentDisplay,
@@ -462,14 +494,14 @@ def adjust_location_inventory(
 
     business_id: Optional[int] = Query(
         None,
-        description="Super admin can specify business"
+        description="Super Admin can specify business",
     ),
 
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required(USER_MANAGEMENT_ROLES1)
-    )
+    ),
 ):
     try:
 
@@ -479,93 +511,93 @@ def adjust_location_inventory(
 
         effective_business_id = resolve_business_id(
             current_user,
-            business_id
+            business_id,
         )
 
         if not effective_business_id:
-
             raise HTTPException(
                 status_code=400,
-                detail="Business could not be determined."
+                detail="Business could not be determined.",
             )
 
         # ======================================================
-        # 2. GET DATA
+        # 2. RESOLVE LOCATION
         # ======================================================
 
-        location_id = adjustment_data.location_id
+        location_id = resolve_location_id(
+            current_user,
+            adjustment_data.location_id,
+        )
+
+        if location_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Location is required.",
+            )
+
+        # ======================================================
+        # 3. ITEM
+        # ======================================================
+
         item_id = adjustment_data.item_id
+
+        # ======================================================
+        # 4. QUANTITY
+        # ======================================================
 
         qty = float(
             adjustment_data.quantity_adjusted
         )
 
-        # ======================================================
-        # 3. VALIDATE QUANTITY
-        # ======================================================
-
         if qty == 0:
-
             raise HTTPException(
                 status_code=400,
-                detail="Adjustment cannot be zero."
+                detail="Adjustment cannot be zero.",
             )
 
         # ======================================================
-        # 4. VALIDATE LOCATION
+        # 5. VALIDATE LOCATION
         # ======================================================
 
         location = (
-            db.query(
-                location_models.Location
-            )
+            db.query(location_models.Location)
             .filter(
-                location_models.Location.id
-                == location_id,
-
+                location_models.Location.id == location_id,
                 location_models.Location.business_id
                 == effective_business_id,
-
-                location_models.Location.status
-                == "active"
+                location_models.Location.status == "active",
             )
             .first()
         )
 
         if not location:
-
             raise HTTPException(
                 status_code=404,
-                detail="Location not found or inactive."
+                detail="Location not found or inactive.",
             )
 
         # ======================================================
-        # 5. VALIDATE ITEM
+        # 6. VALIDATE ITEM
         # ======================================================
 
         item = (
-            db.query(
-                store_models.StoreItem
-            )
+            db.query(store_models.StoreItem)
             .filter(
-                store_models.StoreItem.id
-                == item_id,
-
+                store_models.StoreItem.id == item_id,
                 store_models.StoreItem.business_id
-                == effective_business_id
+                == effective_business_id,
             )
             .first()
         )
 
         if not item:
-
             raise HTTPException(
                 status_code=404,
-                detail="Item not found."
+                detail="Item not found.",
             )
 
         # ======================================================
-        # 6. GET LOCATION INVENTORY
+        # 7. GET / LOCK INVENTORY
         # ======================================================
 
         inventory = (
@@ -580,14 +612,11 @@ def adjust_location_inventory(
                 == item_id,
 
                 location_models.LocationInventory.business_id
-                == effective_business_id
+                == effective_business_id,
             )
+            .with_for_update()
             .first()
         )
-
-        # ======================================================
-        # 7. CURRENT QUANTITY
-        # ======================================================
 
         current_quantity = float(
             inventory.quantity
@@ -597,16 +626,22 @@ def adjust_location_inventory(
 
         # ======================================================
         # 8. NEGATIVE ADJUSTMENT
-        #
-        # -10 means remove 10.
         # ======================================================
 
         if qty < 0:
 
             quantity_to_remove = abs(qty)
 
-            if quantity_to_remove > current_quantity:
+            if not inventory:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "No inventory exists for this "
+                        "item at the selected location."
+                    ),
+                )
 
+            if quantity_to_remove > current_quantity:
                 raise HTTPException(
                     status_code=400,
                     detail=(
@@ -615,17 +650,7 @@ def adjust_location_inventory(
                         f"from {item.name}. "
                         f"Current location stock is "
                         f"{current_quantity}."
-                    )
-                )
-
-            if not inventory:
-
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "No inventory exists for this "
-                        "item at the selected location."
-                    )
+                    ),
                 )
 
             inventory.quantity = (
@@ -637,8 +662,6 @@ def adjust_location_inventory(
 
         # ======================================================
         # 9. POSITIVE ADJUSTMENT
-        #
-        # +10 means add 10.
         # ======================================================
 
         else:
@@ -656,29 +679,21 @@ def adjust_location_inventory(
 
                 inventory = (
                     location_models.LocationInventory(
-
                         business_id=effective_business_id,
-
                         location_id=location_id,
-
                         item_id=item_id,
-
                         opening_quantity=0,
-
                         quantity=qty,
-
                         unit_price=(
                             item.unit_price
                             if item.unit_price is not None
                             else 0
                         ),
-
                         received_at=now_wat(),
-
                         note=(
                             "Created through "
                             "location inventory adjustment"
-                        )
+                        ),
                     )
                 )
 
@@ -687,27 +702,19 @@ def adjust_location_inventory(
                 remaining_quantity = qty
 
         # ======================================================
-        # 10. CREATE ADJUSTMENT RECORD
+        # 10. CREATE ADJUSTMENT
         # ======================================================
 
         adjustment = (
             catering_models.LocationInventoryAdjustment(
-
                 business_id=effective_business_id,
-
                 location_id=location_id,
-
                 item_id=item_id,
-
                 quantity_adjusted=qty,
-
                 remaining_quantity=remaining_quantity,
-
                 reason=adjustment_data.reason,
-
                 adjusted_by=current_user.username,
-
-                adjusted_at=now_wat()
+                adjusted_at=now_wat(),
             )
         )
 
@@ -718,24 +725,21 @@ def adjust_location_inventory(
         # ======================================================
 
         db.commit()
-
         db.refresh(adjustment)
 
         # ======================================================
-        # 12. RETURN
+        # 12. RESPONSE
         # ======================================================
 
         return (
-            catering_schemas.LocationInventoryAdjustmentDisplay(
-
+            location_schemas
+            .LocationInventoryAdjustmentDisplay(
                 id=adjustment.id,
 
                 location_id=location.id,
-
                 location_name=location.name,
 
                 item_id=item.id,
-
                 item_name=item.name,
 
                 unit=item.unit,
@@ -765,13 +769,10 @@ def adjust_location_inventory(
         )
 
     except HTTPException:
-
         db.rollback()
-
         raise
 
     except Exception as e:
-
         db.rollback()
 
         raise HTTPException(
@@ -779,9 +780,10 @@ def adjust_location_inventory(
             detail=(
                 "Location inventory adjustment failed: "
                 f"{str(e)}"
-            )
+            ),
         )
 
+    
 
 # ==========================================================
 # LIST LOCATION INVENTORY ADJUSTMENTS
@@ -791,36 +793,48 @@ def adjust_location_inventory(
     "/location/adjustments",
     response_model=list[
         catering_schemas.LocationInventoryAdjustmentDisplay
-    ]
+    ],
 )
 def list_location_inventory_adjustments(
-
-    location_id: Optional[int] = Query(
-        None
-    ),
-
-    item_id: Optional[int] = Query(
-        None
-    ),
-
-    start_date: Optional[datetime] = Query(
-        None
-    ),
-
-    end_date: Optional[datetime] = Query(
-        None
-    ),
-
+    location_id: Optional[int] = Query(None),
+    item_id: Optional[int] = Query(None),
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
     business_id: Optional[int] = Query(
-        None
+        None,
+        description="Super Admin can specify business",
     ),
 
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required(USER_MANAGEMENT_ROLES1)
-    )
+    ),
 ):
+    """
+    List location inventory adjustment history.
+
+    Business rules:
+
+    Super Admin:
+        - Must specify/select a business when required.
+        - Can view adjustments for that business.
+        - Can filter by location and item.
+
+    Business users:
+        - Can only view adjustments belonging to their business.
+
+    Camp Boss:
+        - Can only view adjustments for their assigned location.
+        - Any location_id supplied by the frontend is ignored.
+
+    Date filtering:
+        start_date:
+            Records from this datetime onward.
+
+        end_date:
+            Records up to this datetime.
+    """
 
     try:
 
@@ -830,14 +844,13 @@ def list_location_inventory_adjustments(
 
         effective_business_id = resolve_business_id(
             current_user,
-            business_id
+            business_id,
         )
 
-        if not effective_business_id:
-
+        if effective_business_id is None:
             raise HTTPException(
                 status_code=400,
-                detail="Business could not be determined."
+                detail="Business could not be determined.",
             )
 
         # ======================================================
@@ -857,10 +870,38 @@ def list_location_inventory_adjustments(
         )
 
         # ======================================================
-        # 3. LOCATION FILTER
+        # 3. CAMP BOSS LOCATION RESTRICTION
         # ======================================================
 
-        if location_id is not None:
+        if is_camp_boss(current_user):
+
+            user_location_id = current_user.location_id
+
+            if user_location_id is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "Camp Boss is not assigned "
+                        "to a location."
+                    ),
+                )
+
+            # --------------------------------------------------
+            # Ignore location_id supplied by frontend.
+            # --------------------------------------------------
+
+            query = query.filter(
+                catering_models
+                .LocationInventoryAdjustment
+                .location_id
+                == user_location_id
+            )
+
+        # ======================================================
+        # 4. LOCATION FILTER
+        # ======================================================
+
+        elif location_id is not None:
 
             query = query.filter(
                 catering_models
@@ -870,7 +911,7 @@ def list_location_inventory_adjustments(
             )
 
         # ======================================================
-        # 4. ITEM FILTER
+        # 5. ITEM FILTER
         # ======================================================
 
         if item_id is not None:
@@ -883,10 +924,10 @@ def list_location_inventory_adjustments(
             )
 
         # ======================================================
-        # 5. START DATE
+        # 6. START DATE FILTER
         # ======================================================
 
-        if start_date:
+        if start_date is not None:
 
             query = query.filter(
                 catering_models
@@ -896,10 +937,10 @@ def list_location_inventory_adjustments(
             )
 
         # ======================================================
-        # 6. END DATE
+        # 7. END DATE FILTER
         # ======================================================
 
-        if end_date:
+        if end_date is not None:
 
             query = query.filter(
                 catering_models
@@ -909,7 +950,7 @@ def list_location_inventory_adjustments(
             )
 
         # ======================================================
-        # 7. GET RECORDS
+        # 8. ORDER
         # ======================================================
 
         adjustments = (
@@ -923,18 +964,22 @@ def list_location_inventory_adjustments(
                 catering_models
                 .LocationInventoryAdjustment
                 .id
-                .desc()
+                .desc(),
             )
             .all()
         )
 
         # ======================================================
-        # 8. BUILD RESPONSE
+        # 9. BUILD RESPONSE
         # ======================================================
 
         results = []
 
         for adjustment in adjustments:
+
+            # --------------------------------------------------
+            # LOCATION
+            # --------------------------------------------------
 
             location = (
                 db.query(
@@ -945,10 +990,17 @@ def list_location_inventory_adjustments(
                     == adjustment.location_id,
 
                     location_models.Location.business_id
-                    == effective_business_id
+                    == effective_business_id,
                 )
                 .first()
             )
+
+            if not location:
+                continue
+
+            # --------------------------------------------------
+            # STORE ITEM
+            # --------------------------------------------------
 
             item = (
                 db.query(
@@ -959,14 +1011,17 @@ def list_location_inventory_adjustments(
                     == adjustment.item_id,
 
                     store_models.StoreItem.business_id
-                    == effective_business_id
+                    == effective_business_id,
                 )
                 .first()
             )
 
-            if not location or not item:
-
+            if not item:
                 continue
+
+            # --------------------------------------------------
+            # RESPONSE
+            # --------------------------------------------------
 
             results.append(
                 catering_schemas
@@ -1026,10 +1081,13 @@ def list_location_inventory_adjustments(
                 )
             )
 
+        # ======================================================
+        # 10. RETURN
+        # ======================================================
+
         return results
 
     except HTTPException:
-
         raise
 
     except Exception as e:
@@ -1040,8 +1098,9 @@ def list_location_inventory_adjustments(
                 "Failed to retrieve location "
                 "inventory adjustments: "
                 f"{str(e)}"
-            )
+            ),
         )
+
 
 
 
@@ -1051,10 +1110,9 @@ def list_location_inventory_adjustments(
 
 @router.put(
     "/location/adjustments/{adjustment_id}",
-    response_model=location_schemas.LocationInventoryAdjustmentDisplay
+    response_model=location_schemas.LocationInventoryAdjustmentDisplay,
 )
 def update_location_inventory_adjustment(
-
     adjustment_id: int,
 
     data:
@@ -1062,15 +1120,48 @@ def update_location_inventory_adjustment(
 
     business_id: Optional[int] = Query(
         None,
-        description="Super admin can specify business"
+        description="Super Admin can specify business",
     ),
 
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required(USER_MANAGEMENT_ROLES1)
-    )
+    ),
 ):
+    """
+    Update an existing location inventory adjustment.
+
+    Rules:
+
+    Super Admin:
+        - Can update an adjustment for the selected business.
+
+    Business users:
+        - Can only update adjustments belonging to their business.
+
+    Camp Boss:
+        - Can only update adjustments belonging to their
+          assigned location.
+        - Cannot move an adjustment to another location.
+        - Any location_id supplied by the frontend must match
+          their assigned location.
+
+    Inventory behavior:
+
+        Positive adjustment:
+            Adds stock.
+
+        Negative adjustment:
+            Removes stock.
+
+    When editing:
+        1. Reverse the original adjustment.
+        2. Validate the new location/item.
+        3. Apply the new adjustment.
+        4. Update the adjustment record.
+        5. Commit everything together.
+    """
 
     try:
 
@@ -1080,18 +1171,17 @@ def update_location_inventory_adjustment(
 
         effective_business_id = resolve_business_id(
             current_user,
-            business_id
+            business_id,
         )
 
-        if not effective_business_id:
-
+        if effective_business_id is None:
             raise HTTPException(
                 status_code=400,
-                detail="Business could not be determined."
+                detail="Business could not be determined.",
             )
 
         # ======================================================
-        # 2. GET ADJUSTMENT
+        # 2. LOCK ADJUSTMENT
         # ======================================================
 
         adjustment = (
@@ -1108,20 +1198,105 @@ def update_location_inventory_adjustment(
                 catering_models
                 .LocationInventoryAdjustment
                 .business_id
-                == effective_business_id
+                == effective_business_id,
             )
+            .with_for_update()
             .first()
         )
 
         if not adjustment:
-
             raise HTTPException(
                 status_code=404,
-                detail="Adjustment not found."
+                detail="Adjustment not found.",
             )
 
         # ======================================================
-        # 3. VALIDATE NEW LOCATION
+        # 3. CAMP BOSS LOCATION RESTRICTION
+        # ======================================================
+
+        if is_camp_boss(current_user):
+
+            user_location_id = current_user.location_id
+
+            if user_location_id is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "Camp Boss is not assigned "
+                        "to a location."
+                    ),
+                )
+
+            # --------------------------------------------------
+            # Existing adjustment must belong to Camp Boss
+            # location.
+            # --------------------------------------------------
+
+            if adjustment.location_id != user_location_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "You can only update adjustments "
+                        "belonging to your assigned location."
+                    ),
+                )
+
+            # --------------------------------------------------
+            # Ignore/match frontend location.
+            # Camp Boss cannot move adjustment elsewhere.
+            # --------------------------------------------------
+
+            if data.location_id != user_location_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "Camp Boss cannot move an adjustment "
+                        "to another location."
+                    ),
+                )
+
+        # ======================================================
+        # 4. GET OLD VALUES
+        # ======================================================
+
+        old_location_id = adjustment.location_id
+        old_item_id = adjustment.item_id
+        old_qty = float(
+            adjustment.quantity_adjusted or 0
+        )
+
+        # ======================================================
+        # 5. VALIDATE NEW QUANTITY
+        # ======================================================
+
+        new_qty = float(
+            data.quantity_adjusted
+        )
+
+        if new_qty == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Adjustment cannot be zero.",
+            )
+
+        # ======================================================
+        # 6. DETERMINE NEW LOCATION
+        # ======================================================
+
+        new_location_id = data.location_id
+
+        # ------------------------------------------------------
+        # Camp Boss is forced to assigned location.
+        # ------------------------------------------------------
+
+        if is_camp_boss(current_user):
+
+            new_location_id = (
+                current_user.location_id
+            )
+
+        # ======================================================
+        # 7. VALIDATE NEW LOCATION
         # ======================================================
 
         new_location = (
@@ -1130,26 +1305,25 @@ def update_location_inventory_adjustment(
             )
             .filter(
                 location_models.Location.id
-                == data.location_id,
+                == new_location_id,
 
                 location_models.Location.business_id
                 == effective_business_id,
 
                 location_models.Location.status
-                == "active"
+                == "active",
             )
             .first()
         )
 
         if not new_location:
-
             raise HTTPException(
                 status_code=404,
-                detail="Location not found or inactive."
+                detail="Location not found or inactive.",
             )
 
         # ======================================================
-        # 4. VALIDATE NEW ITEM
+        # 8. VALIDATE NEW ITEM
         # ======================================================
 
         new_item = (
@@ -1161,35 +1335,19 @@ def update_location_inventory_adjustment(
                 == data.item_id,
 
                 store_models.StoreItem.business_id
-                == effective_business_id
+                == effective_business_id,
             )
             .first()
         )
 
         if not new_item:
-
             raise HTTPException(
                 status_code=404,
-                detail="Item not found."
+                detail="Item not found.",
             )
 
         # ======================================================
-        # 5. VALIDATE NEW QUANTITY
-        # ======================================================
-
-        new_qty = float(
-            data.quantity_adjusted
-        )
-
-        if new_qty == 0:
-
-            raise HTTPException(
-                status_code=400,
-                detail="Adjustment cannot be zero."
-            )
-
-        # ======================================================
-        # 6. GET OLD INVENTORY
+        # 9. LOCK OLD INVENTORY
         # ======================================================
 
         old_inventory = (
@@ -1198,33 +1356,29 @@ def update_location_inventory_adjustment(
             )
             .filter(
                 location_models.LocationInventory.location_id
-                == adjustment.location_id,
+                == old_location_id,
 
                 location_models.LocationInventory.item_id
-                == adjustment.item_id,
+                == old_item_id,
 
                 location_models.LocationInventory.business_id
-                == effective_business_id
+                == effective_business_id,
             )
+            .with_for_update()
             .first()
         )
 
         if not old_inventory:
-
             raise HTTPException(
                 status_code=400,
                 detail=(
                     "The inventory record associated with "
                     "this adjustment no longer exists."
-                )
+                ),
             )
 
-        old_qty = float(
-            adjustment.quantity_adjusted
-        )
-
         # ======================================================
-        # 7. REVERSE OLD ADJUSTMENT
+        # 10. REVERSE OLD ADJUSTMENT
         # ======================================================
 
         if old_qty > 0:
@@ -1234,8 +1388,8 @@ def update_location_inventory_adjustment(
             )
 
             # --------------------------------------------------
-            # If the added quantity has already been consumed,
-            # don't allow changing the adjustment.
+            # The positive adjustment may have already been
+            # partially consumed.
             # --------------------------------------------------
 
             if old_remaining < old_qty:
@@ -1252,20 +1406,40 @@ def update_location_inventory_adjustment(
                         f"{used_quantity} unit(s) from the "
                         "original adjustment have already "
                         "been used."
-                    )
+                    ),
                 )
 
+            current_old_quantity = float(
+                old_inventory.quantity or 0
+            )
+
+            if old_qty > current_old_quantity:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Cannot reverse the original "
+                        "adjustment because the current "
+                        "inventory is lower than the "
+                        "original adjustment quantity."
+                    ),
+                )
+
+            # --------------------------------------------------
+            # Remove the original positive adjustment.
+            # --------------------------------------------------
+
             old_inventory.quantity = (
-                float(old_inventory.quantity or 0)
+                current_old_quantity
                 - old_qty
             )
 
         else:
 
             # --------------------------------------------------
-            # Old negative adjustment removed stock.
+            # Original adjustment was negative.
             #
-            # Restore that stock.
+            # It removed stock, so reversing it means
+            # returning that stock.
             # --------------------------------------------------
 
             old_inventory.quantity = (
@@ -1274,35 +1448,52 @@ def update_location_inventory_adjustment(
             )
 
         # ======================================================
-        # 8. VALIDATE NEW TARGET INVENTORY
+        # 11. GET NEW INVENTORY
         # ======================================================
 
-        new_inventory = (
-            db.query(
-                location_models.LocationInventory
-            )
-            .filter(
-                location_models.LocationInventory.location_id
-                == data.location_id,
+        # ------------------------------------------------------
+        # If old and new point to the same inventory row,
+        # old_inventory is already locked and can be reused.
+        # ------------------------------------------------------
 
-                location_models.LocationInventory.item_id
-                == data.item_id,
+        if (
+            old_location_id == new_location_id
+            and old_item_id == data.item_id
+        ):
 
-                location_models.LocationInventory.business_id
-                == effective_business_id
+            new_inventory = old_inventory
+
+        else:
+
+            new_inventory = (
+                db.query(
+                    location_models.LocationInventory
+                )
+                .filter(
+                    location_models.LocationInventory.location_id
+                    == new_location_id,
+
+                    location_models.LocationInventory.item_id
+                    == data.item_id,
+
+                    location_models.LocationInventory.business_id
+                    == effective_business_id,
+                )
+                .with_for_update()
+                .first()
             )
-            .first()
-        )
 
         # ======================================================
-        # 9. APPLY NEW ADJUSTMENT
+        # 12. APPLY NEW ADJUSTMENT
         # ======================================================
 
         if new_qty < 0:
 
-            quantity_to_remove = abs(
-                new_qty
-            )
+            # --------------------------------------------------
+            # NEGATIVE ADJUSTMENT
+            # --------------------------------------------------
+
+            quantity_to_remove = abs(new_qty)
 
             available_quantity = float(
                 new_inventory.quantity
@@ -1310,10 +1501,16 @@ def update_location_inventory_adjustment(
                 else 0
             )
 
-            if (
-                quantity_to_remove
-                > available_quantity
-            ):
+            if not new_inventory:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "No inventory exists for this item "
+                        "at the selected location."
+                    ),
+                )
+
+            if quantity_to_remove > available_quantity:
 
                 raise HTTPException(
                     status_code=400,
@@ -1322,17 +1519,8 @@ def update_location_inventory_adjustment(
                         f"{quantity_to_remove} units "
                         f"from {new_item.name}. "
                         f"Available at location: "
-                        f"{available_quantity}"
-                    )
-                )
-
-            if not new_inventory:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "No inventory exists for this item "
-                        "at the selected location."
-                    )
+                        f"{available_quantity}."
+                    ),
                 )
 
             new_inventory.quantity = (
@@ -1344,12 +1532,15 @@ def update_location_inventory_adjustment(
 
         else:
 
+            # --------------------------------------------------
+            # POSITIVE ADJUSTMENT
+            # --------------------------------------------------
+
             if new_inventory:
 
                 new_inventory.quantity = (
                     float(
-                        new_inventory.quantity
-                        or 0
+                        new_inventory.quantity or 0
                     )
                     + new_qty
                 )
@@ -1358,13 +1549,12 @@ def update_location_inventory_adjustment(
 
                 new_inventory = (
                     location_models.LocationInventory(
-
                         business_id=(
                             effective_business_id
                         ),
 
                         location_id=(
-                            data.location_id
+                            new_location_id
                         ),
 
                         item_id=(
@@ -1387,7 +1577,7 @@ def update_location_inventory_adjustment(
                         note=(
                             "Created through "
                             "location inventory adjustment"
-                        )
+                        ),
                     )
                 )
 
@@ -1396,11 +1586,11 @@ def update_location_inventory_adjustment(
             new_remaining_quantity = new_qty
 
         # ======================================================
-        # 10. UPDATE ADJUSTMENT RECORD
+        # 13. UPDATE ADJUSTMENT RECORD
         # ======================================================
 
         adjustment.location_id = (
-            data.location_id
+            new_location_id
         )
 
         adjustment.item_id = (
@@ -1431,10 +1621,14 @@ def update_location_inventory_adjustment(
             effective_business_id
         )
 
-        db.add(adjustment)
+        # ======================================================
+        # 14. FLUSH
+        # ======================================================
+
+        db.flush()
 
         # ======================================================
-        # 11. COMMIT
+        # 15. COMMIT EVERYTHING
         # ======================================================
 
         db.commit()
@@ -1442,7 +1636,7 @@ def update_location_inventory_adjustment(
         db.refresh(adjustment)
 
         # ======================================================
-        # 12. RETURN
+        # 16. RETURN UPDATED ADJUSTMENT
         # ======================================================
 
         return (
@@ -1506,7 +1700,6 @@ def update_location_inventory_adjustment(
     except HTTPException:
 
         db.rollback()
-
         raise
 
     except Exception as e:
@@ -1518,8 +1711,9 @@ def update_location_inventory_adjustment(
             detail=(
                 "Failed to update location "
                 f"adjustment: {str(e)}"
-            )
+            ),
         )
+
 
 
 # ==========================================================
@@ -1530,20 +1724,19 @@ def update_location_inventory_adjustment(
     "/location/adjustments/{adjustment_id}"
 )
 def delete_location_inventory_adjustment(
-
     adjustment_id: int,
 
     business_id: Optional[int] = Query(
-        None
+        None,
+        description="Super admin can specify business"
     ),
 
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required(USER_MANAGEMENT_ROLES1)
-    )
+    ),
 ):
-
     try:
 
         # ======================================================
@@ -1552,24 +1745,22 @@ def delete_location_inventory_adjustment(
 
         effective_business_id = resolve_business_id(
             current_user,
-            business_id
+            business_id,
         )
 
         if not effective_business_id:
-
             raise HTTPException(
                 status_code=400,
-                detail="Business could not be determined."
+                detail="Business could not be determined.",
             )
 
         # ======================================================
-        # 2. FIND ADJUSTMENT
+        # 2. GET AND LOCK ADJUSTMENT
         # ======================================================
 
         adjustment = (
             db.query(
-                catering_models
-                .LocationInventoryAdjustment
+                catering_models.LocationInventoryAdjustment
             )
             .filter(
                 catering_models
@@ -1580,20 +1771,20 @@ def delete_location_inventory_adjustment(
                 catering_models
                 .LocationInventoryAdjustment
                 .business_id
-                == effective_business_id
+                == effective_business_id,
             )
+            .with_for_update()
             .first()
         )
 
         if not adjustment:
-
             raise HTTPException(
                 status_code=404,
-                detail="Adjustment not found."
+                detail="Adjustment not found.",
             )
 
         # ======================================================
-        # 3. GET INVENTORY
+        # 3. GET AND LOCK INVENTORY
         # ======================================================
 
         inventory = (
@@ -1601,55 +1792,92 @@ def delete_location_inventory_adjustment(
                 location_models.LocationInventory
             )
             .filter(
-                location_models.LocationInventory.location_id
+                location_models
+                .LocationInventory.location_id
                 == adjustment.location_id,
 
-                location_models.LocationInventory.item_id
+                location_models
+                .LocationInventory.item_id
                 == adjustment.item_id,
 
-                location_models.LocationInventory.business_id
-                == effective_business_id
+                location_models
+                .LocationInventory.business_id
+                == effective_business_id,
             )
+            .with_for_update()
             .first()
         )
 
         if not inventory:
-
             raise HTTPException(
                 status_code=400,
                 detail=(
                     "Location inventory record "
-                    "no longer exists."
-                )
+                    "no longer exists. "
+                    "The adjustment cannot be safely deleted."
+                ),
             )
+
+        # ======================================================
+        # 4. GET CURRENT QUANTITY
+        # ======================================================
 
         current_quantity = float(
             inventory.quantity or 0
         )
 
-        adjustment_qty = float(
+        adjustment_quantity = float(
             adjustment.quantity_adjusted
         )
 
         # ======================================================
-        # 4. POSITIVE ADJUSTMENT
-        #
-        # +10 added 10.
-        #
-        # We can only delete it if the entire 10 units
-        # are still available.
+        # 5. VALIDATE ADJUSTMENT
         # ======================================================
 
-        if adjustment_qty > 0:
+        if adjustment_quantity == 0:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid adjustment. "
+                    "Adjustment quantity cannot be zero."
+                ),
+            )
+
+        # ======================================================
+        # 6. POSITIVE ADJUSTMENT
+        #
+        # Example:
+        #
+        # Adjustment: +10
+        #
+        # Original stock:
+        # 50
+        #
+        # After adjustment:
+        # 60
+        #
+        # To delete the adjustment:
+        # 60 - 10 = 50
+        #
+        # BUT:
+        # If some of those 10 units have already been used,
+        # the adjustment must not be deleted.
+        # ======================================================
+
+        if adjustment_quantity > 0:
 
             remaining_quantity = float(
                 adjustment.remaining_quantity or 0
             )
 
-            if remaining_quantity < adjustment_qty:
+            # --------------------------------------------------
+            # CHECK WHETHER ADJUSTED STOCK WAS USED
+            # --------------------------------------------------
+
+            if remaining_quantity < adjustment_quantity:
 
                 used_quantity = (
-                    adjustment_qty
+                    adjustment_quantity
                     - remaining_quantity
                 )
 
@@ -1658,40 +1886,56 @@ def delete_location_inventory_adjustment(
                     detail=(
                         "Cannot delete this adjustment "
                         "because "
-                        f"{used_quantity} unit(s) have "
-                        "already been used."
-                    )
+                        f"{used_quantity} unit(s) from the "
+                        "adjustment have already been used."
+                    ),
                 )
 
-            if current_quantity < adjustment_qty:
+            # --------------------------------------------------
+            # CHECK CURRENT STOCK
+            # --------------------------------------------------
+
+            if current_quantity < adjustment_quantity:
 
                 raise HTTPException(
                     status_code=400,
                     detail=(
                         "Cannot delete this adjustment "
-                        "because the current location "
-                        "stock is insufficient to "
-                        "reverse it."
-                    )
+                        "because the current location stock "
+                        "is insufficient to reverse it."
+                    ),
                 )
+
+            # --------------------------------------------------
+            # REMOVE THE ADDED STOCK
+            # --------------------------------------------------
 
             inventory.quantity = (
                 current_quantity
-                - adjustment_qty
+                - adjustment_quantity
             )
 
         # ======================================================
-        # 5. NEGATIVE ADJUSTMENT
+        # 7. NEGATIVE ADJUSTMENT
         #
-        # -10 removed 10.
+        # Example:
         #
-        # Delete means restore the 10.
+        # Adjustment: -10
+        #
+        # Original stock:
+        # 50
+        #
+        # After adjustment:
+        # 40
+        #
+        # Deleting adjustment:
+        # 40 + 10 = 50
         # ======================================================
 
         else:
 
             quantity_to_restore = abs(
-                adjustment_qty
+                adjustment_quantity
             )
 
             inventory.quantity = (
@@ -1700,54 +1944,79 @@ def delete_location_inventory_adjustment(
             )
 
         # ======================================================
-        # 6. SAVE INFORMATION
+        # 8. SAVE RESPONSE DATA BEFORE DELETE
         # ======================================================
 
-        item_id = adjustment.item_id
+        deleted_adjustment_id = adjustment.id
 
-        location_id = adjustment.location_id
+        deleted_location_id = (
+            adjustment.location_id
+        )
 
-        quantity_adjusted = (
+        deleted_item_id = (
+            adjustment.item_id
+        )
+
+        deleted_quantity = (
             adjustment.quantity_adjusted
         )
 
         # ======================================================
-        # 7. DELETE ADJUSTMENT
+        # 9. DELETE ADJUSTMENT
         # ======================================================
 
         db.delete(adjustment)
 
         # ======================================================
-        # 8. COMMIT
+        # 10. COMMIT EVERYTHING
         # ======================================================
 
         db.commit()
 
         # ======================================================
-        # 9. RESPONSE
+        # 11. RESPONSE
         # ======================================================
 
         return {
             "message": (
-                "Location adjustment deleted successfully."
+                "Location inventory adjustment "
+                "deleted successfully."
             ),
 
-            "adjustment_id": adjustment_id,
+            "adjustment_id": (
+                deleted_adjustment_id
+            ),
 
-            "location_id": location_id,
+            "location_id": (
+                deleted_location_id
+            ),
 
-            "item_id": item_id,
+            "item_id": (
+                deleted_item_id
+            ),
 
-            "quantity_adjusted": quantity_adjusted,
+            "quantity_adjusted": (
+                deleted_quantity
+            ),
 
-            "business_id": effective_business_id,
+            "business_id": (
+                effective_business_id
+            ),
         }
+
+    # ==========================================================
+    # HTTP ERROR
+    # ==========================================================
 
     except HTTPException:
 
         db.rollback()
 
         raise
+
+    # ==========================================================
+    # UNEXPECTED ERROR
+    # ==========================================================
 
     except Exception as e:
 
@@ -1757,10 +2026,11 @@ def delete_location_inventory_adjustment(
             status_code=500,
             detail=(
                 "Failed to delete location "
-                f"adjustment: {str(e)}"
-            )
+                f"inventory adjustment: {str(e)}"
+            ),
         )
 
+    
 
 # ==========================================================
 # LOCATION STOCK BALANCE
@@ -1770,396 +2040,234 @@ def delete_location_inventory_adjustment(
     "/location-balance-stock",
     response_model=list[
         location_schemas.LocationStockBalance
-    ]
+    ],
 )
 def get_location_stock_balance(
     location_id: Optional[int] = Query(
         None,
-        description="Filter by location"
+        description="Filter by location",
     ),
 
     item_id: Optional[int] = Query(
         None,
-        description="Filter by item"
+        description="Filter by item",
     ),
 
     category_id: Optional[int] = Query(
         None,
-        description="Filter by category"
+        description="Filter by category ID",
     ),
 
     item_type: Optional[str] = Query(
         None,
-        description="Filter by item type"
+        description="Filter by item type",
     ),
 
     search: Optional[str] = Query(
         None,
-        description="Search by item, category or location"
+        description="Search by item, category or location",
     ),
 
     business_id: Optional[int] = Query(
         None,
-        description="Business ID (Super Admin only)"
+        description="Business ID (Super Admin only)",
     ),
 
     db: Session = Depends(get_db),
 
     current_user: user_schemas.UserDisplaySchema = Depends(
         role_required(USER_MANAGEMENT_ROLES1)
-    )
+    ),
 ):
 
     try:
 
-        # ==========================================================
+        # ======================================================
         # 1. RESOLVE BUSINESS
-        #
-        # Do NOT use resolve_business_id() here because your
-        # current user.roles contains RoleSimple objects.
-        #
-        # Business users are automatically restricted to their
-        # own business.
-        #
-        # Super Admin has business_id == None and must provide
-        # business_id when viewing a specific business.
-        # ==========================================================
+        # ======================================================
 
-        if current_user.business_id is not None:
+        effective_business_id = resolve_business_id(
+            current_user,
+            business_id,
+        )
 
-            effective_business_id = current_user.business_id
+        if effective_business_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business could not be determined.",
+            )
+
+        # ======================================================
+        # 2. DETERMINE CAMP BOSS
+        # ======================================================
+
+        camp_boss = is_camp_boss(
+            current_user
+        )
+
+        # ======================================================
+        # 3. DETERMINE EFFECTIVE LOCATION
+        # ======================================================
+
+        if camp_boss:
+
+            if current_user.location_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=(
+                        "Camp Boss is not assigned "
+                        "to a location."
+                    ),
+                )
+
+            # Camp Boss can NEVER override location
+            # from the frontend.
+            effective_location_id = int(
+                current_user.location_id
+            )
 
         else:
 
-            if business_id is None:
+            effective_location_id = (
+                int(location_id)
+                if location_id is not None
+                else None
+            )
 
+        # ======================================================
+        # DEBUG
+        # ======================================================
+
+        print(
+            "\n=============================================="
+        )
+        print(
+            " LOCATION STOCK BALANCE"
+        )
+        print(
+            "=============================================="
+        )
+
+        print(
+            "USERNAME:",
+            getattr(
+                current_user,
+                "username",
+                None,
+            ),
+        )
+
+        print(
+            "BUSINESS:",
+            effective_business_id,
+        )
+
+        print(
+            "USER BUSINESS:",
+            getattr(
+                current_user,
+                "business_id",
+                None,
+            ),
+        )
+
+        print(
+            "CAMP BOSS:",
+            camp_boss,
+        )
+
+        print(
+            "REQUEST LOCATION:",
+            location_id,
+        )
+
+        print(
+            "EFFECTIVE LOCATION:",
+            effective_location_id,
+        )
+
+        print(
+            "ITEM ID:",
+            item_id,
+        )
+
+        print(
+            "CATEGORY ID:",
+            category_id,
+        )
+
+        print(
+            "ITEM TYPE:",
+            item_type,
+        )
+
+        print(
+            "SEARCH:",
+            search,
+        )
+
+        print(
+            "==============================================\n"
+        )
+
+        # ======================================================
+        # 4. VALIDATE LOCATION
+        # ======================================================
+
+        if effective_location_id is not None:
+
+            location_exists = (
+                db.query(
+                    location_models.Location
+                )
+                .filter(
+                    location_models.Location.id
+                    == effective_location_id,
+
+                    location_models.Location.business_id
+                    == effective_business_id,
+                )
+                .first()
+            )
+
+            if not location_exists:
                 raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "business_id is required for "
-                        "Super Admin."
-                    )
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Location not found.",
                 )
 
-            effective_business_id = business_id
-
-        # ==========================================================
-        # 2. OPENING STOCK
+        # ======================================================
+        # 5. VALIDATE CATEGORY
         #
-        # Opening stock is now stored directly on
-        # LocationInventory.opening_quantity.
-        #
-        # We keep it per:
-        #
-        #     location + item
-        # ==========================================================
+        # This makes sure the category belongs to the current
+        # business before using it as a filter.
+        # ======================================================
 
-        opening_query = (
-            db.query(
-                location_models.LocationInventory.location_id,
+        if category_id is not None:
 
-                location_models.LocationInventory.item_id,
-
-                func.coalesce(
-                    location_models.LocationInventory.opening_quantity,
-                    0
-                ).label(
-                    "opening_stock"
+            category_exists = (
+                db.query(
+                    store_models.StoreCategory
                 )
-            )
-            .filter(
-                location_models.LocationInventory.business_id
-                == effective_business_id
-            )
-            .all()
-        )
+                .filter(
+                    store_models.StoreCategory.id
+                    == category_id,
 
-        opening_map = {
-
-            (
-                row.location_id,
-                row.item_id
-            ): float(
-                row.opening_stock or 0
-            )
-
-            for row in opening_query
-        }
-
-        # ==========================================================
-        # 3. TOTAL RECEIVED
-        #
-        # Stock received by the location from the central store.
-        #
-        # StoreIssue
-        #     -> StoreIssueItem
-        #
-        # Every quantity issued to a location is received by that
-        # location.
-        # ==========================================================
-
-        received_query = (
-            db.query(
-
-                store_models.StoreIssue.location_id.label(
-                    "location_id"
-                ),
-
-                store_models.StoreIssueItem.item_id.label(
-                    "item_id"
-                ),
-
-                func.coalesce(
-                    func.sum(
-                        store_models.StoreIssueItem.quantity
-                    ),
-                    0
-                ).label(
-                    "total_received"
+                    store_models.StoreCategory.business_id
+                    == effective_business_id,
                 )
+                .first()
             )
 
-            .join(
-                store_models.StoreIssue,
-
-                store_models.StoreIssue.id
-                ==
-                store_models.StoreIssueItem.issue_id
-            )
-
-            .filter(
-                store_models.StoreIssue.business_id
-                == effective_business_id
-            )
-
-            .group_by(
-                store_models.StoreIssue.location_id,
-
-                store_models.StoreIssueItem.item_id
-            )
-
-            .all()
-        )
-
-        received_map = {
-
-            (
-                row.location_id,
-                row.item_id
-            ): float(
-                row.total_received or 0
-            )
-
-            for row in received_query
-        }
-
-        # ==========================================================
-        # 4. TOTAL ADJUSTED
-        #
-        # Adjustment convention:
-        #
-        #   +10 = ADD 10 STOCK
-        #   -10 = REMOVE 10 STOCK
-        #
-        # Therefore SUM(quantity_adjusted) gives the NET
-        # adjustment effect.
-        # ==========================================================
-
-        adjustment_query = (
-            db.query(
-
-                catering_models
-                .LocationInventoryAdjustment
-                .location_id
-                .label("location_id"),
-
-                catering_models
-                .LocationInventoryAdjustment
-                .item_id
-                .label("item_id"),
-
-                func.coalesce(
-                    func.sum(
-                        catering_models
-                        .LocationInventoryAdjustment
-                        .quantity_adjusted
-                    ),
-                    0
-                ).label(
-                    "total_adjusted"
+            if not category_exists:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Category not found.",
                 )
-            )
 
-            .filter(
-                catering_models
-                .LocationInventoryAdjustment
-                .business_id
-                == effective_business_id
-            )
-
-            .group_by(
-                catering_models
-                .LocationInventoryAdjustment
-                .location_id,
-
-                catering_models
-                .LocationInventoryAdjustment
-                .item_id
-            )
-
-            .all()
-        )
-
-        adjustment_map = {
-
-            (
-                row.location_id,
-                row.item_id
-            ): float(
-                row.total_adjusted or 0
-            )
-
-            for row in adjustment_query
-        }
-
-        # ==========================================================
-        # 5. TOTAL USED / CONSUMED
-        #
-        # Catering usage represents stock consumed at a location.
-        #
-        # Only non-voided usage is counted.
-        # ==========================================================
-
-        usage_query = (
-            db.query(
-
-                catering_models
-                .CateringUsageItem
-                .location_id
-                .label("location_id"),
-
-                catering_models
-                .CateringUsageItem
-                .item_id
-                .label("item_id"),
-
-                func.coalesce(
-                    func.sum(
-                        catering_models
-                        .CateringUsageItem
-                        .quantity_used
-                    ),
-                    0
-                ).label(
-                    "total_used"
-                )
-            )
-
-            .join(
-                catering_models.CateringUsage,
-
-                catering_models.CateringUsage.id
-                ==
-                catering_models.CateringUsageItem.usage_id
-            )
-
-            .filter(
-                catering_models
-                .CateringUsage
-                .business_id
-                ==
-                effective_business_id,
-
-                catering_models
-                .CateringUsage
-                .status
-                !=
-                "voided"
-            )
-
-            .group_by(
-                catering_models
-                .CateringUsageItem
-                .location_id,
-
-                catering_models
-                .CateringUsageItem
-                .item_id
-            )
-
-            .all()
-        )
-
-        used_map = {
-
-            (
-                row.location_id,
-                row.item_id
-            ): float(
-                row.total_used or 0
-            )
-
-            for row in usage_query
-        }
-
-        # ==========================================================
-        # 6. GET LOCATION INVENTORY
-        #
-        # This gives:
-        #
-        # - current quantity
-        # - location unit price
-        # - opening quantity
-        #
-        # We primarily use opening_quantity for the balance
-        # calculation and current quantity as a reference.
-        # ==========================================================
-
-        inventory_query = (
-            db.query(
-                location_models.LocationInventory
-            )
-            .filter(
-                location_models.LocationInventory.business_id
-                == effective_business_id
-            )
-        )
-
-        if location_id is not None:
-
-            inventory_query = inventory_query.filter(
-                location_models
-                .LocationInventory
-                .location_id
-                ==
-                location_id
-            )
-
-        if item_id is not None:
-
-            inventory_query = inventory_query.filter(
-                location_models
-                .LocationInventory
-                .item_id
-                ==
-                item_id
-            )
-
-        inventories = inventory_query.all()
-
-        inventory_map = {
-
-            (
-                inventory.location_id,
-                inventory.item_id
-            ): inventory
-
-            for inventory in inventories
-        }
-
-        # ==========================================================
-        # 7. GET LOCATIONS
-        # ==========================================================
+        # ======================================================
+        # 6. GET LOCATIONS
+        # ======================================================
 
         locations_query = (
             db.query(
@@ -2167,17 +2275,17 @@ def get_location_stock_balance(
             )
             .filter(
                 location_models.Location.business_id
-                ==
-                effective_business_id
+                == effective_business_id
             )
         )
 
-        if location_id is not None:
+        if effective_location_id is not None:
 
-            locations_query = locations_query.filter(
-                location_models.Location.id
-                ==
-                location_id
+            locations_query = (
+                locations_query.filter(
+                    location_models.Location.id
+                    == effective_location_id
+                )
             )
 
         locations = (
@@ -2188,9 +2296,9 @@ def get_location_stock_balance(
             .all()
         )
 
-        # ==========================================================
-        # 8. GET STORE ITEMS
-        # ==========================================================
+        # ======================================================
+        # 7. GET STORE ITEMS
+        # ======================================================
 
         items_query = (
             db.query(
@@ -2215,72 +2323,100 @@ def get_location_stock_balance(
                     "default_unit_price"
                 ),
 
+                store_models.StoreItem.category_id.label(
+                    "category_id"
+                ),
+
                 store_models.StoreCategory.name.label(
                     "category_name"
-                )
-            )
+                ),
 
+            )
             .outerjoin(
                 store_models.StoreCategory,
 
                 store_models.StoreItem.category_id
                 ==
-                store_models.StoreCategory.id
+                store_models.StoreCategory.id,
             )
-
             .filter(
                 store_models.StoreItem.business_id
-                ==
-                effective_business_id
+                == effective_business_id
             )
         )
 
-        # ==========================================================
-        # 9. ITEM FILTERS
-        # ==========================================================
+        # ======================================================
+        # 8. ITEM FILTER
+        # ======================================================
+
+        if item_id is not None:
+
+            items_query = items_query.filter(
+                store_models.StoreItem.id
+                == item_id
+            )
+
+        # ======================================================
+        # 9. CATEGORY FILTER
+        #
+        # IMPORTANT:
+        # category_id is an INTEGER.
+        #
+        # The frontend sends:
+        #
+        # category_id=5
+        #
+        # NOT:
+        #
+        # category_id=Beverages
+        # ======================================================
 
         if category_id is not None:
 
             items_query = items_query.filter(
                 store_models.StoreItem.category_id
-                ==
-                category_id
+                == category_id
             )
 
-        if item_type:
+        # ======================================================
+        # 10. ITEM TYPE FILTER
+        # ======================================================
+
+        if item_type and item_type.strip():
 
             items_query = items_query.filter(
                 func.lower(
                     store_models.StoreItem.item_type
                 )
                 ==
-                item_type.lower()
+                item_type.strip().lower()
             )
 
-        if item_id is not None:
+        # ======================================================
+        # 11. SEARCH FILTER
+        # ======================================================
 
-            items_query = items_query.filter(
-                store_models.StoreItem.id
-                ==
-                item_id
+        if search and search.strip():
+
+            search_value = (
+                f"%{search.strip()}%"
             )
 
-        if search:
-
-            search_value = f"%{search}%"
-
             items_query = items_query.filter(
-
-                store_models.StoreItem.name.ilike(
-                    search_value
+                (
+                    store_models.StoreItem.name
+                    .ilike(search_value)
                 )
-
                 |
-
-                store_models.StoreCategory.name.ilike(
-                    search_value
+                (
+                    store_models.StoreCategory.name
+                    .ilike(search_value)
                 )
             )
+
+        # ======================================================
+        # 12. GET ITEMS
+        # ======================================================
 
         items = (
             items_query
@@ -2290,9 +2426,381 @@ def get_location_stock_balance(
             .all()
         )
 
-        # ==========================================================
-        # 10. BUILD RESPONSE
-        # ==========================================================
+        # ======================================================
+        # 13. OPENING STOCK
+        # ======================================================
+
+        opening_query = (
+            db.query(
+
+                location_models.LocationInventory.location_id,
+
+                location_models.LocationInventory.item_id,
+
+                func.coalesce(
+                    location_models.LocationInventory.opening_quantity,
+                    0,
+                ).label(
+                    "opening_stock"
+                ),
+
+            )
+            .filter(
+                location_models.LocationInventory.business_id
+                == effective_business_id
+            )
+        )
+
+        if effective_location_id is not None:
+
+            opening_query = (
+                opening_query.filter(
+                    location_models.LocationInventory.location_id
+                    == effective_location_id
+                )
+            )
+
+        if item_id is not None:
+
+            opening_query = (
+                opening_query.filter(
+                    location_models.LocationInventory.item_id
+                    == item_id
+                )
+            )
+
+        opening_rows = (
+            opening_query.all()
+        )
+
+        opening_map = {
+            (
+                row.location_id,
+                row.item_id,
+            ):
+            float(
+                row.opening_stock or 0
+            )
+            for row in opening_rows
+        }
+
+        # ======================================================
+        # 14. RECEIVED STOCK
+        # ======================================================
+
+        received_query = (
+            db.query(
+
+                store_models.StoreIssue.location_id.label(
+                    "location_id"
+                ),
+
+                store_models.StoreIssueItem.item_id.label(
+                    "item_id"
+                ),
+
+                func.coalesce(
+                    func.sum(
+                        store_models.StoreIssueItem.quantity
+                    ),
+                    0,
+                ).label(
+                    "total_received"
+                ),
+
+            )
+            .join(
+                store_models.StoreIssue,
+
+                store_models.StoreIssue.id
+                ==
+                store_models.StoreIssueItem.issue_id,
+            )
+            .filter(
+                store_models.StoreIssue.business_id
+                == effective_business_id
+            )
+        )
+
+        if effective_location_id is not None:
+
+            received_query = (
+                received_query.filter(
+                    store_models.StoreIssue.location_id
+                    == effective_location_id
+                )
+            )
+
+        if item_id is not None:
+
+            received_query = (
+                received_query.filter(
+                    store_models.StoreIssueItem.item_id
+                    == item_id
+                )
+            )
+
+        received_rows = (
+            received_query
+            .group_by(
+                store_models.StoreIssue.location_id,
+
+                store_models.StoreIssueItem.item_id,
+            )
+            .all()
+        )
+
+        received_map = {
+            (
+                row.location_id,
+                row.item_id,
+            ):
+            float(
+                row.total_received or 0
+            )
+            for row in received_rows
+        }
+
+        # ======================================================
+        # 15. ADJUSTMENTS
+        # ======================================================
+
+        adjustment_query = (
+            db.query(
+
+                catering_models
+                .LocationInventoryAdjustment
+                .location_id
+                .label(
+                    "location_id"
+                ),
+
+                catering_models
+                .LocationInventoryAdjustment
+                .item_id
+                .label(
+                    "item_id"
+                ),
+
+                func.coalesce(
+                    func.sum(
+                        catering_models
+                        .LocationInventoryAdjustment
+                        .quantity_adjusted
+                    ),
+                    0,
+                ).label(
+                    "total_adjusted"
+                ),
+
+            )
+            .filter(
+                catering_models
+                .LocationInventoryAdjustment
+                .business_id
+                ==
+                effective_business_id
+            )
+        )
+
+        if effective_location_id is not None:
+
+            adjustment_query = (
+                adjustment_query.filter(
+                    catering_models
+                    .LocationInventoryAdjustment
+                    .location_id
+                    ==
+                    effective_location_id
+                )
+            )
+
+        if item_id is not None:
+
+            adjustment_query = (
+                adjustment_query.filter(
+                    catering_models
+                    .LocationInventoryAdjustment
+                    .item_id
+                    ==
+                    item_id
+                )
+            )
+
+        adjustment_rows = (
+            adjustment_query
+            .group_by(
+                catering_models
+                .LocationInventoryAdjustment
+                .location_id,
+
+                catering_models
+                .LocationInventoryAdjustment
+                .item_id,
+            )
+            .all()
+        )
+
+        adjustment_map = {
+            (
+                row.location_id,
+                row.item_id,
+            ):
+            float(
+                row.total_adjusted or 0
+            )
+            for row in adjustment_rows
+        }
+
+        # ======================================================
+        # 16. USED STOCK
+        # ======================================================
+
+        usage_query = (
+            db.query(
+
+                catering_models
+                .CateringUsageItem
+                .location_id
+                .label(
+                    "location_id"
+                ),
+
+                catering_models
+                .CateringUsageItem
+                .item_id
+                .label(
+                    "item_id"
+                ),
+
+                func.coalesce(
+                    func.sum(
+                        catering_models
+                        .CateringUsageItem
+                        .quantity_used
+                    ),
+                    0,
+                ).label(
+                    "total_used"
+                ),
+
+            )
+            .join(
+                catering_models.CateringUsage,
+
+                catering_models.CateringUsage.id
+                ==
+                catering_models.CateringUsageItem.usage_id,
+            )
+            .filter(
+
+                catering_models.CateringUsage.business_id
+                ==
+                effective_business_id,
+
+                catering_models.CateringUsage.status
+                !=
+                "voided",
+            )
+        )
+
+        if effective_location_id is not None:
+
+            usage_query = (
+                usage_query.filter(
+                    catering_models
+                    .CateringUsageItem
+                    .location_id
+                    ==
+                    effective_location_id
+                )
+            )
+
+        if item_id is not None:
+
+            usage_query = (
+                usage_query.filter(
+                    catering_models
+                    .CateringUsageItem
+                    .item_id
+                    ==
+                    item_id
+                )
+            )
+
+        usage_rows = (
+            usage_query
+            .group_by(
+                catering_models
+                .CateringUsageItem
+                .location_id,
+
+                catering_models
+                .CateringUsageItem
+                .item_id,
+            )
+            .all()
+        )
+
+        used_map = {
+            (
+                row.location_id,
+                row.item_id,
+            ):
+            float(
+                row.total_used or 0
+            )
+            for row in usage_rows
+        }
+
+        # ======================================================
+        # 17. LOCATION INVENTORY
+        # ======================================================
+
+        inventory_query = (
+            db.query(
+                location_models.LocationInventory
+            )
+            .filter(
+                location_models.LocationInventory.business_id
+                == effective_business_id
+            )
+        )
+
+        if effective_location_id is not None:
+
+            inventory_query = (
+                inventory_query.filter(
+                    location_models.LocationInventory.location_id
+                    == effective_location_id
+                )
+            )
+
+        if item_id is not None:
+
+            inventory_query = (
+                inventory_query.filter(
+                    location_models.LocationInventory.item_id
+                    == item_id
+                )
+            )
+
+        inventories = (
+            inventory_query.all()
+        )
+
+        inventory_map = {
+            (
+                inventory.location_id,
+                inventory.item_id,
+            ):
+            inventory
+            for inventory in inventories
+        }
+
+        # ======================================================
+        # 18. BUILD RESPONSE
+        # ======================================================
 
         response = []
 
@@ -2302,68 +2810,50 @@ def get_location_stock_balance(
 
                 key = (
                     location.id,
-                    item.item_id
+                    item.item_id,
                 )
 
-                inventory = inventory_map.get(key)
-
-                # ==================================================
-                # 10.1 MOVEMENT TOTALS
-                # ==================================================
-
-                opening_stock = opening_map.get(
-                    key,
-                    0
+                inventory = (
+                    inventory_map.get(key)
                 )
 
-                total_received = received_map.get(
-                    key,
-                    0
+                opening_stock = (
+                    opening_map.get(key, 0)
                 )
 
-                total_used = used_map.get(
-                    key,
-                    0
+                total_received = (
+                    received_map.get(key, 0)
                 )
 
-                total_adjusted = adjustment_map.get(
-                    key,
-                    0
+                total_adjusted = (
+                    adjustment_map.get(key, 0)
                 )
 
-                # ==================================================
-                # 10.2 ONLY SHOW ITEMS WITH ACTIVITY
-                #
-                # This prevents every StoreItem from appearing
-                # under every location.
-                # ==================================================
+                total_used = (
+                    used_map.get(key, 0)
+                )
+
+                # ------------------------------------------------
+                # Only show records with activity
+                # ------------------------------------------------
 
                 has_activity = (
-
                     inventory is not None
-
                     or opening_stock != 0
-
                     or total_received != 0
-
-                    or total_used != 0
-
                     or total_adjusted != 0
+                    or total_used != 0
                 )
 
                 if not has_activity:
-
                     continue
 
                 # ==================================================
-                # 10.3 CURRENT UNIT PRICE
-                #
-                # First use the location inventory price.
-                # Otherwise use the StoreItem default price.
+                # CURRENT UNIT PRICE
                 # ==================================================
 
                 if (
-                    inventory
+                    inventory is not None
                     and inventory.unit_price is not None
                 ):
 
@@ -2378,13 +2868,7 @@ def get_location_stock_balance(
                     )
 
                 # ==================================================
-                # 10.4 TRUE CURRENT BALANCE
-                #
-                # Opening
-                # + Received
-                # + Adjustments
-                # - Used
-                # = Balance
+                # BALANCE
                 # ==================================================
 
                 balance = (
@@ -2394,35 +2878,28 @@ def get_location_stock_balance(
                     - total_used
                 )
 
-                # ==================================================
-                # 10.5 PREVENT NEGATIVE DISPLAY
-                # ==================================================
-
                 if abs(balance) < 0.000001:
-
                     balance = 0
 
                 if balance < 0:
-
                     balance = 0
 
                 # ==================================================
-                # 10.6 TOTAL BALANCE VALUE
+                # TOTAL VALUE
                 # ==================================================
 
                 balance_total_amount = round(
                     balance
                     *
                     current_unit_price,
-                    2
+                    2,
                 )
 
                 # ==================================================
-                # 10.7 RESPONSE
+                # RESPONSE
                 # ==================================================
 
                 response.append(
-
                     location_schemas.LocationStockBalance(
 
                         location_id=location.id,
@@ -2432,6 +2909,8 @@ def get_location_stock_balance(
                         item_id=item.item_id,
 
                         item_name=item.item_name,
+
+                        category_id=item.category_id,
 
                         category_name=(
                             item.category_name
@@ -2444,27 +2923,27 @@ def get_location_stock_balance(
 
                         opening_stock=round(
                             opening_stock,
-                            4
+                            4,
                         ),
 
                         total_received=round(
                             total_received,
-                            4
-                        ),
-
-                        total_used=round(
-                            total_used,
-                            4
+                            4,
                         ),
 
                         total_adjusted=round(
                             total_adjusted,
-                            4
+                            4,
+                        ),
+
+                        total_used=round(
+                            total_used,
+                            4,
                         ),
 
                         balance=round(
                             balance,
-                            4
+                            4,
                         ),
 
                         current_unit_price=(
@@ -2477,22 +2956,76 @@ def get_location_stock_balance(
                     )
                 )
 
-        # ==========================================================
-        # 11. RETURN
-        # ==========================================================
+        # ======================================================
+        # 19. SORT
+        # ======================================================
+
+        response.sort(
+            key=lambda row: (
+                str(
+                    row.location_name or ""
+                ).lower(),
+
+                str(
+                    row.item_name or ""
+                ).lower(),
+            )
+        )
+
+        # ======================================================
+        # DEBUG
+        # ======================================================
+
+        print(
+            "LOCATION BALANCE RESULT COUNT:",
+            len(response),
+        )
+
+        if camp_boss:
+
+            print(
+                "CAMP BOSS LOCATION:",
+                effective_location_id,
+            )
+
+            print(
+                "RESULT LOCATIONS:",
+                sorted(
+                    {
+                        row.location_id
+                        for row in response
+                    }
+                ),
+            )
+
+        # ======================================================
+        # RETURN
+        # ======================================================
 
         return response
 
-    except HTTPException:
+    # ==========================================================
+    # HTTP ERROR
+    # ==========================================================
 
+    except HTTPException:
         raise
+
+    # ==========================================================
+    # UNEXPECTED ERROR
+    # ==========================================================
 
     except Exception as e:
 
+        print(
+            "LOCATION STOCK BALANCE ERROR:",
+            repr(e),
+        )
+
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=(
-                "Failed to retrieve location stock "
-                f"balance: {str(e)}"
-            )
+                "Failed to retrieve location "
+                f"stock balance: {str(e)}"
+            ),
         )

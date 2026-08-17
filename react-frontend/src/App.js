@@ -122,6 +122,8 @@ import StoreIssueRecord from "./components/catering/StoreIssueRecord";
 
 
 
+
+
 const App = () => {
   return (
     <Router>
@@ -205,9 +207,10 @@ const App = () => {
           />
 
           <Route
-            path="Locationstock-balance"
+            path="locationstock-balance"
             element={<LocationBalanceStock />}
           />
+
 
           <Route
             path="kitchenstock"
@@ -336,7 +339,7 @@ const App = () => {
 
         
         <Route
-          path="stock-balance"
+          path="cateringstock-balance"
           element={<CateringStockBalance />}
         />
         

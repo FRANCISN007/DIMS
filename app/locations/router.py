@@ -25,6 +25,19 @@ from app.core.tenant import resolve_business_id
 from app.locations.models import Location
 
 
+from app.core.tenant import (
+    resolve_business_id,
+    
+)
+
+
+from app.core.location import (
+    is_camp_boss,
+    resolve_location_id,
+    validate_location_access,
+    apply_location_access_filter,
+)
+
 
 
 from app.business.models import Business
@@ -51,7 +64,7 @@ def create_location(
     ),
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
-        role_required(["store", "camp_boss", "manager"])
+        role_required(USER_MANAGEMENT_ROLES)
     ),
 ):
     # ----------------------------------------
@@ -149,7 +162,7 @@ def list_locations(
     db: Session = Depends(get_db),
     current_user: UserDisplaySchema = Depends(
         #role_required(USER_MANAGEMENT_ROLES)
-        role_required(["store", "camp_boss", "manager"])
+        role_required(USER_MANAGEMENT_ROLES)
     ),
 ):
     """
@@ -260,9 +273,10 @@ def list_simple_locations(
 
 
 
-# ----------------------------
-# Store Issue Control (Location) - Multi-Tenant
-# ----------------------------
+# ==========================================================
+# STORE ISSUE CONTROL - LOCATION
+# ==========================================================
+
 @router.get(
     "/location-issue-control",
     response_model=List[dict]
@@ -281,20 +295,108 @@ def get_store_items_received_by_location(
 ):
     try:
 
-        # ==========================================================
+        # ======================================================
         # 1. RESOLVE BUSINESS
-        # ==========================================================
+        # ======================================================
 
         effective_business_id = resolve_business_id(
             current_user,
             business_id
         )
 
-        # ==========================================================
-        # 2. VALIDATE LOCATION
-        # ==========================================================
+        if effective_business_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Business could not be determined."
+            )
 
-        if location_id:
+        # ======================================================
+        # 2. RESOLVE LOCATION ACCESS
+        #
+        # Camp Boss:
+        #   - Automatically restricted to assigned location
+        #   - Cannot override another location
+        #
+        # Other users:
+        #   - Requested location is respected
+        #   - None means all locations
+        # ======================================================
+
+        effective_location_id = resolve_location_id(
+            current_user,
+            location_id
+        )
+
+        # ======================================================
+        # DEBUG
+        # ======================================================
+
+        print(
+            "\n=============================================="
+        )
+        print(
+            " LOCATION ISSUE CONTROL"
+        )
+        print(
+            "=============================================="
+        )
+
+        print(
+            "USERNAME:",
+            getattr(
+                current_user,
+                "username",
+                None
+            )
+        )
+
+        print(
+            "BUSINESS:",
+            effective_business_id
+        )
+
+        print(
+            "USER BUSINESS:",
+            getattr(
+                current_user,
+                "business_id",
+                None
+            )
+        )
+
+        print(
+            "USER LOCATION:",
+            getattr(
+                current_user,
+                "location_id",
+                None
+            )
+        )
+
+        print(
+            "REQUESTED LOCATION:",
+            location_id
+        )
+
+        print(
+            "EFFECTIVE LOCATION:",
+            effective_location_id
+        )
+
+        print(
+            "IS CAMP BOSS:",
+            is_camp_boss(current_user)
+        )
+
+        print(
+            "==============================================\n"
+        )
+
+        # ======================================================
+        # 3. VALIDATE EFFECTIVE LOCATION
+        # ======================================================
+
+        if effective_location_id is not None:
 
             location = (
                 db.query(
@@ -302,7 +404,7 @@ def get_store_items_received_by_location(
                 )
                 .filter(
                     location_models.Location.id
-                    == location_id,
+                    == effective_location_id,
 
                     location_models.Location.business_id
                     == effective_business_id
@@ -316,21 +418,14 @@ def get_store_items_received_by_location(
                     detail="Location not found"
                 )
 
-        # ==========================================================
-        # 3. LATEST UNIT PRICE SUBQUERY
-        # ==========================================================
-        #
-        # Get the latest purchase price from the central store
-        # for each item.
-        #
-        # This is the same approach used by the Bar
-        # Store Issue Control endpoint.
-        #
-        # ==========================================================
+        # ======================================================
+        # 4. LATEST UNIT PRICE SUBQUERY
+        # ======================================================
 
         latest_price_subquery = (
             db.query(
                 store_models.StoreStockEntry.item_id,
+
                 store_models.StoreStockEntry.unit_price
             )
             .filter(
@@ -350,12 +445,13 @@ def get_store_items_received_by_location(
             .subquery()
         )
 
-        # ==========================================================
-        # 4. MAIN QUERY
-        # ==========================================================
+        # ======================================================
+        # 5. MAIN QUERY
+        # ======================================================
 
         query = (
             db.query(
+
                 store_models.StoreIssueItem.item_id,
 
                 store_models.StoreItem.name,
@@ -377,53 +473,57 @@ def get_store_items_received_by_location(
                 latest_price_subquery.c.unit_price
             )
 
-            # ------------------------------------------------------
+            # --------------------------------------------------
             # Store Issue
-            # ------------------------------------------------------
+            # --------------------------------------------------
 
             .join(
                 store_models.StoreIssue,
 
                 store_models.StoreIssue.id
-                == store_models.StoreIssueItem.issue_id
+                ==
+                store_models.StoreIssueItem.issue_id
             )
 
-            # ------------------------------------------------------
+            # --------------------------------------------------
             # Store Item
-            # ------------------------------------------------------
+            # --------------------------------------------------
 
             .join(
                 store_models.StoreItem,
 
                 store_models.StoreItem.id
-                == store_models.StoreIssueItem.item_id
+                ==
+                store_models.StoreIssueItem.item_id
             )
 
-            # ------------------------------------------------------
+            # --------------------------------------------------
             # Location
-            # ------------------------------------------------------
+            # --------------------------------------------------
 
             .join(
                 location_models.Location,
 
                 location_models.Location.id
-                == store_models.StoreIssue.location_id
+                ==
+                store_models.StoreIssue.location_id
             )
 
-            # ------------------------------------------------------
+            # --------------------------------------------------
             # Latest price
-            # ------------------------------------------------------
+            # --------------------------------------------------
 
             .outerjoin(
                 latest_price_subquery,
 
                 latest_price_subquery.c.item_id
-                == store_models.StoreIssueItem.item_id
+                ==
+                store_models.StoreIssueItem.item_id
             )
 
-            # ======================================================
-            # TENANT + DESTINATION FILTERS
-            # ======================================================
+            # ==================================================
+            # TENANT FILTERS
+            # ==================================================
 
             .filter(
 
@@ -431,38 +531,38 @@ def get_store_items_received_by_location(
                 store_models.StoreIssue.issue_to
                 == "location",
 
-                # Store issue belongs to current business
+                # Store issue belongs to business
                 store_models.StoreIssue.business_id
                 == effective_business_id,
 
-                # Store issue item belongs to current business
+                # Store issue item belongs to business
                 store_models.StoreIssueItem.business_id
                 == effective_business_id,
 
-                # Store item belongs to current business
+                # Store item belongs to business
                 store_models.StoreItem.business_id
                 == effective_business_id,
 
-                # Location belongs to current business
+                # Location belongs to business
                 location_models.Location.business_id
                 == effective_business_id
             )
         )
 
-        # ==========================================================
-        # 5. LOCATION FILTER
-        # ==========================================================
+        # ======================================================
+        # 6. APPLY EFFECTIVE LOCATION
+        # ======================================================
 
-        if location_id:
+        if effective_location_id is not None:
 
             query = query.filter(
                 store_models.StoreIssue.location_id
-                == location_id
+                == effective_location_id
             )
 
-        # ==========================================================
-        # 6. START DATE FILTER
-        # ==========================================================
+        # ======================================================
+        # 7. START DATE
+        # ======================================================
 
         if start_date:
 
@@ -471,20 +571,21 @@ def get_store_items_received_by_location(
                 >= start_date
             )
 
-        # ==========================================================
-        # 7. END DATE FILTER
-        # ==========================================================
+        # ======================================================
+        # 8. END DATE
+        # ======================================================
 
         if end_date:
 
             query = query.filter(
                 store_models.StoreIssue.issue_date
-                < end_date + timedelta(days=1)
+                <
+                end_date + timedelta(days=1)
             )
 
-        # ==========================================================
-        # 8. ORDER
-        # ==========================================================
+        # ======================================================
+        # 9. ORDER
+        # ======================================================
 
         results = (
             query
@@ -498,11 +599,12 @@ def get_store_items_received_by_location(
             .all()
         )
 
-        # ==========================================================
-        # 9. RESPONSE
-        # ==========================================================
+        # ======================================================
+        # 10. RESPONSE
+        # ======================================================
 
         return [
+
             {
                 "item_id": r.item_id,
 
@@ -529,7 +631,8 @@ def get_store_items_received_by_location(
                 "total_amount": (
                     round(
                         float(r.quantity or 0)
-                        * float(r.unit_price),
+                        *
+                        float(r.unit_price),
                         2
                     )
                     if r.unit_price is not None
@@ -540,13 +643,25 @@ def get_store_items_received_by_location(
             for r in results
         ]
 
+    # ==========================================================
+    # PRESERVE HTTP ERRORS
+    # ==========================================================
+
     except HTTPException:
-        # Preserve intended 404/400 responses
         raise
+
+    # ==========================================================
+    # UNEXPECTED ERROR
+    # ==========================================================
 
     except Exception as e:
 
         db.rollback()
+
+        print(
+            "LOCATION ISSUE CONTROL ERROR:",
+            repr(e)
+        )
 
         raise HTTPException(
             status_code=500,
@@ -556,6 +671,7 @@ def get_store_items_received_by_location(
             )
         )
 
+    
 
 @router.get(
     "/{location_id}",

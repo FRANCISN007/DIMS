@@ -83,6 +83,10 @@ from fastapi import (
 )
 
 
+from app.core.roles import USER_MANAGEMENT_ROLES
+
+from app.core.roles import USER_MANAGEMENT_ROLES1
+
 
 from app.locations import models as location_models
 from app.locations import schemas as location_schemas
@@ -196,6 +200,106 @@ def list_categories(
     )
 
     return categories
+
+
+
+# ==========================================================
+# SIMPLE CATEGORY LIST
+# ==========================================================
+
+@router.get(
+    "/categories/simple",
+)
+def get_categories_simple(
+    business_id: Optional[int] = Query(
+        None,
+        description="Business ID (Super Admin only)",
+    ),
+
+    db: Session = Depends(get_db),
+
+    current_user: user_schemas.UserDisplaySchema = Depends(
+        role_required(USER_MANAGEMENT_ROLES1)
+    ),
+):
+    try:
+
+        # ======================================================
+        # RESOLVE BUSINESS
+        # ======================================================
+
+        effective_business_id = resolve_business_id(
+            current_user,
+            business_id,
+        )
+
+        if effective_business_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business could not be determined.",
+            )
+
+        # ======================================================
+        # GET CATEGORIES
+        # ======================================================
+
+        categories = (
+            db.query(
+                store_models.StoreCategory.id,
+                store_models.StoreCategory.name,
+            )
+            .filter(
+                store_models.StoreCategory.business_id
+                == effective_business_id
+            )
+            .order_by(
+                store_models.StoreCategory.name.asc()
+            )
+            .all()
+        )
+
+
+
+        
+        # ======================================================
+        # RETURN SIMPLE LIST
+        # ======================================================
+
+        return [
+            {
+                "id": category.id,
+                "name": category.name,
+            }
+            for category in categories
+        ]
+
+    # ==========================================================
+    # HTTP EXCEPTION
+    # ==========================================================
+
+    except HTTPException:
+        raise
+
+    # ==========================================================
+    # UNEXPECTED ERROR
+    # ==========================================================
+
+    except Exception as e:
+
+        print(
+            "GET SIMPLE CATEGORIES ERROR:",
+            repr(e),
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Failed to retrieve categories: "
+                f"{str(e)}"
+            ),
+        )
+
+
 
 
 

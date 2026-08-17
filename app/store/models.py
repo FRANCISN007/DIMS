@@ -109,9 +109,7 @@ class StoreStockEntry(Base, BusinessMixin):
 # ----------------------------
 # 4. Store Issue
 # ----------------------------
-# ----------------------------
-# Store Issue
-# ----------------------------
+
 
 class StoreIssue(Base, BusinessMixin):
     __tablename__ = "store_issues"

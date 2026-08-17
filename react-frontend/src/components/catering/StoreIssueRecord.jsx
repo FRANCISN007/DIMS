@@ -1,35 +1,39 @@
-// src/components/locations/StoreIssueRecord.jsx
-
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
+import React, { useEffect, useMemo, useState } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./StoreIssueRecord.css";
 
 const StoreIssueRecord = () => {
+  /* ==========================================================
+     STATE
+  ========================================================== */
+
   const [records, setRecords] = useState([]);
+
   const [locations, setLocations] = useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [loadingLocations, setLoadingLocations] =
-    useState(false);
+  const [selectedLocation, setSelectedLocation] = useState("");
 
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] =
-    useState("");
+  /*
+   * IMPORTANT:
+   * Do not default these to today's date.
+   *
+   * The previous frontend was sending:
+   *
+   * start_date=2026-08-17
+   * end_date=2026-08-17
+   *
+   * while the existing records were dated 2026-08-16.
+   *
+   * Empty dates allow the backend to return all available
+   * records initially.
+   */
+  /* ==========================================================
+   TODAY'S DATE
+   Use local browser date so Nigeria/Lagos users get
+   the correct current date.
+========================================================== */
 
-  const [search, setSearch] = useState("");
-  const [locationFilter, setLocationFilter] =
-    useState("");
-
-  // ==========================================================
-  // GET TODAY
-  // ==========================================================
-
-  const getToday = () => {
+  const getTodayDate = () => {
     const today = new Date();
 
     const year = today.getFullYear();
@@ -45,107 +49,231 @@ const StoreIssueRecord = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // ==========================================================
-  // DEFAULT DATE = TODAY
-  // ==========================================================
+  const todayDate = getTodayDate();
 
-  const [dateFrom, setDateFrom] =
-    useState(getToday());
+  const [startDate, setStartDate] =
+    useState(todayDate);
 
-  const [dateTo, setDateTo] =
-    useState(getToday());
+  const [endDate, setEndDate] =
+    useState(todayDate);
 
-  // ==========================================================
-  // MESSAGE
-  // ==========================================================
+  const [search, setSearch] = useState("");
 
-  const showMessage = (
-    text,
-    type = "success"
-  ) => {
-    setMessage(text);
-    setMessageType(type);
+  const [loading, setLoading] = useState(true);
+
+  const [message, setMessage] = useState("");
+
+  const axios = axiosWithAuth();
+
+  /* ==========================================================
+     ERROR MESSAGE HELPER
+  ========================================================== */
+
+  const getApiErrorMessage = (err) => {
+    const data = err?.response?.data;
+
+    const detail = data?.detail;
+
+    /* ----------------------------------------------------------
+       FastAPI validation array
+    ---------------------------------------------------------- */
+
+    if (Array.isArray(detail)) {
+      return detail
+        .map((error) => {
+          if (typeof error === "string") {
+            return error;
+          }
+
+          if (
+            error &&
+            typeof error === "object"
+          ) {
+            const msg =
+              error.msg ||
+              error.message ||
+              "Invalid request.";
+
+            const location =
+              Array.isArray(error.loc)
+                ? error.loc.join(" → ")
+                : "";
+
+            return location
+              ? `${location}: ${msg}`
+              : String(msg);
+          }
+
+          return "Invalid request.";
+        })
+        .join(", ");
+    }
+
+    /* ----------------------------------------------------------
+       Object detail
+    ---------------------------------------------------------- */
+
+    if (
+      detail &&
+      typeof detail === "object"
+    ) {
+      if (detail.msg) {
+        return String(detail.msg);
+      }
+
+      if (detail.message) {
+        return String(detail.message);
+      }
+
+      return "Invalid request.";
+    }
+
+    /* ----------------------------------------------------------
+       String detail
+    ---------------------------------------------------------- */
+
+    if (typeof detail === "string") {
+      return detail;
+    }
+
+    /* ----------------------------------------------------------
+       API message
+    ---------------------------------------------------------- */
+
+    if (
+      typeof data?.message === "string"
+    ) {
+      return data.message;
+    }
+
+    /* ----------------------------------------------------------
+       Axios message
+    ---------------------------------------------------------- */
+
+    if (
+      typeof err?.message === "string"
+    ) {
+      return err.message;
+    }
+
+    return "An unexpected error occurred.";
+  };
+
+  /* ==========================================================
+     MESSAGE
+  ========================================================== */
+
+  const showMessage = (msg, type = "error") => {
+    setMessage({
+      text:
+        typeof msg === "string"
+          ? msg
+          : getApiErrorMessage({
+              response: {
+                data: {
+                  detail: msg,
+                },
+              },
+            }),
+      type,
+    });
 
     setTimeout(() => {
       setMessage("");
-      setMessageType("");
     }, 3000);
   };
 
-  // ==========================================================
-  // FETCH LOCATIONS
-  // ==========================================================
+  /* ==========================================================
+     FETCH LOCATIONS
+  ========================================================== */
 
-  const fetchLocations = async () => {
-    try {
-      setLoadingLocations(true);
-
-      const response =
-        await axiosWithAuth().get(
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await axios.get(
           "/locations/simple"
         );
 
-      setLocations(
-        Array.isArray(response.data)
-          ? response.data
-          : []
-      );
-    } catch (error) {
-      console.error(
-        "Error loading locations:",
-        error
-      );
+        console.log(
+          "LOCATIONS RESPONSE:",
+          response.data
+        );
 
-      showMessage(
-        error.response?.data?.detail ||
-          "Failed to load locations.",
-        "error"
-      );
-    } finally {
-      setLoadingLocations(false);
-    }
-  };
+        setLocations(
+          Array.isArray(response.data)
+            ? response.data
+            : []
+        );
 
-  // ==========================================================
-  // FETCH STORE ISSUE RECORDS
-  // ==========================================================
+      } catch (err) {
+        console.error(
+          "FAILED TO FETCH LOCATIONS:",
+          err
+        );
 
-  const fetchRecords = async () => {
+        showMessage(
+          getApiErrorMessage(err)
+        );
+      }
+    };
+
+    fetchLocations();
+  }, []);
+
+  /* ==========================================================
+     FETCH STORE ISSUE RECORDS
+  ========================================================== */
+
+  useEffect(() => {
+    fetchIssueRecords();
+  }, [
+    selectedLocation,
+    startDate,
+    endDate,
+  ]);
+
+  /* ==========================================================
+     FETCH FUNCTION
+  ========================================================== */
+
+  const fetchIssueRecords = async () => {
     try {
       setLoading(true);
 
       const params = new URLSearchParams();
 
-      // ------------------------------------------------------
-      // LOCATION
-      // ------------------------------------------------------
+      /* ------------------------------------------------------
+         LOCATION
+      ------------------------------------------------------ */
 
-      if (locationFilter) {
+      if (selectedLocation) {
         params.append(
           "location_id",
-          locationFilter
+          String(selectedLocation)
         );
       }
 
-      // ------------------------------------------------------
-      // START DATE
-      // ------------------------------------------------------
+      /* ------------------------------------------------------
+         START DATE
+         Only send when selected.
+      ------------------------------------------------------ */
 
-      if (dateFrom) {
+      if (startDate) {
         params.append(
           "start_date",
-          dateFrom
+          startDate
         );
       }
 
-      // ------------------------------------------------------
-      // END DATE
-      // ------------------------------------------------------
+      /* ------------------------------------------------------
+         END DATE
+         Only send when selected.
+      ------------------------------------------------------ */
 
-      if (dateTo) {
+      if (endDate) {
         params.append(
           "end_date",
-          dateTo
+          endDate
         );
       }
 
@@ -156,314 +284,517 @@ const StoreIssueRecord = () => {
         ? `/locations/location-issue-control?${queryString}`
         : "/locations/location-issue-control";
 
-      const response =
-        await axiosWithAuth().get(url);
+      console.log(
+        "\n=========================================="
+      );
+
+      console.log(
+        "STORE ISSUE CONTROL"
+      );
+
+      console.log(
+        "LOCATION FILTER:",
+        selectedLocation || "ALL"
+      );
+
+      console.log(
+        "START DATE:",
+        startDate || "ALL"
+      );
+
+      console.log(
+        "END DATE:",
+        endDate || "ALL"
+      );
+
+      console.log(
+        "REQUEST:",
+        url
+      );
+
+      console.log(
+        "=========================================="
+      );
+
+      const response = await axios.get(
+        url
+      );
+
+      console.log(
+        "STORE ISSUE RESPONSE:",
+        response.data
+      );
 
       setRecords(
         Array.isArray(response.data)
           ? response.data
           : []
       );
-    } catch (error) {
+
+    } catch (err) {
       console.error(
-        "Error loading store issue records:",
-        error
+        "FAILED TO FETCH STORE ISSUE RECORDS:",
+        err
+      );
+
+      console.error(
+        "API RESPONSE:",
+        err?.response?.data
       );
 
       setRecords([]);
 
       showMessage(
-        error.response?.data?.detail ||
-          "Failed to load store issue records.",
-        "error"
+        getApiErrorMessage(err)
       );
+
     } finally {
       setLoading(false);
     }
   };
 
-  // ==========================================================
-  // INITIAL LOAD
-  // ==========================================================
+  /* ==========================================================
+     FORMAT DATE
+     
+     Backend example:
+     
+     2026-08-16T01:00:00+01:00
+  ========================================================== */
 
-  useEffect(() => {
-    fetchLocations();
-  }, []);
-
-  // ==========================================================
-  // LOAD RECORDS WHEN FILTER CHANGES
-  // ==========================================================
-
-  useEffect(() => {
-    fetchRecords();
-  }, [
-    locationFilter,
-    dateFrom,
-    dateTo,
-  ]);
-
-  // ==========================================================
-  // GET LOCATION NAME
-  // ==========================================================
-
-  const getLocationName = (record) => {
-    if (record?.location_name) {
-      return record.location_name;
-    }
-
-    const location = locations.find(
-      (item) =>
-        Number(item.id) ===
-        Number(record?.location_id)
-    );
-
-    return location?.name || "-";
-  };
-
-  // ==========================================================
-  // FORMAT DATE
-  // ==========================================================
-
-  const formatDate = (date) => {
-    if (!date) {
+  const formatDate = (value) => {
+    if (!value) {
       return "-";
     }
 
-    const parsed = new Date(date);
+    const date = new Date(value);
 
-    if (
-      Number.isNaN(
-        parsed.getTime()
-      )
-    ) {
-      return date;
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
     }
 
-    return parsed.toLocaleDateString(
-      "en-GB",
+    return date.toLocaleDateString(
+      undefined,
       {
-        day: "2-digit",
-        month: "short",
         year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
       }
     );
   };
 
-  // ==========================================================
-  // FORMAT NUMBER
-  // ==========================================================
+  /* ==========================================================
+     FORMAT TIME
+  ========================================================== */
+
+  const formatTime = (value) => {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleTimeString(
+      undefined,
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+  };
+
+  /* ==========================================================
+     FORMAT DATE + TIME
+  ========================================================== */
+
+  const formatDateTime = (value) => {
+    const date = formatDate(value);
+    const time = formatTime(value);
+
+    if (!time) {
+      return date;
+    }
+
+    return `${date} ${time}`;
+  };
+
+  /* ==========================================================
+     FORMAT NUMBER
+  ========================================================== */
 
   const formatNumber = (value) => {
-    return Number(
+    const number = Number(
       value || 0
-    ).toLocaleString(
-      "en-NG",
+    );
+
+    if (Number.isNaN(number)) {
+      return "0";
+    }
+
+    return number.toLocaleString(
+      undefined,
       {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 4,
+      }
+    );
+  };
+
+  /* ==========================================================
+     FORMAT MONEY
+  ========================================================== */
+
+  const formatMoney = (value) => {
+    const number = Number(
+      value || 0
+    );
+
+    if (Number.isNaN(number)) {
+      return "0.00";
+    }
+
+    return number.toLocaleString(
+      undefined,
+      {
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }
     );
   };
 
-  // ==========================================================
-  // FILTER RECORDS BY SEARCH
-  // ==========================================================
+  /* ==========================================================
+     SEARCH
+     
+     Search is intentionally done on the records already
+     returned by the backend.
+     
+     This means Camp Boss cannot use search to obtain another
+     location because the backend has already restricted the
+     dataset.
+  ========================================================== */
 
   const filteredRecords = useMemo(() => {
     const value =
-      search
-        .trim()
-        .toLowerCase();
+      search.trim().toLowerCase();
+
+    if (!value) {
+      return records;
+    }
 
     return records.filter(
       (record) => {
-        const locationName =
-          getLocationName(record);
+        const itemName =
+          String(
+            record?.item_name || ""
+          ).toLowerCase();
 
-        const searchText = [
-          record?.item_id,
-          record?.item_name,
-          record?.unit,
-          record?.location_id,
-          locationName,
-          record?.issue_date,
-          record?.quantity,
-          record?.unit_price,
-          record?.total_amount,
-        ]
-          .join(" ")
-          .toLowerCase();
+        const locationName =
+          String(
+            record?.location_name || ""
+          ).toLowerCase();
+
+        const itemId =
+          String(
+            record?.item_id || ""
+          ).toLowerCase();
+
+        const unit =
+          String(
+            record?.unit || ""
+          ).toLowerCase();
 
         return (
-          !value ||
-          searchText.includes(value)
+          itemName.includes(value) ||
+          locationName.includes(value) ||
+          itemId.includes(value) ||
+          unit.includes(value)
         );
       }
     );
   }, [
     records,
     search,
-    locations,
   ]);
 
-  // ==========================================================
-  // TOTAL QUANTITY
-  // ==========================================================
+  /* ==========================================================
+     TOTAL QUANTITY
+  ========================================================== */
 
-  const totalQuantity = useMemo(() => {
-    return filteredRecords.reduce(
-      (total, record) =>
-        total +
+  const totalQuantity =
+    filteredRecords.reduce(
+      (sum, record) =>
+        sum +
         Number(
           record?.quantity || 0
         ),
       0
     );
-  }, [filteredRecords]);
 
-  // ==========================================================
-  // TOTAL AMOUNT
-  // ==========================================================
+  /* ==========================================================
+     TOTAL AMOUNT
+  ========================================================== */
 
-  const totalAmount = useMemo(() => {
-    return filteredRecords.reduce(
-      (total, record) =>
-        total +
+  const totalAmount =
+    filteredRecords.reduce(
+      (sum, record) =>
+        sum +
         Number(
           record?.total_amount || 0
         ),
       0
     );
-  }, [filteredRecords]);
 
-  // ==========================================================
-  // UNIQUE ITEMS
-  // ==========================================================
-
-  const uniqueItems = useMemo(() => {
-    return new Set(
-      filteredRecords.map(
-        (record) =>
-          record?.item_id
-      )
-    ).size;
-  }, [filteredRecords]);
-
-  // ==========================================================
-  // CLEAR FILTERS
-  // ==========================================================
+  /* ==========================================================
+     CLEAR FILTERS
+  ========================================================== */
 
   const clearFilters = () => {
+    setSelectedLocation("");
+    setStartDate(todayDate);
+    setEndDate(todayDate);
     setSearch("");
-    setLocationFilter("");
-
-    const today = getToday();
-
-    setDateFrom(today);
-    setDateTo(today);
   };
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  /* ==========================================================
+     DATE DISPLAY
+  ========================================================== */
+
+  const dateDisplay = useMemo(() => {
+    if (
+      !startDate &&
+      !endDate
+    ) {
+      return "All dates";
+    }
+
+    if (
+      startDate &&
+      endDate
+    ) {
+      return `${startDate} to ${endDate}`;
+    }
+
+    if (startDate) {
+      return `From ${startDate}`;
+    }
+
+    if (endDate) {
+      return `Up to ${endDate}`;
+    }
+
+    return "All dates";
+  }, [
+    startDate,
+    endDate,
+  ]);
+
+  /* ==========================================================
+     RENDER
+  ========================================================== */
 
   return (
     <div className="store-issue-record-container">
 
-      {/* ====================================================
+      {/* ======================================================
           HEADER
-      ==================================================== */}
+      ====================================================== */}
 
       <div className="store-issue-record-header">
+
+        {/* ====================================================
+            TITLE
+        ==================================================== */}
 
         <div className="store-issue-title-section">
 
           <div className="store-issue-title-icon">
-            SR
+            📦
           </div>
 
           <div>
+
             <h2>
               Store Issue Record
             </h2>
 
             <p>
-              Record of items received
-              from the central store.
+              Store stock issued to locations
             </p>
+
           </div>
 
         </div>
 
-        {/* ==================================================
+        {/* ====================================================
             SUMMARY
-        ================================================== */}
+        ==================================================== */}
 
         <div className="store-issue-summary-container">
 
           <div className="store-issue-summary">
-            <span>Records</span>
+
+            <span>
+              Records
+            </span>
 
             <strong>
               {filteredRecords.length}
             </strong>
+
           </div>
 
           <div className="store-issue-summary">
-            <span>Items</span>
 
-            <strong>
-              {uniqueItems}
-            </strong>
-          </div>
-
-          <div className="store-issue-summary">
-            <span>Quantity</span>
+            <span>
+              Quantity
+            </span>
 
             <strong>
               {formatNumber(
                 totalQuantity
               )}
             </strong>
+
           </div>
 
           <div className="store-issue-summary amount-summary">
-            <span>Amount</span>
+
+            <span>
+              Total Amount
+            </span>
 
             <strong>
               ₦
-              {formatNumber(
+              {formatMoney(
                 totalAmount
               )}
             </strong>
+
           </div>
 
         </div>
 
       </div>
 
-      {/* ====================================================
+      {/* ======================================================
           MESSAGE
-      ==================================================== */}
+      ====================================================== */}
 
       {message && (
         <div
           className={`store-issue-message ${
-            messageType === "error"
-              ? "store-issue-error"
-              : "store-issue-success"
+            message.type === "success"
+              ? "store-issue-success"
+              : "store-issue-error"
           }`}
         >
-          {message}
+          {String(
+            message.text
+          )}
         </div>
       )}
 
-      {/* ====================================================
+      {/* ======================================================
           FILTER PANEL
-      ==================================================== */}
+      ====================================================== */}
 
       <div className="store-issue-filter-panel">
 
-        {/* SEARCH */}
+        {/* ====================================================
+            LOCATION
+        ==================================================== */}
+
+        <div className="store-issue-filter-group">
+
+          <label>
+            Location
+          </label>
+
+          <select
+            value={selectedLocation}
+            onChange={(e) => {
+              setSelectedLocation(
+                e.target.value
+              );
+            }}
+          >
+
+            <option value="">
+              All Locations
+            </option>
+
+            {locations.map(
+              (location) => (
+                <option
+                  key={String(
+                    location.id
+                  )}
+                  value={String(
+                    location.id
+                  )}
+                >
+                  {String(
+                    location.name || ""
+                  )}
+                </option>
+              )
+            )}
+
+          </select>
+
+        </div>
+
+        {/* ====================================================
+            START DATE
+        ==================================================== */}
+
+        <div className="store-issue-filter-group">
+
+          <label>
+            Start Date
+          </label>
+
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(
+                e.target.value
+              );
+            }}
+          />
+
+        </div>
+
+        {/* ====================================================
+            END DATE
+        ==================================================== */}
+
+        <div className="store-issue-filter-group">
+
+          <label>
+            End Date
+          </label>
+
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) => {
+              setEndDate(
+                e.target.value
+              );
+            }}
+          />
+
+        </div>
+
+        {/* ====================================================
+            SEARCH
+        ==================================================== */}
 
         <div className="store-issue-filter-group search-group">
 
@@ -475,164 +806,101 @@ const StoreIssueRecord = () => {
             type="text"
             placeholder="Search item or location..."
             value={search}
-            onChange={(e) =>
+            onChange={(e) => {
               setSearch(
                 e.target.value
-              )
-            }
+              );
+            }}
           />
 
         </div>
 
-        {/* LOCATION */}
+        {/* ====================================================
+            CLEAR
+        ==================================================== */}
 
         <div className="store-issue-filter-group">
 
           <label>
-            Location
+            &nbsp;
           </label>
 
-          <select
-            value={locationFilter}
-            onChange={(e) =>
-              setLocationFilter(
-                e.target.value
-              )
-            }
-            disabled={
-              loadingLocations
-            }
+          <button
+            type="button"
+            className="store-issue-clear-btn"
+            onClick={clearFilters}
           >
-
-            <option value="">
-              All Locations
-            </option>
-
-            {locations.map(
-              (location) => (
-                <option
-                  key={
-                    location.id
-                  }
-                  value={
-                    location.id
-                  }
-                >
-                  {location.name}
-                </option>
-              )
-            )}
-
-          </select>
+            Clear
+          </button>
 
         </div>
-
-        {/* FROM DATE */}
-
-        <div className="store-issue-filter-group">
-
-          <label>
-            From Date
-          </label>
-
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) =>
-              setDateFrom(
-                e.target.value
-              )
-            }
-          />
-
-        </div>
-
-        {/* TO DATE */}
-
-        <div className="store-issue-filter-group">
-
-          <label>
-            To Date
-          </label>
-
-          <input
-            type="date"
-            value={dateTo}
-            min={
-              dateFrom ||
-              undefined
-            }
-            onChange={(e) =>
-              setDateTo(
-                e.target.value
-              )
-            }
-          />
-
-        </div>
-
-        {/* CLEAR */}
-
-        <button
-          type="button"
-          className="store-issue-clear-btn"
-          onClick={
-            clearFilters
-          }
-        >
-          Clear
-        </button>
 
       </div>
 
-      {/* ====================================================
-          CURRENT DATE
-      ==================================================== */}
+      {/* ======================================================
+          DATE DISPLAY
+      ====================================================== */}
 
       <div className="store-issue-date-display">
 
         <span>
-          Showing records for
+          Date Range
         </span>
 
         <strong>
-          {dateFrom === dateTo
-            ? formatDate(dateFrom)
-            : `${formatDate(
-                dateFrom
-              )} — ${formatDate(
-                dateTo
-              )}`}
+          {dateDisplay}
         </strong>
 
       </div>
 
-      {/* ====================================================
+      {/* ======================================================
           TABLE CARD
-      ==================================================== */}
+      ====================================================== */}
 
       <div className="store-issue-record-card">
-
-        {/* ==================================================
-            IMPORTANT:
-            THIS IS THE ACTUAL VERTICAL SCROLL CONTAINER
-        ================================================== */}
 
         <div className="store-issue-table-wrapper">
 
           <table className="store-issue-record-table">
 
             <thead>
+
               <tr>
-                <th>#</th>
-                <th>Date</th>
-                <th>Location</th>
-                <th>Item</th>
-                <th>Unit</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total Amount</th>
+
+                <th>
+                  #
+                </th>
+
+                <th>
+                  Date
+                </th>
+
+                <th>
+                  Location
+                </th>
+
+                <th>
+                  Item
+                </th>
+
+                <th>
+                  Unit
+                </th>
+
+                <th>
+                  Quantity
+                </th>
+
+                <th>
+                  Unit Price
+                </th>
+
+                <th>
+                  Total Amount
+                </th>
+
               </tr>
+
             </thead>
 
             <tbody>
@@ -640,94 +908,112 @@ const StoreIssueRecord = () => {
               {loading ? (
 
                 <tr>
+
                   <td
                     colSpan="8"
                     className="store-issue-table-loading"
                   >
-                    Loading store issue
-                    records...
+                    Loading store issue records...
                   </td>
+
                 </tr>
 
               ) : filteredRecords.length === 0 ? (
 
                 <tr>
+
                   <td
                     colSpan="8"
                     className="store-issue-table-empty"
                   >
-                    No store issue
-                    records found for
-                    the selected date.
+                    No store issue records found.
                   </td>
+
                 </tr>
 
               ) : (
 
                 filteredRecords.map(
-                  (
-                    record,
-                    index
-                  ) => (
+                  (record, index) => (
 
                     <tr
-                      key={`${record.item_id}-${record.issue_date}-${index}`}
+                      key={`${record.item_id}-${record.location_id}-${record.issue_date}-${index}`}
                     >
 
-                      {/* NUMBER */}
+                      {/* ====================================
+                          NUMBER
+                      ==================================== */}
 
                       <td className="store-issue-number">
+
                         {index + 1}
+
                       </td>
 
-                      {/* DATE */}
+                      {/* ====================================
+                          DATE
+                      ==================================== */}
 
                       <td className="store-issue-date-cell">
-                        {formatDate(
+
+                        {formatDateTime(
                           record.issue_date
                         )}
+
                       </td>
 
-                      {/* LOCATION */}
+                      {/* ====================================
+                          LOCATION
+                      ==================================== */}
 
                       <td className="store-issue-location-cell">
 
                         <strong>
-                          {getLocationName(
-                            record
+                          {String(
+                            record.location_name ||
+                              "-"
                           )}
                         </strong>
 
                       </td>
 
-                      {/* ITEM */}
+                      {/* ====================================
+                          ITEM
+                      ==================================== */}
 
                       <td className="store-issue-item-cell">
 
                         <strong>
-                          {
+                          {String(
                             record.item_name ||
-                            `Item #${record.item_id}`
-                          }
+                              "-"
+                          )}
                         </strong>
 
                         <small>
                           ID:{" "}
-                          {
-                            record.item_id
-                          }
+                          {String(
+                            record.item_id ||
+                              "-"
+                          )}
                         </small>
 
                       </td>
 
-                      {/* UNIT */}
+                      {/* ====================================
+                          UNIT
+                      ==================================== */}
 
                       <td>
-                        {record.unit ||
-                          "-"}
+                        {String(
+                          record.unit ||
+                            "-"
+                        )}
                       </td>
 
-                      {/* QUANTITY */}
+                      {/* ====================================
+                          QUANTITY
+                      ==================================== */}
 
                       <td className="store-issue-quantity-cell">
 
@@ -737,33 +1023,47 @@ const StoreIssueRecord = () => {
 
                       </td>
 
-                      {/* UNIT PRICE */}
+                      {/* ====================================
+                          UNIT PRICE
+                      ==================================== */}
 
-                      <td>
+                      <td className="store-issue-total-cell">
 
                         {record.unit_price !==
-                          null &&
+                        null &&
                         record.unit_price !==
-                          undefined
-                          ? `₦${formatNumber(
+                        undefined ? (
+                          <>
+                            ₦
+                            {formatMoney(
                               record.unit_price
-                            )}`
-                          : "-"}
+                            )}
+                          </>
+                        ) : (
+                          "-"
+                        )}
 
                       </td>
 
-                      {/* TOTAL */}
+                      {/* ====================================
+                          TOTAL
+                      ==================================== */}
 
                       <td className="store-issue-total-cell">
 
                         {record.total_amount !==
-                          null &&
+                        null &&
                         record.total_amount !==
-                          undefined
-                          ? `₦${formatNumber(
+                        undefined ? (
+                          <>
+                            ₦
+                            {formatMoney(
                               record.total_amount
-                            )}`
-                          : "-"}
+                            )}
+                          </>
+                        ) : (
+                          "-"
+                        )}
 
                       </td>
 

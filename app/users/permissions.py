@@ -1,10 +1,15 @@
 from typing import Iterable
 
 from fastapi import Depends, HTTPException, status
+from typing import Optional
+
 
 from app.users.auth import get_current_user
 from app.users.schemas import UserDisplaySchema
 from app.core.roles import ADMIN, SUPER_ADMIN
+
+
+
 
 
 def role_required(
@@ -257,3 +262,6 @@ def role_required(
         return current_user
 
     return wrapper
+
+
+
