@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
+
 
 from pydantic import BaseModel, ConfigDict
 
@@ -33,6 +34,8 @@ class UserCreate(BaseModel):
 
     # Optional location
     location_id: Optional[int] = None
+
+    status: Literal["active", "inactive"] = "active"
 
 
 class UserUpdate(BaseModel):

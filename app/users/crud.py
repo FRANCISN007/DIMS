@@ -11,6 +11,10 @@ from app.users import schemas as user_schema
 # CREATE USER
 # ==========================================================
 
+# ==========================================================
+# CREATE USER
+# ==========================================================
+
 def create_user(
     db: Session,
     user: user_schema.UserCreate,
@@ -22,16 +26,31 @@ def create_user(
 
     Roles are handled through the User.roles relationship
     and the user_roles association table.
+
+    User status is independent from role status.
     """
 
     new_user = User(
         username=user.username.strip().lower(),
+
         full_name=user.full_name.strip(),
-        phone=user.phone.strip() if user.phone else None,
+
+        phone=(
+            user.phone.strip()
+            if user.phone
+            else None
+        ),
+
         hashed_password=hashed_password,
+
         business_id=business_id,
+
         location_id=user.location_id,
-        status="active",
+
+        # IMPORTANT:
+        # User status belongs to the USER,
+        # not the role.
+        status=user.status,
     )
 
     db.add(new_user)
@@ -40,22 +59,22 @@ def create_user(
     # Assign multiple roles
     # ------------------------------------------------------
 
-    # The register endpoint validates the role IDs before
-    # calling this function.
-    #
-    # We only assign the IDs that were supplied.
     if user.role_ids:
+
         from app.roles.models import Role
 
         roles = (
             db.query(Role)
-            .filter(Role.id.in_(user.role_ids))
+            .filter(
+                Role.id.in_(user.role_ids)
+            )
             .all()
         )
 
         new_user.roles = roles
 
     db.commit()
+
     db.refresh(new_user)
 
     return new_user

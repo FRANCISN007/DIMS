@@ -990,6 +990,9 @@ const UserManagement = () => {
 
         location_id:
           locationId,
+
+        status:
+          newUser.status || "active",
       };
 
       try {
@@ -1105,6 +1108,10 @@ const UserManagement = () => {
 
     setEditingUser({
       ...user,
+      status:
+        user.status === "inactive"
+          ? "inactive"
+          : "active",
     });
 
     setEditRoleId(
@@ -1265,6 +1272,11 @@ const UserManagement = () => {
 
         location_id:
           locationId,
+
+        status:
+          editingUser.status === "inactive"
+            ? "inactive"
+            : "active",
       };
 
       try {
@@ -2596,6 +2608,31 @@ const UserManagement = () => {
                 </select>
               </label>
 
+
+              <label>
+              Account Status:
+
+              <select
+                value={newUser.status}
+                onChange={(event) =>
+                  setNewUser({
+                    ...newUser,
+                    status:
+                      event.target.value,
+                  })
+                }
+                required
+              >
+                <option value="active">
+                  Active
+                </option>
+
+                <option value="inactive">
+                  Inactive
+                </option>
+              </select>
+            </label>
+
               {/* =================================================
                   LOCATION
 
@@ -2858,6 +2895,32 @@ const UserManagement = () => {
                     )}
                   </select>
                 </label>
+
+                <label>
+                Account Status:
+
+                <select
+                  value={
+                    editingUser.status || "active"
+                  }
+                  onChange={(event) =>
+                    setEditingUser({
+                      ...editingUser,
+                      status:
+                        event.target.value,
+                    })
+                  }
+                  required
+                >
+                  <option value="active">
+                    Active
+                  </option>
+
+                  <option value="inactive">
+                    Inactive
+                  </option>
+                </select>
+              </label>
 
                 {/* =================================================
                     LOCATION

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./ListBarSales.css";
 
-import "../restaurant/Receipt.css";
+
 
 const ListBarSales = () => {
   const [sales, setSales] = useState([]);

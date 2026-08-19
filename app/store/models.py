@@ -3,8 +3,8 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Ind
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import os
-from app.bar.models import Bar
-from app.kitchen.models import Kitchen
+
+
 from app.core.mixins import BusinessMixin
 
 from zoneinfo import ZoneInfo
@@ -64,7 +64,7 @@ class StoreItem(Base, BusinessMixin):
     # Relationships
     stock_entries = relationship("StoreStockEntry", back_populates="item")
     issue_items = relationship("StoreIssueItem", back_populates="item")
-    meal_order_items = relationship("MealOrderItem", back_populates="store_item")
+    
 
     # 🔥🔥🔥 ADD THIS
     __table_args__ = (

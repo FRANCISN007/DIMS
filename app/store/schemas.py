@@ -9,7 +9,7 @@ from app.vendor.schemas import VendorOut
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal, Union
 
-from app.kitchen.schemas import KitchenDisplaySimple
+
 
 from app.locations.schemas import LocationSimple
 

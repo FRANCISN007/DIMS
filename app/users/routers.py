@@ -87,10 +87,8 @@ def register_user(
     # ==========================================================
 
     if is_super_admin:
-        # ------------------------------------------------------
-        # Super Admin must select the business for the new user.
-        # ------------------------------------------------------
 
+        # Super Admin must select business
         if user.business_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -100,10 +98,8 @@ def register_user(
         business_id = user.business_id
 
     else:
-        # ------------------------------------------------------
-        # Normal Admin automatically uses their own business.
-        # ------------------------------------------------------
 
+        # Normal Admin uses own business
         if current_user.business_id is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -164,7 +160,17 @@ def register_user(
         )
 
     # ==========================================================
-    # 7. VALIDATE ROLE IDS
+    # 7. VALIDATE USER STATUS
+    # ==========================================================
+
+    if user.status not in {"active", "inactive"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User status must be active or inactive.",
+        )
+
+    # ==========================================================
+    # 8. VALIDATE ROLE IDS
     # ==========================================================
 
     if not user.role_ids:
@@ -174,7 +180,7 @@ def register_user(
         )
 
     # ----------------------------------------------------------
-    # Remove duplicate role IDs while preserving order.
+    # Remove duplicate role IDs while preserving order
     # ----------------------------------------------------------
 
     role_ids = list(
@@ -185,7 +191,7 @@ def register_user(
     )
 
     # ==========================================================
-    # 8. LOAD ROLES
+    # 9. LOAD ACTIVE ROLES
     # ==========================================================
 
     roles = (
@@ -198,9 +204,9 @@ def register_user(
         .all()
     )
 
-    # ----------------------------------------------------------
-    # Make sure every submitted role exists.
-    # ----------------------------------------------------------
+    # ==========================================================
+    # 10. MAKE SURE EVERY ROLE EXISTS
+    # ==========================================================
 
     found_role_ids = {
         role.id
@@ -223,21 +229,15 @@ def register_user(
         )
 
     # ==========================================================
-    # 9. VALIDATE ROLE BUSINESS
+    # 11. VALIDATE ROLE BUSINESS
     # ==========================================================
 
     for role in roles:
 
-        # ------------------------------------------------------
-        # If roles belong to businesses, make sure the role
-        # belongs to the selected business.
-        #
-        # If your Role table is global, this condition should
-        # be removed.
-        # ------------------------------------------------------
-
         if role.business_id is not None:
+
             if role.business_id != business_id:
+
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
@@ -247,7 +247,7 @@ def register_user(
                 )
 
     # ==========================================================
-    # 10. VALIDATE LOCATION
+    # 12. VALIDATE LOCATION
     # ==========================================================
 
     location = None
@@ -265,6 +265,7 @@ def register_user(
         )
 
         if not location:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=(
@@ -275,7 +276,7 @@ def register_user(
             )
 
     # ==========================================================
-    # 11. HASH PASSWORD
+    # 13. HASH PASSWORD
     # ==========================================================
 
     hashed_password = pwd_context.hash(
@@ -283,13 +284,13 @@ def register_user(
     )
 
     # ==========================================================
-    # 12. PREPARE USER DATA
+    # 14. PREPARE USER DATA
     # ==========================================================
 
     user.username = username
 
     # ==========================================================
-    # 13. CREATE USER
+    # 15. CREATE USER
     # ==========================================================
 
     new_user = user_crud.create_user(
@@ -300,13 +301,28 @@ def register_user(
     )
 
     # ==========================================================
-    # 14. ASSIGN ROLES
+    # 16. SET USER STATUS
+    # ==========================================================
+    #
+    # IMPORTANT:
+    # This belongs to the USER, not the ROLE.
+    #
+    # John -> inactive
+    # Henry -> active
+    #
+    # Both can still have the Camp Boss role.
+    #
+
+    new_user.status = user.status
+
+    # ==========================================================
+    # 17. ASSIGN ROLES
     # ==========================================================
 
     new_user.roles = roles
 
     # ==========================================================
-    # 15. ASSIGN LOCATION
+    # 18. ASSIGN LOCATION
     # ==========================================================
 
     new_user.location_id = (
@@ -316,7 +332,7 @@ def register_user(
     )
 
     # ==========================================================
-    # 16. SAVE
+    # 19. SAVE
     # ==========================================================
 
     db.commit()
@@ -324,7 +340,7 @@ def register_user(
     db.refresh(new_user)
 
     # ==========================================================
-    # 17. PRIMARY ROLE
+    # 20. PRIMARY ROLE
     # ==========================================================
 
     primary_role = (
@@ -334,10 +350,11 @@ def register_user(
     )
 
     # ==========================================================
-    # 18. RETURN USER
+    # 21. RETURN USER
     # ==========================================================
 
     return schemas.UserDisplaySchema(
+
         id=new_user.id,
 
         username=new_user.username,
@@ -406,7 +423,7 @@ def register_user(
         ),
 
         # ------------------------------------------------------
-        # Status
+        # USER STATUS
         # ------------------------------------------------------
 
         status=new_user.status,
@@ -419,7 +436,6 @@ def register_user(
 
         updated_at=new_user.updated_at,
     )
-
 
 
 
@@ -446,6 +462,24 @@ def login(
     """
     Authenticate user and return JWT token.
 
+    Login is allowed only when:
+
+    1. User account status is active.
+    2. For business users:
+       - At least one role is assigned.
+       - Business exists.
+       - Business license is active.
+       - An active license exists and has not expired.
+    3. Super Admin does not depend on a Role record.
+
+    IMPORTANT:
+    Role status does NOT control login.
+
+    The USER status controls whether the account can log in.
+
+    Role status should be handled by the authorization /
+    permission system after login.
+
     Supports:
     - Super Admin
     - Business users
@@ -470,7 +504,7 @@ def login(
     )
 
     # ======================================================
-    # AUTHENTICATE
+    # AUTHENTICATE USER
     # ======================================================
 
     user = authenticate_user(
@@ -500,8 +534,25 @@ def login(
     # ======================================================
     # USER STATUS
     # ======================================================
+    #
+    # ONLY USER STATUS controls whether the account
+    # can authenticate.
+    #
+    # active   -> login allowed
+    # inactive -> login denied
+    #
+    # Role status is intentionally NOT checked here.
+    #
+    # ======================================================
 
-    if user.status != "active":
+    if (
+        user.status is None
+        or user.status.lower().strip() != "active"
+    ):
+
+        logger.warning(
+            f"Login blocked - inactive user -> {username}"
+        )
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -512,8 +563,6 @@ def login(
     # RELATIONSHIPS
     # ======================================================
 
-    # IMPORTANT:
-    # User now has MULTIPLE roles.
     roles = user.roles or []
 
     business = user.business
@@ -531,6 +580,48 @@ def login(
     business_id = None
 
     license_key = None
+
+    # ======================================================
+    # ROLE VALIDATION
+    # ======================================================
+    #
+    # IMPORTANT:
+    #
+    # Role status does NOT control login.
+    #
+    # We only require that a normal business user has
+    # at least one assigned role.
+    #
+    # DO NOT check:
+    #
+    #     role.status
+    #
+    # here.
+    #
+    # Example:
+    #
+    # User status = active
+    # Role status = inactive
+    #
+    # -> USER CAN LOGIN.
+    #
+    # Authorization logic should determine what that
+    # user can access.
+    #
+    # ======================================================
+
+    if not is_super_admin:
+
+        if not roles:
+
+            logger.warning(
+                f"Login blocked - no role assigned -> {username}"
+            )
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User has no role assigned.",
+            )
 
     # ======================================================
     # BUSINESS USER
@@ -564,6 +655,11 @@ def login(
 
         if not business.is_license_active:
 
+            logger.warning(
+                f"Login blocked - business license inactive "
+                f"for {username}"
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Business license is inactive.",
@@ -576,9 +672,7 @@ def login(
         license_key = (
             db.query(LicenseKey)
             .filter(
-                LicenseKey.business_id
-                == business.id,
-
+                LicenseKey.business_id == business.id,
                 LicenseKey.is_active.is_(True),
             )
             .order_by(
@@ -588,6 +682,11 @@ def login(
         )
 
         if license_key is None:
+
+            logger.warning(
+                f"Login blocked - no active license "
+                f"for {username}"
+            )
 
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -606,6 +705,11 @@ def login(
                 )
                 < now_wat()
             ):
+
+                logger.warning(
+                    f"Login blocked - expired license "
+                    f"for {username}"
+                )
 
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -645,6 +749,14 @@ def login(
         # --------------------------------------------------
         # BUSINESS USER
         # --------------------------------------------------
+        #
+        # IMPORTANT:
+        # Include the assigned roles regardless of their
+        # status.
+        #
+        # Role status is NOT a login restriction.
+        #
+        # --------------------------------------------------
 
         role_list = [
             {
@@ -667,18 +779,6 @@ def login(
 
         # --------------------------------------------------
         # PRIMARY ROLE
-        # --------------------------------------------------
-        #
-        # This is temporary backward compatibility.
-        #
-        # Existing code using:
-        #
-        # current_user.role_code
-        #
-        # will still work.
-        #
-        # Later we can change authorization to check
-        # current_user.roles instead.
         # --------------------------------------------------
 
         primary_role = (
@@ -732,7 +832,7 @@ def login(
         "business_id": business_id,
 
         # --------------------------------------------------
-        # Multiple roles
+        # MULTIPLE ROLES
         # --------------------------------------------------
 
         "role_ids": role_ids,
@@ -740,7 +840,7 @@ def login(
         "role_codes": role_codes,
 
         # --------------------------------------------------
-        # Backward compatibility
+        # BACKWARD COMPATIBILITY
         # --------------------------------------------------
 
         "role_id": role_id,
@@ -748,7 +848,7 @@ def login(
         "role_code": role_code,
 
         # --------------------------------------------------
-        # Location
+        # LOCATION
         # --------------------------------------------------
 
         "location_id": location_id,
@@ -889,8 +989,7 @@ def login(
             ),
         },
     }
-
-
+    
 
 # ==========================================================
 # LIST USERS

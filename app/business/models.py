@@ -7,10 +7,10 @@ from sqlalchemy.orm import relationship, Session
 
 
 
-from app.bank.models import Bank
+
 from app.vendor.models import Vendor
 from app.license.models import LicenseKey
-from app.users.models import User
+
 from app.roles.models import Role
 from app.locations.models import Location
 
@@ -72,21 +72,9 @@ class Business(Base):
 
     
 
-    # -----------------------------
-    # FINANCE
-    # -----------------------------
+    
 
-    banks = relationship(
-        "Bank",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
 
-    payments = relationship(
-        "Payment",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
 
     # -----------------------------
     # VENDORS
@@ -144,62 +132,11 @@ class Business(Base):
         cascade="all, delete-orphan"
     )
 
-    # -----------------------------
-    # RESTAURANT
-    # -----------------------------
+    
 
-    restaurant_locations = relationship(
-        "RestaurantLocation",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
+    
 
-    meal_categories = relationship(
-        "MealCategory",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
-
-    meals = relationship(
-        "Meal",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
-
-    meal_orders = relationship(
-        "MealOrder",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
-
-    restaurant_sales = relationship(
-        "RestaurantSale",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
-
-    restaurant_sale_payments = relationship(
-        "RestaurantSalePayment",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
-
-    # -----------------------------
-    # ROOMS
-    # -----------------------------
-
-    rooms = relationship(
-        "Room",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
-
-    room_faults = relationship(
-        "RoomFault",
-        back_populates="business",
-        cascade="all, delete-orphan"
-    )
-
+    
     # -----------------------------
     # LICENSE CHECK
     # -----------------------------
@@ -227,7 +164,7 @@ class Business(Base):
 
 
 # Import AFTER model declaration
-from app.bank.models import Bank
+
 from app.vendor.models import Vendor
 from app.license.models import LicenseKey
-from app.users.models import User
+

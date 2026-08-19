@@ -19,24 +19,18 @@ from app.locations.router import router as location_router
 
 from app.catering.router import router as catering_router
 
-from app.rooms.router import router as rooms_router
-from app.bookings.router import router as bookings_router
-from app.payments.router import router as payments_router
+
+
 from app.license.router import router as license_router
-from app.events.router import router as events_router
-from app.eventpayment.router import router as eventpayment_router
+
 from backup.backup import router as backup_router
 
 from app.importitem.router import router as importitem_router
 
-from app.bank.router import router as bank_router
+
 from app.store.router import router as store_router
-from app.bar.routers import router as bar_router
-from app.barpayment.router import router as barpayment_router
+
 from app.vendor.router import router as vendor_router
-from app.kitchen.router import router as kitchen_router
-from app.restaurant.router import router as restaurant_router
-from app.restpayment.router import router as restpayment_router
 
 from app.superadmin.router import router as superadmin_router
 from app.business.router import router as business_router
@@ -145,7 +139,6 @@ app.include_router(location_router, prefix="/locations", tags=["Location"])
 app.include_router(catering_router, prefix="/catering", tags=["Catering Services"])
 
 
-app.include_router(bank_router, prefix="/bank", tags=["Banks"])
 
 
 

@@ -46,7 +46,7 @@ const HomePage = () => {
         {/* TOP LEFT LOGO */}
         <div className="top-left-brand">
           <div className="logo-orbit-wrapper">
-            <img src="/images/hems-logo.jpeg" className="top-left-logo" />
+            <img src="/images/DIMS-LOGO1.PNG" className="top-left-logo" />
             <span className="orbit-ring"></span>
             <span className="orbit-dot"></span>
           </div>

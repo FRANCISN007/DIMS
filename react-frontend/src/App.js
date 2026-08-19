@@ -18,9 +18,9 @@ import LoginPage from "./modules/auth/LoginPage";
 // ================= DASHBOARD =================
 import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
-import RoomsPage from "./pages/RoomsPage";
-import BookingsPage from "./pages/BookingsPage";
-import RoomStatusBoard from "./pages/RoomStatusBoard";
+
+
+
 
 // ================= STORE =================
 import StoreDashboardPage from "./components/store/StoreDashboardPage";
@@ -31,18 +31,14 @@ import CreatePurchase from "./components/store/CreatePurchase";
 import ListPurchase from "./components/store/ListPurchase";
 import IssueToLocation from "./components/store/IssueToLocation";
 import ListIssuesToLocation from "./components/store/ListIssuesToLocation";
-import CreateKitchen from "./components/store/CreateKitchen";
+
 import StockAdjustment from "./components/store/StockAdjustment";
 import ListAdjustment from "./components/store/ListAdjustment";
 import StockBalance from "./components/store/StockBalance";
 
 import LocationBalanceStock from "./components/store/LocationBalanceStock";
 
-import KitchenBalanceStock from "./components/store/KitchenBalanceStock";
-import KitchenStockAdjust from "./components/store/KitchenStockAdjust";
-import KitchenAdjustmentList from "./components/store/KitchenAdjustmentList";
-import IssuesToKitchen from "./components/store/IssuesToKitchen";
-import KitchenIssueList from "./components/store/KitchenIssueList";
+
 
 // ================= BAR =================
 import BarDashboardPage from "./components/bar/BarDashboardPage";
@@ -59,27 +55,8 @@ import BarPaymentCreate from "./components/bar/BarPaymentCreate";
 import ListBarPayment from "./components/bar/ListBarPayment";
 import BarSalesSummary from "./components/bar/BarSalesSummary";
 
-// ================= RESTAURANT =================
-import RestDashboardPage from "./components/restaurant/RestDashboardPage";
-import RestaurantLocation from "./components/restaurant/RestaurantLocation";
-import MealCategory from "./components/restaurant/MealCategory";
-import MealCreate from "./components/restaurant/MealCreate";
-import GuestOrderCreate from "./components/restaurant/GuestOrderCreate";
-import ListGuestOrder from "./components/restaurant/ListGuestOrder";
-import OrderToSales from "./components/restaurant/OrderToSales";
-import ListRestaurantSales from "./components/restaurant/ListRestaurantSales";
-import RestaurantPayment from "./components/restaurant/RestaurantPayment";
-import ListRestaurantPayment from "./components/restaurant/ListRestaurantPayment";
-import KitchenStock from "./components/restaurant/KitchenStock";
-import SalesSummary from "./components/restaurant/SalesSummary";
 
-// ================= BOOKINGS =================
-import CreateBooking from "./components/bookings/CreateBooking";
-import ListBooking from "./components/bookings/ListBooking";
-import CheckoutGuest from "./components/bookings/CheckoutGuest";
-import CancelBooking from "./components/bookings/CancelBooking";
-import SummaryReport from "./components/bookings/SummaryReport";
-import ReservationAlert from "./components/bookings/ReservationAlert";
+
 
 // ================= PAYMENTS =================
 import CreateBank from "./components/payments/CreateBank";
@@ -88,15 +65,7 @@ import PaymentOutstandingList from "./components/payments/PaymentOutstandingList
 import ListPayment from "./components/payments/ListPayment";
 import VoidPayment from "./components/payments/VoidPayment";
 
-// ================= EVENTS =================
-import CreateEvent from "./components/events/CreateEvent";
-import ListEvent from "./components/events/ListEvent";
-import EventPayment from "./components/events/EventPayment";
-import ListEventPayment from "./components/events/ListEventPayment";
-import VoidEventPayment from "./components/events/VoidEventPayment";
-import ViewEventForm from "./components/events/ViewEventForm";
-import EventUpdate from "./components/events/EventUpdate";
-import ViewEventPayment from "./components/events/ViewEventPayment";
+
 
 
 // ================= ROLES =================
@@ -212,35 +181,8 @@ const App = () => {
           />
 
 
-          <Route
-            path="kitchenstock"
-            element={<KitchenBalanceStock />}
-          />
-
-          <Route
-            path="kitchen/create"
-            element={<CreateKitchen />}
-          />
-
-          <Route
-            path="kitchenadjustment/create"
-            element={<KitchenStockAdjust />}
-          />
-
-          <Route
-            path="kitchenadjustment/list"
-            element={<KitchenAdjustmentList />}
-          />
-
-          <Route
-            path="kitchen/issue"
-            element={<IssuesToKitchen />}
-          />
-
-          <Route
-            path="kitchenissue/list"
-            element={<KitchenIssueList />}
-          />
+        
+        
         </Route>
 
 
@@ -364,74 +306,7 @@ const App = () => {
         </Route>
 
 
-        {/* =====================================================
-            RESTAURANT
-        ===================================================== */}
-
-        <Route
-          path="/restaurant"
-          element={
-            <ProtectedRoute>
-              <RestDashboardPage />
-            </ProtectedRoute>
-          }
-        >
-          <Route
-            path="location"
-            element={<RestaurantLocation />}
-          />
-
-          <Route
-            path="meal-category"
-            element={<MealCategory />}
-          />
-
-          <Route
-            path="meal-create"
-            element={<MealCreate />}
-          />
-
-          <Route
-            path="guest-order-create"
-            element={<GuestOrderCreate />}
-          />
-
-          <Route
-            path="guest-orders"
-            element={<ListGuestOrder />}
-          />
-
-          <Route
-            path="order-to-sales"
-            element={<OrderToSales />}
-          />
-
-          <Route
-            path="sales"
-            element={<ListRestaurantSales />}
-          />
-
-          <Route
-            path="payment"
-            element={<RestaurantPayment />}
-          />
-
-          <Route
-            path="payments"
-            element={<ListRestaurantPayment />}
-          />
-
-          <Route
-            path="kitchen-stock"
-            element={<KitchenStock />}
-          />
-
-          <Route
-            path="sales-summary"
-            element={<SalesSummary />}
-          />
-        </Route>
-
+        
 
         {/* =====================================================
             MAIN DASHBOARD
@@ -453,59 +328,9 @@ const App = () => {
             element={<UsersPage />}
           />
 
-          {/* ================= ROOMS ================= */}
+          
 
-          <Route
-            path="rooms"
-            element={<RoomsPage />}
-          />
-
-          <Route
-            path="rooms/status"
-            element={<RoomStatusBoard />}
-          />
-
-
-          {/* ===================================================
-              BOOKINGS
-          =================================================== */}
-
-          <Route
-            path="bookings"
-            element={<BookingsPage />}
-          >
-            <Route
-              index
-              element={<ListBooking />}
-            />
-
-            <Route
-              path="create"
-              element={<CreateBooking />}
-            />
-
-            <Route
-              path="list"
-              element={<ListBooking />}
-            />
-
-            <Route
-              path="checkout"
-              element={<CheckoutGuest />}
-            />
-
-            <Route
-              path="cancel"
-              element={<CancelBooking />}
-            />
-
-            <Route
-              path="summary"
-              element={<SummaryReport />}
-            />
-          </Route>
-
-
+          
           {/* ===================================================
               PAYMENTS
           =================================================== */}
@@ -540,60 +365,7 @@ const App = () => {
           </Route>
 
 
-          {/* ===================================================
-              EVENTS
-          =================================================== */}
-
-          <Route path="events">
-
-            <Route
-              index
-              element={<ListEvent />}
-            />
-
-            <Route
-              path="create"
-              element={<CreateEvent />}
-            />
-
-            <Route
-              path="list"
-              element={<ListEvent />}
-            />
-
-            <Route
-              path="payment"
-              element={<EventPayment />}
-            />
-
-            <Route
-              path="payments/list"
-              element={<ListEventPayment />}
-            />
-
-            <Route
-              path="payments/void"
-              element={<VoidEventPayment />}
-            />
-
-            <Route
-              path="view"
-              element={<ViewEventForm />}
-            />
-
-            <Route
-              path="update"
-              element={<EventUpdate />}
-            />
-
-            <Route
-              path="payments/view/:id"
-              element={<ViewEventPayment />}
-            />
-
-          </Route>
-
-
+          
 
           {/* ===================================================
               ROLES
@@ -641,14 +413,7 @@ const App = () => {
           </Route>
 
 
-          {/* ===================================================
-              RESERVATION ALERT
-          =================================================== */}
-
-          <Route
-            path="reservation-alert"
-            element={<ReservationAlert />}
-          />
+          
 
         </Route>
 

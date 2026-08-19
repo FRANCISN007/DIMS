@@ -227,34 +227,111 @@ def list_roles(
         .all()
     )
 
+
+
 @router.get(
     "/simple",
     response_model=list[schemas.RoleSimple],
 )
 def list_simple_roles(
+    business_id: Optional[int] = Query(None),
+
     db: Session = Depends(get_db),
-    current_user: UserDisplaySchema = Depends(get_current_user),
+
+    current_user: UserDisplaySchema = Depends(
+        get_current_user
+    ),
 ):
     """
-    List active roles.
+    List active roles for the appropriate business.
 
-    - Super Admin → all active roles
-    - Business users → active roles for their business only
+    ----------------------------------------------------------
+    SUPER ADMIN
+    ----------------------------------------------------------
+    Super Admin must provide business_id.
+
+        GET /roles/simple?business_id=1
+
+    Only active roles belonging to business 1 are returned.
+
+    ----------------------------------------------------------
+    BUSINESS USER
+    ----------------------------------------------------------
+    Normal business users automatically use their own
+    business_id.
+
+    Any business_id supplied by the frontend is ignored.
+
+    ----------------------------------------------------------
+    IMPORTANT
+    ----------------------------------------------------------
+    This endpoint NEVER returns roles from all businesses.
     """
 
-    query = db.query(Role).filter(
-        Role.status == "active"
+    # ==========================================================
+    # 1. DETERMINE SUPER ADMIN
+    # ==========================================================
+
+    is_super_admin = (
+        current_user.role_code == SUPER_ADMIN
+        or current_user.business_id is None
     )
 
-    if current_user.business_id is not None:
-        query = query.filter(
-            Role.business_id == current_user.business_id
+    # ==========================================================
+    # 2. DETERMINE BUSINESS
+    # ==========================================================
+
+    if is_super_admin:
+
+        # ------------------------------------------------------
+        # Super Admin must select a business
+        # ------------------------------------------------------
+
+        if business_id is None:
+            return []
+
+        selected_business_id = business_id
+
+    else:
+
+        # ------------------------------------------------------
+        # Normal business user
+        # ------------------------------------------------------
+
+        if current_user.business_id is None:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Your account is not assigned "
+                    "to a business."
+                ),
+            )
+
+        selected_business_id = (
+            current_user.business_id
         )
 
-    return (
-        query.order_by(Role.name.asc())
+    # ==========================================================
+    # 3. GET ONLY ACTIVE ROLES FOR SELECTED BUSINESS
+    # ==========================================================
+
+    roles = (
+        db.query(Role)
+        .filter(
+            Role.business_id == selected_business_id,
+            Role.status == "active",
+        )
+        .order_by(
+            Role.name.asc()
+        )
         .all()
     )
+
+    # ==========================================================
+    # 4. RETURN
+    # ==========================================================
+
+    return roles
 
 
 @router.get(

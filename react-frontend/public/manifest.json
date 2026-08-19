@@ -1,19 +1,19 @@
 {
-  "short_name": "HEMS Hotel",
-  "name": "HEMS Hotel Management Software",
+  "short_name": "DIMS",
+  "name": "DISTRIBUTION & INVENTORY MANAGEMEMT SYSTEM",
   "icons": [
     {
-      "src": "images/hems-logo1.ico",
+      "src": "images/DIMS_LOGO.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "images/hemslogo.jpeg",
+      "src": "images/DIMS-LOGO1.PNG",
       "sizes": "192x192",
       "type": "image/jpeg"
     },
     {
-      "src": "images/hemslogo.jpeg",
+      "src": "images/DIMS-LOGO1.PNG",
       "sizes": "512x512",
       "type": "image/jpeg"
     }

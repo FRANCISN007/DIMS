@@ -1,19 +1,55 @@
-
 import React, { useEffect, useState } from "react";
 import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./CreateRole.css";
 
 const CreateRole = ({ onClose }) => {
   /* =========================================================
+     CURRENT USER
+     ========================================================= */
+
+  const storedUser = localStorage.getItem("user");
+
+  let currentUser = null;
+
+  try {
+    currentUser = storedUser
+      ? JSON.parse(storedUser)
+      : null;
+  } catch (error) {
+    console.error("Unable to read logged-in user:", error);
+  }
+
+  /*
+   * Super Admin has no business_id.
+   *
+   * Therefore:
+   *
+   * business_id === null / undefined
+   *       => Super Admin
+   *
+   * business_id exists
+   *       => Business Admin / normal business user
+   */
+  const isSuperAdmin =
+    currentUser?.business_id === null ||
+    currentUser?.business_id === undefined;
+
+  /* =========================================================
      STATE
-  ========================================================= */
+     ========================================================= */
 
   const [formData, setFormData] = useState({
+    business_id: "",
     name: "",
     code: "",
     description: "",
     status: "active",
   });
+
+  const [businesses, setBusinesses] = useState([]);
+
+  const [loadingBusinesses, setLoadingBusinesses] =
+    useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,10 +58,7 @@ const CreateRole = ({ onClose }) => {
 
   /* =========================================================
      AUTO HIDE MESSAGE
-     
-     Success and error messages automatically disappear
-     after 3 seconds.
-  ========================================================= */
+     ========================================================= */
 
   useEffect(() => {
     if (!message) {
@@ -43,8 +76,57 @@ const CreateRole = ({ onClose }) => {
   }, [message]);
 
   /* =========================================================
+     LOAD BUSINESSES
+     
+     Only Super Admin needs the business dropdown.
+     ========================================================= */
+
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      return;
+    }
+
+    const fetchBusinesses = async () => {
+      try {
+        setLoadingBusinesses(true);
+
+        const response = await axiosWithAuth().get(
+          "/business/simple"
+        );
+
+        console.log(
+          "BUSINESS SIMPLE RESPONSE:",
+          response.data
+        );
+
+        setBusinesses(
+          Array.isArray(response.data)
+            ? response.data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load businesses:",
+          error?.response?.data || error
+        );
+
+        setMessage(
+          error?.response?.data?.detail ||
+            "Failed to load businesses."
+        );
+
+        setMessageType("error");
+      } finally {
+        setLoadingBusinesses(false);
+      }
+    };
+
+    fetchBusinesses();
+  }, [isSuperAdmin]);
+
+  /* =========================================================
      CLOSE FORM
-  ========================================================= */
+     ========================================================= */
 
   const handleClose = () => {
     if (submitting) {
@@ -58,7 +140,7 @@ const CreateRole = ({ onClose }) => {
 
   /* =========================================================
      HANDLE INPUT
-  ========================================================= */
+     ========================================================= */
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,10 +150,6 @@ const CreateRole = ({ onClose }) => {
       [name]: value,
     }));
 
-    /*
-     * Clear any previous message when
-     * the user starts editing again.
-     */
     if (message) {
       setMessage("");
       setMessageType("");
@@ -80,12 +158,42 @@ const CreateRole = ({ onClose }) => {
 
   /* =========================================================
      VALIDATION
-  ========================================================= */
+     ========================================================= */
 
   const validateForm = () => {
+    /* -------------------------------------------------------
+       SUPER ADMIN BUSINESS
+       ------------------------------------------------------- */
+
+    if (isSuperAdmin && !formData.business_id) {
+      setMessage(
+        "Please select a business for this role."
+      );
+
+      setMessageType("error");
+
+      return false;
+    }
+
+    /* -------------------------------------------------------
+       ROLE NAME
+       ------------------------------------------------------- */
+
     if (!formData.name.trim()) {
       setMessage("Role name is required.");
       setMessageType("error");
+
+      return false;
+    }
+
+    /* -------------------------------------------------------
+       ROLE CODE
+       ------------------------------------------------------- */
+
+    if (!formData.code.trim()) {
+      setMessage("Role code is required.");
+      setMessageType("error");
+
       return false;
     }
 
@@ -94,7 +202,7 @@ const CreateRole = ({ onClose }) => {
 
   /* =========================================================
      CREATE ROLE
-  ========================================================= */
+     ========================================================= */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,20 +217,44 @@ const CreateRole = ({ onClose }) => {
     try {
       setSubmitting(true);
 
-      /*
-       * Business ID is NOT included.
-       *
-       * The backend determines the business
-       * from the logged-in user.
-       */
+      /* =====================================================
+         PAYLOAD
+         ===================================================== */
+
       const payload = {
         name: formData.name.trim(),
-        code: formData.code.trim() || null,
-        description: formData.description.trim() || null,
+
+        code: formData.code.trim(),
+
+        description:
+          formData.description.trim() || null,
+
         status: formData.status,
       };
 
-      console.log("CREATE ROLE PAYLOAD:", payload);
+      /*
+       * IMPORTANT
+       *
+       * Only Super Admin sends business_id.
+       *
+       * For Business Admin, the backend determines:
+       *
+       * current_user.business_id
+       */
+
+      if (isSuperAdmin) {
+        payload.business_id =
+          Number(formData.business_id);
+      }
+
+      console.log(
+        "CREATE ROLE PAYLOAD:",
+        payload
+      );
+
+      /* =====================================================
+         POST
+         ===================================================== */
 
       const response = await axiosWithAuth().post(
         "/roles",
@@ -134,19 +266,22 @@ const CreateRole = ({ onClose }) => {
         response.data
       );
 
-      /*
-       * Show success message.
-       *
-       * The useEffect above will automatically
-       * remove it after 3 seconds.
-       */
-      setMessage("Role created successfully.");
+      /* =====================================================
+         SUCCESS
+         ===================================================== */
+
+      setMessage(
+        "Role created successfully."
+      );
+
       setMessageType("success");
 
-      /*
-       * Clear form after successful creation.
-       */
+      /* =====================================================
+         RESET FORM
+         ===================================================== */
+
       setFormData({
+        business_id: "",
         name: "",
         code: "",
         description: "",
@@ -158,27 +293,36 @@ const CreateRole = ({ onClose }) => {
         error?.response?.data || error
       );
 
-      const status = error?.response?.status;
+      const responseStatus =
+        error?.response?.status;
 
-      const detail = error?.response?.data?.detail;
+      const detail =
+        error?.response?.data?.detail;
 
-      if (status === 409) {
+      if (responseStatus === 409) {
         setMessage(
-          detail || "Role name or code already exists."
+          detail ||
+            "Role name or code already exists."
         );
-      } else if (status === 400) {
+      } else if (responseStatus === 400) {
         setMessage(
           detail ||
             "Please check the information provided."
         );
-      } else if (status === 403) {
+      } else if (responseStatus === 403) {
         setMessage(
           detail ||
             "You do not have permission to create this role."
         );
-      } else if (status === 404) {
+      } else if (responseStatus === 404) {
         setMessage(
-          detail || "Business not found."
+          detail ||
+            "Business not found."
+        );
+      } else if (responseStatus === 422) {
+        setMessage(
+          detail ||
+            "Please provide all required role information."
         );
       } else {
         setMessage(
@@ -187,10 +331,6 @@ const CreateRole = ({ onClose }) => {
         );
       }
 
-      /*
-       * Error message will also disappear
-       * automatically after 3 seconds.
-       */
       setMessageType("error");
     } finally {
       setSubmitting(false);
@@ -199,10 +339,11 @@ const CreateRole = ({ onClose }) => {
 
   /* =========================================================
      RESET
-  ========================================================= */
+     ========================================================= */
 
   const handleReset = () => {
     setFormData({
+      business_id: "",
       name: "",
       code: "",
       description: "",
@@ -215,7 +356,7 @@ const CreateRole = ({ onClose }) => {
 
   /* =========================================================
      RENDER
-  ========================================================= */
+     ========================================================= */
 
   return (
     <div className="create-role-page">
@@ -225,7 +366,7 @@ const CreateRole = ({ onClose }) => {
       >
         {/* ===================================================
             CLOSE BUTTON
-        =================================================== */}
+            =================================================== */}
 
         <button
           type="button"
@@ -240,21 +381,23 @@ const CreateRole = ({ onClose }) => {
 
         {/* ===================================================
             HEADER
-        =================================================== */}
+            =================================================== */}
 
         <div className="create-role-header">
           <div>
             <h2>Create Role</h2>
 
             <p>
-              Create a new role for your business.
+              {isSuperAdmin
+                ? "Create a role for a selected business."
+                : "Create a new role for your business."}
             </p>
           </div>
         </div>
 
         {/* ===================================================
             MESSAGE
-        =================================================== */}
+            =================================================== */}
 
         {message && (
           <div
@@ -275,8 +418,49 @@ const CreateRole = ({ onClose }) => {
         )}
 
         {/* ===================================================
+            BUSINESS
+             
+            ONLY SUPER ADMIN
+            =================================================== */}
+
+        {isSuperAdmin && (
+          <div className="form-group">
+            <label htmlFor="business_id">
+              Business{" "}
+              <span className="required">*</span>
+            </label>
+
+            <select
+              id="business_id"
+              name="business_id"
+              value={formData.business_id}
+              onChange={handleChange}
+              disabled={
+                submitting ||
+                loadingBusinesses
+              }
+            >
+              <option value="">
+                {loadingBusinesses
+                  ? "Loading businesses..."
+                  : "Select business"}
+              </option>
+
+              {businesses.map((business) => (
+                <option
+                  key={business.id}
+                  value={business.id}
+                >
+                  {business.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* ===================================================
             ROLE NAME
-        =================================================== */}
+            =================================================== */}
 
         <div className="form-group">
           <label htmlFor="name">
@@ -299,11 +483,12 @@ const CreateRole = ({ onClose }) => {
 
         {/* ===================================================
             ROLE CODE
-        =================================================== */}
+            =================================================== */}
 
         <div className="form-group">
           <label htmlFor="code">
-            Role Code
+            Role Code{" "}
+            <span className="required">*</span>
           </label>
 
           <input
@@ -312,7 +497,7 @@ const CreateRole = ({ onClose }) => {
             name="code"
             value={formData.code}
             onChange={handleChange}
-            placeholder="Example: STO222"
+            placeholder="Example: company_admin"
             maxLength={50}
             disabled={submitting}
             autoComplete="off"
@@ -321,7 +506,7 @@ const CreateRole = ({ onClose }) => {
 
         {/* ===================================================
             DESCRIPTION
-        =================================================== */}
+            =================================================== */}
 
         <div className="form-group">
           <label htmlFor="description">
@@ -342,7 +527,7 @@ const CreateRole = ({ onClose }) => {
 
         {/* ===================================================
             STATUS
-        =================================================== */}
+            =================================================== */}
 
         <div className="form-group">
           <label htmlFor="status">
@@ -368,7 +553,7 @@ const CreateRole = ({ onClose }) => {
 
         {/* ===================================================
             ACTIONS
-        =================================================== */}
+            =================================================== */}
 
         <div className="form-actions">
           <button
@@ -383,7 +568,10 @@ const CreateRole = ({ onClose }) => {
           <button
             type="submit"
             className="create-role-button"
-            disabled={submitting}
+            disabled={
+              submitting ||
+              loadingBusinesses
+            }
           >
             {submitting ? (
               <>

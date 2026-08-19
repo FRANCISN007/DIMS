@@ -50,16 +50,19 @@ const ListItem = () => {
     "Carton",
     "Kg",
     "Basket",
-    "crates",
+    "Crates",
+    "Pack",
+    "Litres",
     "Piece",
   ];
 
   const itemTypeOptions = [
     "All",
-    "ingredients",
-    "food stuff",
-    "protein",
-    "general",
+    "Ingredients",
+    "Food stuff",
+    "Protein",
+    "Water",
+    "General",
   ];
 
   // =========================================================

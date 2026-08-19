@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.store import models as store_models
-from app.bar import models as bar_models
+
 
 
 from sqlalchemy import func
@@ -324,117 +324,7 @@ def increase_bar_inventory(
     Increase bar inventory after an issue.
     """
 
-    bar_inventory = (
-        db.query(bar_models.BarInventory)
-        .filter(
-            bar_models.BarInventory.business_id == business_id,
-            bar_models.BarInventory.bar_id == bar_id,
-            bar_models.BarInventory.item_id == item.id
-        )
-        .first()
-    )
-
-    if bar_inventory:
-
-        bar_inventory.quantity += quantity
-
-    else:
-
-        db.add(
-            bar_models.BarInventory(
-                business_id=business_id,
-                bar_id=bar_id,
-                item_id=item.id,
-                quantity=quantity,
-                selling_price=item.selling_price
-            )
-        )
-
-
-def reset_bar_inventory(
-    db: Session,
-    business_id: int,
-):
-    """
-    Remove every quantity from every bar.
-
-    It will be rebuilt from StoreIssue afterwards.
-    """
-
-    db.query(bar_models.BarInventory).filter(
-        bar_models.BarInventory.business_id == business_id
-    ).delete()
-
-
-
-
-def rebuild_bar_inventory(
-    db: Session,
-    business_id: int,
-):
-    """
-    Rebuild bar inventory from StoreIssue history.
-
-    Store adjustments do NOT affect bar inventory.
-    Only issues from the store to the bar are replayed.
-    """
-
-    # -----------------------------------------
-    # Load all store items
-    # -----------------------------------------
-    items = {
-        item.id: item
-        for item in (
-            db.query(store_models.StoreItem)
-            .filter(
-                store_models.StoreItem.business_id == business_id
-            )
-            .all()
-        )
-    }
-
-    # -----------------------------------------
-    # Load every issue sent to bars
-    # -----------------------------------------
-    issues = (
-        db.query(store_models.StoreIssue)
-        .filter(
-            store_models.StoreIssue.business_id == business_id,
-            store_models.StoreIssue.issue_to == "bar",
-        )
-        .order_by(
-            store_models.StoreIssue.issue_date.asc(),
-            store_models.StoreIssue.id.asc(),
-        )
-        .all()
-    )
-
-    # -----------------------------------------
-    # Replay issues
-    # -----------------------------------------
-    for issue in issues:
-
-        # Skip invalid issues
-        if not issue.bar_id:
-            continue
-
-        for issue_item in issue.issue_items:
-
-            item = items.get(issue_item.item_id)
-
-            if item is None:
-                continue
-
-            increase_bar_inventory(
-                db=db,
-                business_id=business_id,
-                bar_id=issue.bar_id,
-                item=item,
-                quantity=issue_item.quantity,
-            )
-
-
-
+    
 
 
 
@@ -634,12 +524,4 @@ def rebuild_everything(
         business_id,
     )
 
-    reset_bar_inventory(
-        db,
-        business_id,
-    )
-
-    rebuild_bar_inventory(
-        db,
-        business_id,
-    )
+    
