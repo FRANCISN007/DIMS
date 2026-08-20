@@ -11,13 +11,17 @@ import "./ListIssuesToLocation.css";
 
 const ListIssuesToLocation = () => {
   // ==========================================================
+  // AXIOS
+  // ==========================================================
+
+  const axios = axiosWithAuth();
+
+  // ==========================================================
   // DATA
   // ==========================================================
 
   const [issues, setIssues] = useState([]);
-
   const [locations, setLocations] = useState([]);
-
   const [items, setItems] = useState([]);
 
   // ==========================================================
@@ -42,6 +46,8 @@ const ListIssuesToLocation = () => {
 
   const [message, setMessage] = useState("");
 
+  const messageTimeout = useRef(null);
+
   // ==========================================================
   // FILTERS
   // ==========================================================
@@ -65,6 +71,9 @@ const ListIssuesToLocation = () => {
   const [editingIssue, setEditingIssue] =
     useState(null);
 
+  const [savingEdit, setSavingEdit] =
+    useState(false);
+
   const [formData, setFormData] = useState({
     ref: "",
     issue_to: "location",
@@ -73,48 +82,124 @@ const ListIssuesToLocation = () => {
     issue_items: [],
   });
 
+  /*
+   * Keep the original quantities only as information about
+   * what the issue contained before editing.
+   *
+   * IMPORTANT:
+   * We DO NOT use this to calculate stock.
+   *
+   * The backend is responsible for:
+   *
+   *     actual stock + old issue quantity
+   *
+   * and then rebuilding the inventory.
+   */
   const [originalIssueCounts, setOriginalIssueCounts] =
     useState({});
 
+  // ==========================================================
+  // SEARCH
+  // ==========================================================
+
   const fetchTimeout = useRef(null);
 
-  const axios = axiosWithAuth();
+  // ==========================================================
+  // FORMAT LOCAL DATE
+  // ==========================================================
+
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      date.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
 
   // ==========================================================
   // TODAY
   // ==========================================================
 
   const getToday = () => {
-    return new Date()
-      .toISOString()
-      .split("T")[0];
+    return formatDate(new Date());
   };
 
   // ==========================================================
-  // SET DEFAULT DATE RANGE
+  // LAST 7 DAYS
+  // ==========================================================
+
+  const getLast7Days = () => {
+    const today = new Date();
+
+    const start = new Date(today);
+
+    start.setDate(
+      today.getDate() - 6
+    );
+
+    return {
+      startDate: formatDate(start),
+      endDate: formatDate(today),
+    };
+  };
+
+  // ==========================================================
+  // SHOW MESSAGE
+  // ==========================================================
+
+  const showMessage = (msg) => {
+    if (messageTimeout.current) {
+      clearTimeout(
+        messageTimeout.current
+      );
+    }
+
+    setMessage(msg);
+
+    messageTimeout.current =
+      setTimeout(() => {
+        setMessage("");
+      }, 3500);
+  };
+
+  // ==========================================================
+  // CLEANUP
   // ==========================================================
 
   useEffect(() => {
-    const now = new Date();
+    return () => {
+      if (fetchTimeout.current) {
+        clearTimeout(
+          fetchTimeout.current
+        );
+      }
 
-    const firstDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    )
-      .toISOString()
-      .split("T")[0];
+      if (messageTimeout.current) {
+        clearTimeout(
+          messageTimeout.current
+        );
+      }
+    };
+  }, []);
 
-    const lastDay = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0
-    )
-      .toISOString()
-      .split("T")[0];
+  // ==========================================================
+  // DEFAULT DATE RANGE
+  // ==========================================================
 
-    setStartDate(firstDay);
-    setEndDate(lastDay);
+  useEffect(() => {
+    const {
+      startDate,
+      endDate,
+    } = getLast7Days();
+
+    setStartDate(startDate);
+    setEndDate(endDate);
   }, []);
 
   // ==========================================================
@@ -122,60 +207,63 @@ const ListIssuesToLocation = () => {
   // ==========================================================
 
   useEffect(() => {
-    const fetchLocationsAndItems = async () => {
-      try {
-        const [
-          locationsRes,
-          itemsRes,
-        ] = await Promise.all([
-          axios.get("/locations/simple"),
-          axios.get("/store/items/simple"),
-        ]);
+    const fetchLocationsAndItems =
+      async () => {
+        try {
+          const [
+            locationsRes,
+            itemsRes,
+          ] = await Promise.all([
+            axios.get(
+              "/locations/simple"
+            ),
 
-        setLocations(
-          Array.isArray(locationsRes.data)
-            ? locationsRes.data
-            : []
-        );
+            axios.get(
+              "/store/items/simple"
+            ),
+          ]);
 
-        setItems(
-          Array.isArray(itemsRes.data)
-            ? itemsRes.data
-            : []
-        );
-      } catch (err) {
-        console.error(
-          "Error fetching locations/items:",
-          err
-        );
+          setLocations(
+            Array.isArray(
+              locationsRes.data
+            )
+              ? locationsRes.data
+              : []
+          );
 
-        showMessage(
-          "❌ Failed to load locations/items."
-        );
-      }
-    };
+          setItems(
+            Array.isArray(
+              itemsRes.data
+            )
+              ? itemsRes.data
+              : []
+          );
+        } catch (err) {
+          console.error(
+            "Error fetching locations/items:",
+            err
+          );
+
+          showMessage(
+            "❌ Failed to load locations/items."
+          );
+        }
+      };
 
     fetchLocationsAndItems();
   }, []);
 
   // ==========================================================
-  // SHOW MESSAGE
-  // ==========================================================
-
-  const showMessage = (msg) => {
-    setMessage(msg);
-
-    setTimeout(() => {
-      setMessage("");
-    }, 3500);
-  };
-
-  // ==========================================================
   // SEARCH STORE ITEMS
   // ==========================================================
 
-  const fetchItems = async (searchText) => {
-    if (!searchText.trim()) {
+  const fetchItems = async (
+    searchText
+  ) => {
+    if (
+      !searchText ||
+      !searchText.trim()
+    ) {
       return [];
     }
 
@@ -184,13 +272,17 @@ const ListIssuesToLocation = () => {
         "/store/items/simple-search",
         {
           params: {
-            search: searchText,
+            search:
+              searchText.trim(),
+
             limit: 20,
           },
         }
       );
 
-      return Array.isArray(res.data)
+      return Array.isArray(
+        res.data
+      )
         ? res.data
         : [];
     } catch (err) {
@@ -221,9 +313,8 @@ const ListIssuesToLocation = () => {
       // ------------------------------------------------------
 
       if (locationId) {
-        params.location_id = Number(
-          locationId
-        );
+        params.location_id =
+          Number(locationId);
       }
 
       // ------------------------------------------------------
@@ -231,7 +322,8 @@ const ListIssuesToLocation = () => {
       // ------------------------------------------------------
 
       if (itemId) {
-        params.item_id = Number(itemId);
+        params.item_id =
+          Number(itemId);
       }
 
       // ------------------------------------------------------
@@ -257,26 +349,17 @@ const ListIssuesToLocation = () => {
         }
       );
 
-      /*
-       * Backend now returns:
-       *
-       * {
-       *   issues: [],
-       *   total_item_quantity: 20,
-       *   selected_item_id: 1,
-       *   selected_item_name: "Rice",
-       *   selected_item_unit: "Basket"
-       * }
-       */
-
-      const data = res.data || {};
+      const data =
+        res.data || {};
 
       // ------------------------------------------------------
       // ISSUES
       // ------------------------------------------------------
 
       setIssues(
-        Array.isArray(data.issues)
+        Array.isArray(
+          data.issues
+        )
           ? data.issues
           : []
       );
@@ -287,24 +370,28 @@ const ListIssuesToLocation = () => {
 
       setTotalItemQuantity(
         Number(
-          data.total_item_quantity || 0
+          data.total_item_quantity ||
+            0
         )
       );
 
       // ------------------------------------------------------
-      // SELECTED ITEM INFORMATION
+      // SELECTED ITEM
       // ------------------------------------------------------
 
       setSelectedItemId(
-        data.selected_item_id ?? null
+        data.selected_item_id ??
+          null
       );
 
       setSelectedItemName(
-        data.selected_item_name || ""
+        data.selected_item_name ||
+          ""
       );
 
       setSelectedItemUnit(
-        data.selected_item_unit || ""
+        data.selected_item_unit ||
+          ""
       );
     } catch (err) {
       console.error(
@@ -334,7 +421,10 @@ const ListIssuesToLocation = () => {
   // ==========================================================
 
   useEffect(() => {
-    if (!startDate || !endDate) {
+    if (
+      !startDate ||
+      !endDate
+    ) {
       return;
     }
 
@@ -350,52 +440,78 @@ const ListIssuesToLocation = () => {
   // EDIT ISSUE
   // ==========================================================
 
-  const handleEditClick = (issue) => {
-    const issue_items =
-      (issue.issue_items || []).map(
-        (it) => ({
-          itemId:
-            it.item?.id || "",
-
-          itemName:
-            it.item?.name || "",
-
-          search:
-            it.item?.name || "",
-
-          suggestions: [],
-
-          quantity:
-            it.quantity || "",
-        })
-      );
-
+  const handleEditClick = (
+    issue
+  ) => {
     // --------------------------------------------------------
-    // ORIGINAL QUANTITIES
+    // BUILD ISSUE ITEMS
     // --------------------------------------------------------
 
-    const orig = {};
+    const issueItems =
+      (
+        issue.issue_items ||
+        []
+      ).map((it) => ({
+        itemId:
+          it.item?.id ||
+          "",
 
-    issue_items.forEach((item) => {
-      const id = Number(
-        item.itemId
-      );
+        itemName:
+          it.item?.name ||
+          "",
 
-      if (!id) {
-        return;
+        search:
+          it.item?.name ||
+          "",
+
+        suggestions: [],
+
+        quantity:
+          Number(
+            it.quantity || 0
+          ),
+      }));
+
+    // --------------------------------------------------------
+    // SAVE ORIGINAL QUANTITIES
+    //
+    // This is NOT used for frontend stock calculation.
+    // It is simply retained while editing.
+    // --------------------------------------------------------
+
+    const originalCounts = {};
+
+    issueItems.forEach(
+      (item) => {
+        const itemId =
+          Number(
+            item.itemId
+          );
+
+        if (!itemId) {
+          return;
+        }
+
+        originalCounts[
+          itemId
+        ] =
+          (
+            originalCounts[
+              itemId
+            ] || 0
+          ) +
+          Number(
+            item.quantity || 0
+          );
       }
+    );
 
-      orig[id] =
-        (orig[id] || 0) +
-        Number(
-          item.quantity || 0
-        );
-    });
-
-    setOriginalIssueCounts(orig);
+    setOriginalIssueCounts(
+      originalCounts
+    );
 
     // --------------------------------------------------------
-    // FORM DATA
+    // FORM
     // --------------------------------------------------------
 
     setFormData({
@@ -406,14 +522,19 @@ const ListIssuesToLocation = () => {
         "location",
 
       issued_to_id:
-        issue.issued_to_id || "",
+        issue.issued_to_id ||
+        issue.location_id ||
+        "",
 
       issue_date:
         issue.issue_date
-          ? issue.issue_date.split("T")[0]
+          ? issue.issue_date.split(
+              "T"
+            )[0]
           : getToday(),
 
-      issue_items,
+      issue_items:
+        issueItems,
     });
 
     setEditingIssue(
@@ -430,10 +551,18 @@ const ListIssuesToLocation = () => {
     field,
     value
   ) => {
+    // --------------------------------------------------------
+    // UPDATE FORM
+    // --------------------------------------------------------
+
     setFormData((prev) => {
       const updated = [
         ...prev.issue_items,
       ];
+
+      if (!updated[index]) {
+        return prev;
+      }
 
       // ------------------------------------------------------
       // SEARCH
@@ -442,14 +571,25 @@ const ListIssuesToLocation = () => {
       if (
         field === "search"
       ) {
-        updated[index].search =
-          value;
+        updated[index] = {
+          ...updated[index],
 
-        updated[index].itemId =
-          "";
+          search:
+            value,
 
-        updated[index].itemName =
-          "";
+          /*
+           * When user starts typing a new item,
+           * the previous selected item is cleared.
+           */
+          itemId:
+            "",
+
+          itemName:
+            "",
+
+          suggestions:
+            [],
+        };
       }
 
       // ------------------------------------------------------
@@ -459,8 +599,12 @@ const ListIssuesToLocation = () => {
       if (
         field === "quantity"
       ) {
-        updated[index].quantity =
-          value;
+        updated[index] = {
+          ...updated[index],
+
+          quantity:
+            value,
+        };
       }
 
       // ------------------------------------------------------
@@ -470,73 +614,90 @@ const ListIssuesToLocation = () => {
       if (
         field === "select_item"
       ) {
-        updated[index].itemId =
-          value.id;
+        updated[index] = {
+          ...updated[index],
 
-        updated[index].itemName =
-          value.name;
+          itemId:
+            value.id,
 
-        updated[index].search =
-          value.name;
+          itemName:
+            value.name,
 
-        updated[index].suggestions =
-          [];
+          search:
+            value.name,
+
+          suggestions:
+            [],
+        };
       }
 
       return {
         ...prev,
+
         issue_items:
           updated,
       };
     });
 
     // --------------------------------------------------------
-    // ITEM SEARCH
+    // SEARCH ITEMS
     // --------------------------------------------------------
 
     if (
-      field === "search"
+      field !== "search"
     ) {
-      if (
-        fetchTimeout.current
-      ) {
-        clearTimeout(
-          fetchTimeout.current
-        );
-      }
-
-      fetchTimeout.current =
-        setTimeout(
-          async () => {
-            const results =
-              await fetchItems(
-                value
-              );
-
-            setFormData(
-              (prev) => {
-                const rows = [
-                  ...prev.issue_items,
-                ];
-
-                if (!rows[index]) {
-                  return prev;
-                }
-
-                rows[index].suggestions =
-                  results;
-
-                return {
-                  ...prev,
-                  issue_items:
-                    rows,
-                };
-              }
-            );
-          },
-          300
-        );
+      return;
     }
+
+    if (
+      fetchTimeout.current
+    ) {
+      clearTimeout(
+        fetchTimeout.current
+      );
+    }
+
+    /*
+     * Do not search for every keystroke immediately.
+     */
+    fetchTimeout.current =
+      setTimeout(
+        async () => {
+          const results =
+            await fetchItems(
+              value
+            );
+
+          setFormData(
+            (prev) => {
+              const rows = [
+                ...prev.issue_items,
+              ];
+
+              if (
+                !rows[index]
+              ) {
+                return prev;
+              }
+
+              rows[index] = {
+                ...rows[index],
+
+                suggestions:
+                  results,
+              };
+
+              return {
+                ...prev,
+
+                issue_items:
+                  rows,
+              };
+            }
+          );
+        },
+        300
+      );
   };
 
   // ==========================================================
@@ -544,21 +705,23 @@ const ListIssuesToLocation = () => {
   // ==========================================================
 
   const addIssueLine = () => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData(
+      (prev) => ({
+        ...prev,
 
-      issue_items: [
-        ...prev.issue_items,
+        issue_items: [
+          ...prev.issue_items,
 
-        {
-          itemId: "",
-          itemName: "",
-          search: "",
-          suggestions: [],
-          quantity: "",
-        },
-      ],
-    }));
+          {
+            itemId: "",
+            itemName: "",
+            search: "",
+            suggestions: [],
+            quantity: "",
+          },
+        ],
+      })
+    );
   };
 
   // ==========================================================
@@ -568,30 +731,81 @@ const ListIssuesToLocation = () => {
   const removeIssueLine = (
     index
   ) => {
-    setFormData((prev) => {
-      const newItems = [
-        ...prev.issue_items,
-      ];
+    setFormData(
+      (prev) => {
+        const newItems = [
+          ...prev.issue_items,
+        ];
 
-      newItems.splice(
-        index,
-        1
-      );
+        newItems.splice(
+          index,
+          1
+        );
 
-      return {
-        ...prev,
-        issue_items:
-          newItems,
-      };
+        return {
+          ...prev,
+
+          issue_items:
+            newItems,
+        };
+      }
+    );
+  };
+
+  // ==========================================================
+  // CLOSE EDIT
+  // ==========================================================
+
+  const closeEdit = () => {
+    if (savingEdit) {
+      return;
+    }
+
+    setEditingIssue(
+      null
+    );
+
+    setOriginalIssueCounts(
+      {}
+    );
+
+    setFormData({
+      ref: "",
+      issue_to: "location",
+      issued_to_id: "",
+      issue_date: "",
+      issue_items: [],
     });
   };
 
   // ==========================================================
   // UPDATE ISSUE
   // ==========================================================
+  //
+  // IMPORTANT:
+  //
+  // There is NO frontend stock calculation here.
+  //
+  // The backend endpoint is responsible for checking:
+  //
+  //     actual available stock
+  //     +
+  //     old issue quantity
+  //
+  // and rebuilding FIFO inventory.
+  //
+  // ==========================================================
 
   const handleSubmitEdit =
     async (id) => {
+      // ------------------------------------------------------
+      // PREVENT DOUBLE SUBMIT
+      // ------------------------------------------------------
+
+      if (savingEdit) {
+        return;
+      }
+
       try {
         // ----------------------------------------------------
         // LOCATION
@@ -612,6 +826,7 @@ const ListIssuesToLocation = () => {
         // ----------------------------------------------------
 
         if (
+          !formData.issue_items ||
           !formData.issue_items.length
         ) {
           showMessage(
@@ -621,11 +836,11 @@ const ListIssuesToLocation = () => {
           return;
         }
 
-        const requested = {};
+        // ----------------------------------------------------
+        // VALIDATE AND BUILD PAYLOAD
+        // ----------------------------------------------------
 
-        // ----------------------------------------------------
-        // VALIDATE ITEMS
-        // ----------------------------------------------------
+        const issueItems = [];
 
         for (
           const row of
@@ -636,10 +851,14 @@ const ListIssuesToLocation = () => {
               row.itemId || 0
             );
 
-          const qty =
+          const quantity =
             Number(
               row.quantity || 0
             );
+
+          // --------------------------------------------------
+          // ITEM REQUIRED
+          // --------------------------------------------------
 
           if (!itemId) {
             showMessage(
@@ -649,7 +868,16 @@ const ListIssuesToLocation = () => {
             return;
           }
 
-          if (qty <= 0) {
+          // --------------------------------------------------
+          // QUANTITY REQUIRED
+          // --------------------------------------------------
+
+          if (
+            !Number.isFinite(
+              quantity
+            ) ||
+            quantity <= 0
+          ) {
             showMessage(
               "❌ Quantity must be greater than zero."
             );
@@ -657,74 +885,23 @@ const ListIssuesToLocation = () => {
             return;
           }
 
-          requested[itemId] =
-            (
-              requested[itemId] ||
-              0
-            ) + qty;
-        }
+          issueItems.push({
+            item_id:
+              itemId,
 
-        // ----------------------------------------------------
-        // CHECK STOCK
-        // ----------------------------------------------------
-
-        for (
-          const itemId of
-          Object.keys(
-            requested
-          )
-        ) {
-          const reqQty =
-            requested[itemId];
-
-          const stockRes =
-            await axios.get(
-              `/store/stock/${itemId}`
-            );
-
-          const available =
-            Number(
-              stockRes.data
-                ?.available || 0
-            );
-
-          const oldQty =
-            Number(
-              originalIssueCounts[
-                itemId
-              ] || 0
-            );
-
-          const allowed =
-            available +
-            oldQty;
-
-          if (
-            reqQty >
-            allowed
-          ) {
-            const item =
-              items.find(
-                (i) =>
-                  i.id ===
-                  Number(
-                    itemId
-                  )
-              ) || {};
-
-            showMessage(
-              `❌ ${
-                item.name ||
-                "Item"
-              } only has ${allowed} available.`
-            );
-
-            return;
-          }
+            quantity:
+              quantity,
+          });
         }
 
         // ----------------------------------------------------
         // PAYLOAD
+        // ----------------------------------------------------
+        //
+        // Keep this exactly aligned with:
+        //
+        //     store_schemas.IssueCreate
+        //
         // ----------------------------------------------------
 
         const payload = {
@@ -741,26 +918,23 @@ const ListIssuesToLocation = () => {
             ),
 
           issue_date:
-            formData.issue_date,
+            formData.issue_date ||
+            getToday(),
 
           issue_items:
-            formData.issue_items.map(
-              (row) => ({
-                item_id:
-                  Number(
-                    row.itemId
-                  ),
-
-                quantity:
-                  Number(
-                    row.quantity
-                  ),
-              })
-            ),
+            issueItems,
         };
 
         // ----------------------------------------------------
-        // UPDATE
+        // START SAVING
+        // ----------------------------------------------------
+
+        setSavingEdit(
+          true
+        );
+
+        // ----------------------------------------------------
+        // SEND UPDATE
         // ----------------------------------------------------
 
         await axios.put(
@@ -768,29 +942,49 @@ const ListIssuesToLocation = () => {
           payload
         );
 
+        // ----------------------------------------------------
+        // SUCCESS
+        // ----------------------------------------------------
+
         showMessage(
           "✅ Location issue updated successfully."
         );
 
-        setEditingIssue(
-          null
-        );
+        closeEdit();
 
-        setOriginalIssueCounts(
-          {}
-        );
+        // ----------------------------------------------------
+        // REFRESH LIST
+        // ----------------------------------------------------
 
-        fetchIssues();
+        await fetchIssues();
       } catch (err) {
         console.error(
           "Update location issue failed:",
           err
         );
 
-        showMessage(
+        // ----------------------------------------------------
+        // BACKEND ERROR
+        //
+        // For example:
+        //
+        // "Not enough inventory for item Rice.
+        //  Available: 50"
+        //
+        // We display the backend message directly.
+        // ----------------------------------------------------
+
+        const backendMessage =
           err.response?.data
-            ?.detail ||
+            ?.detail;
+
+        showMessage(
+          backendMessage ||
             "❌ Failed to update location issue."
+        );
+      } finally {
+        setSavingEdit(
+          false
         );
       }
     };
@@ -818,7 +1012,7 @@ const ListIssuesToLocation = () => {
           "✅ Location issue deleted successfully."
         );
 
-        fetchIssues();
+        await fetchIssues();
       } catch (err) {
         console.error(
           "Delete location issue failed:",
@@ -838,58 +1032,32 @@ const ListIssuesToLocation = () => {
   // ==========================================================
 
   const handleReset = () => {
-    const now =
-      new Date();
+    const {
+      startDate,
+      endDate,
+    } = getLast7Days();
 
-    const firstDay =
-      new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        1
-      )
-        .toISOString()
-        .split("T")[0];
+    setSelectedLocationId("");
 
-    const lastDay =
-      new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        0
-      )
-        .toISOString()
-        .split("T")[0];
-
-    setSelectedLocationId(
-      ""
-    );
-
-    setSelectedItemFilter(
-      ""
-    );
+    setSelectedItemFilter("");
 
     setStartDate(
-      firstDay
+      startDate
     );
 
     setEndDate(
-      lastDay
+      endDate
     );
 
-    setTotalItemQuantity(
-      0
-    );
+    setTotalItemQuantity(0);
 
     setSelectedItemId(
       null
     );
 
-    setSelectedItemName(
-      ""
-    );
+    setSelectedItemName("");
 
-    setSelectedItemUnit(
-      ""
-    );
+    setSelectedItemUnit("");
   };
 
   // ==========================================================
@@ -898,15 +1066,6 @@ const ListIssuesToLocation = () => {
 
   const totalIssued =
     issues.length;
-
-  /*
-   * When no item filter is selected,
-   * calculate total quantity of everything
-   * displayed.
-   *
-   * When an item filter is selected,
-   * use the backend total.
-   */
 
   const displayedTotalQuantity =
     selectedItemFilter
@@ -1008,10 +1167,15 @@ const ListIssuesToLocation = () => {
           {items.map(
             (item) => (
               <option
-                key={item.id}
-                value={item.id}
+                key={
+                  item.id
+                }
+                value={
+                  item.id
+                }
               >
                 {item.name}
+
                 {item.unit
                   ? ` (${item.unit})`
                   : ""}
@@ -1149,6 +1313,7 @@ const ListIssuesToLocation = () => {
         <table className="list-issues-table">
 
           <thead>
+
             <tr>
 
               <th>
@@ -1176,6 +1341,7 @@ const ListIssuesToLocation = () => {
               </th>
 
             </tr>
+
           </thead>
 
           <tbody>
@@ -1184,15 +1350,18 @@ const ListIssuesToLocation = () => {
             0 ? (
 
               <tr>
+
                 <td colSpan="6">
                   No issues found.
                 </td>
+
               </tr>
 
             ) : (
 
               issues.map(
                 (issue) => (
+
                   <tr
                     key={
                       issue.id
@@ -1243,7 +1412,10 @@ const ListIssuesToLocation = () => {
                           issue.issue_items ||
                           []
                         ).map(
-                          (it) => (
+                          (
+                            it
+                          ) => (
+
                             <li
                               key={
                                 it.id
@@ -1273,6 +1445,7 @@ const ListIssuesToLocation = () => {
                                 : ""}
 
                             </li>
+
                           )
                         )}
 
@@ -1288,6 +1461,9 @@ const ListIssuesToLocation = () => {
                           handleEditClick(
                             issue
                           )
+                        }
+                        disabled={
+                          savingEdit
                         }
                       >
                         ✏️ Edit
@@ -1307,6 +1483,7 @@ const ListIssuesToLocation = () => {
                     </td>
 
                   </tr>
+
                 )
               )
 
@@ -1332,7 +1509,9 @@ const ListIssuesToLocation = () => {
               Edit Location Issue
             </h3>
 
-            {/* REFERENCE */}
+            {/* ==================================================
+                REFERENCE
+            ================================================== */}
 
             <label>
               Reference:
@@ -1344,16 +1523,24 @@ const ListIssuesToLocation = () => {
                 formData.ref
               }
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  ref:
-                    e.target.value,
-                })
+                setFormData(
+                  (prev) => ({
+                    ...prev,
+
+                    ref:
+                      e.target.value,
+                  })
+                )
               }
               placeholder="Enter reference"
+              disabled={
+                savingEdit
+              }
             />
 
-            {/* LOCATION */}
+            {/* ==================================================
+                LOCATION
+            ================================================== */}
 
             <label>
               Location:
@@ -1364,11 +1551,17 @@ const ListIssuesToLocation = () => {
                 formData.issued_to_id
               }
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  issued_to_id:
-                    e.target.value,
-                })
+                setFormData(
+                  (prev) => ({
+                    ...prev,
+
+                    issued_to_id:
+                      e.target.value,
+                  })
+                )
+              }
+              disabled={
+                savingEdit
               }
             >
 
@@ -1378,6 +1571,7 @@ const ListIssuesToLocation = () => {
 
               {locations.map(
                 (location) => (
+
                   <option
                     key={
                       location.id
@@ -1390,12 +1584,15 @@ const ListIssuesToLocation = () => {
                       location.name
                     }
                   </option>
+
                 )
               )}
 
             </select>
 
-            {/* DATE */}
+            {/* ==================================================
+                DATE
+            ================================================== */}
 
             <label>
               Issue Date:
@@ -1407,15 +1604,23 @@ const ListIssuesToLocation = () => {
                 formData.issue_date
               }
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  issue_date:
-                    e.target.value,
-                })
+                setFormData(
+                  (prev) => ({
+                    ...prev,
+
+                    issue_date:
+                      e.target.value,
+                  })
+                )
+              }
+              disabled={
+                savingEdit
               }
             />
 
-            {/* ITEMS */}
+            {/* ==================================================
+                ITEMS
+            ================================================== */}
 
             <h4>
               Items
@@ -1439,13 +1644,18 @@ const ListIssuesToLocation = () => {
                     }
                   >
 
+                    {/* ========================================
+                        ITEM SEARCH
+                    ======================================== */}
+
                     <div className="bar-autocomplete">
 
                       <input
                         type="text"
                         placeholder="Search item..."
                         value={
-                          row.search
+                          row.search ||
+                          ""
                         }
                         onChange={(e) =>
                           handleFormChange(
@@ -1453,6 +1663,9 @@ const ListIssuesToLocation = () => {
                             "search",
                             e.target.value
                           )
+                        }
+                        disabled={
+                          savingEdit
                         }
                       />
 
@@ -1472,6 +1685,7 @@ const ListIssuesToLocation = () => {
                                   item.id
                                 }
                                 onClick={() =>
+                                  !savingEdit &&
                                   handleFormChange(
                                     index,
                                     "select_item",
@@ -1479,9 +1693,15 @@ const ListIssuesToLocation = () => {
                                   )
                                 }
                               >
+
                                 {
                                   item.name
                                 }
+
+                                {item.unit
+                                  ? ` (${item.unit})`
+                                  : ""}
+
                               </li>
 
                             )
@@ -1492,6 +1712,10 @@ const ListIssuesToLocation = () => {
                       )}
 
                     </div>
+
+                    {/* ========================================
+                        QUANTITY
+                    ======================================== */}
 
                     <input
                       type="number"
@@ -1507,7 +1731,14 @@ const ListIssuesToLocation = () => {
                           e.target.value
                         )
                       }
+                      disabled={
+                        savingEdit
+                      }
                     />
+
+                    {/* ========================================
+                        REMOVE
+                    ======================================== */}
 
                     <button
                       type="button"
@@ -1516,6 +1747,9 @@ const ListIssuesToLocation = () => {
                         removeIssueLine(
                           index
                         )
+                      }
+                      disabled={
+                        savingEdit
                       }
                     >
                       ❌
@@ -1528,7 +1762,9 @@ const ListIssuesToLocation = () => {
 
             </div>
 
-            {/* ADD ITEM */}
+            {/* ==================================================
+                ADD ITEM
+            ================================================== */}
 
             <button
               type="button"
@@ -1536,11 +1772,16 @@ const ListIssuesToLocation = () => {
               onClick={
                 addIssueLine
               }
+              disabled={
+                savingEdit
+              }
             >
               ➕ Add Item
             </button>
 
-            {/* ACTIONS */}
+            {/* ==================================================
+                ACTIONS
+            ================================================== */}
 
             <div className="bar-modal-actions">
 
@@ -1551,16 +1792,22 @@ const ListIssuesToLocation = () => {
                     editingIssue
                   )
                 }
+                disabled={
+                  savingEdit
+                }
               >
-                ✅ Save
+                {savingEdit
+                  ? "⏳ Saving..."
+                  : "✅ Save"}
               </button>
 
               <button
                 className="bar-cancel-btn"
-                onClick={() =>
-                  setEditingIssue(
-                    null
-                  )
+                onClick={
+                  closeEdit
+                }
+                disabled={
+                  savingEdit
                 }
               >
                 ❌ Cancel

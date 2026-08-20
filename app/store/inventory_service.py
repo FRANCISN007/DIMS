@@ -8,90 +8,145 @@ from app.store import models as store_models
 from sqlalchemy import func
 
 
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
+from app.store import models as store_models
+
+
+# ==========================================================
+# CALCULATE AVAILABLE STOCK
+# ==========================================================
+
 def calculate_available_stock(
     db: Session,
     business_id: int,
     item_id: int,
 ):
     """
-    Calculate the current available stock.
+    Calculate the actual current available store stock.
 
-    Formula:
+    Stock sources are:
 
-        Opening Stock
-      + Remaining Purchase Stock
-      - Net Adjustments
+        Remaining Purchase Stock
+      + Remaining Opening Stock
+      + Remaining Stock From Negative Adjustments
 
-    Adjustment sign convention:
+    Positive adjustments are stock removals, therefore they
+    are NOT counted as stock.
 
-        +5 = remove 5
-        -5 = add 5
+    IMPORTANT:
+    Purchase/opening quantities are already reduced by FIFO
+    deductions, so we must NOT subtract adjustment totals
+    again here.
     """
 
-    # -----------------------------------------
-    # Remaining Opening Stock
-    # -----------------------------------------
-    opening_stock = (
-        db.query(
-            func.coalesce(
-                func.sum(store_models.StoreInventory.quantity),
-                0
-            )
-        )
-        .filter(
-            store_models.StoreInventory.business_id == business_id,
-            store_models.StoreInventory.item_id == item_id,
-        )
-        .scalar()
-    )
+    # ------------------------------------------------------
+    # REMAINING PURCHASE STOCK
+    # ------------------------------------------------------
 
-    # -----------------------------------------
-    # Remaining Purchase Stock
-    # -----------------------------------------
     purchased_stock = (
         db.query(
             func.coalesce(
-                func.sum(store_models.StoreStockEntry.quantity),
-                0
+                func.sum(
+                    store_models.StoreStockEntry.quantity
+                ),
+                0,
             )
         )
         .filter(
-            store_models.StoreStockEntry.business_id == business_id,
-            store_models.StoreStockEntry.item_id == item_id,
+            store_models.StoreStockEntry.business_id
+            == business_id,
+
+            store_models.StoreStockEntry.item_id
+            == item_id,
+
+            store_models.StoreStockEntry.quantity
+            > 0,
         )
         .scalar()
+        or 0
     )
 
-    # -----------------------------------------
-    # Net Adjustments
-    #
-    # Positive values = stock removed
-    # Negative values = stock added
-    # -----------------------------------------
-    adjustment_total = (
+    # ------------------------------------------------------
+    # REMAINING OPENING STOCK
+    # ------------------------------------------------------
+
+    opening_stock = (
         db.query(
             func.coalesce(
-                func.sum(store_models.StoreInventoryAdjustment.quantity_adjusted),
-                0
+                func.sum(
+                    store_models.StoreInventory.quantity
+                ),
+                0,
             )
         )
         .filter(
-            store_models.StoreInventoryAdjustment.business_id == business_id,
-            store_models.StoreInventoryAdjustment.item_id == item_id,
+            store_models.StoreInventory.business_id
+            == business_id,
+
+            store_models.StoreInventory.item_id
+            == item_id,
+
+            store_models.StoreInventory.quantity
+            > 0,
         )
         .scalar()
+        or 0
+    )
+
+    # ------------------------------------------------------
+    # REMAINING NEGATIVE ADJUSTMENT STOCK
+    #
+    # Negative adjustment:
+    #
+    #     -20 = add 20 stock
+    #
+    # remaining_quantity represents the unused portion
+    # of that added stock.
+    # ------------------------------------------------------
+
+    adjustment_stock = (
+        db.query(
+            func.coalesce(
+                func.sum(
+                    store_models.StoreInventoryAdjustment
+                    .remaining_quantity
+                ),
+                0,
+            )
+        )
+        .filter(
+            store_models.StoreInventoryAdjustment.business_id
+            == business_id,
+
+            store_models.StoreInventoryAdjustment.item_id
+            == item_id,
+
+            store_models.StoreInventoryAdjustment.quantity_adjusted
+            < 0,
+
+            store_models.StoreInventoryAdjustment.remaining_quantity
+            > 0,
+        )
+        .scalar()
+        or 0
     )
 
     available = (
-        opening_stock
-        + purchased_stock
-        - adjustment_total
+        float(purchased_stock)
+        + float(opening_stock)
+        + float(adjustment_stock)
     )
 
     return max(available, 0)
 
 
 
+
+# ==========================================================
+# DEDUCT FIFO STOCK
+# ==========================================================
 
 def deduct_fifo_stock(
     db: Session,
@@ -100,25 +155,39 @@ def deduct_fifo_stock(
     quantity: float,
 ):
     """
-    Deduct inventory using FIFO.
+    Deduct store stock using FIFO.
 
-    Order:
+    Stock sources:
+
     1. Purchase batches
-    2. Positive adjustment stock
+    2. Negative stock adjustments
     3. Opening stock
+
+    Positive adjustments are NOT stock sources.
     """
 
     remaining = float(quantity)
 
-    # ---------------------------------------------------
-    # 1. Deduct Purchase Stock (FIFO)
-    # ---------------------------------------------------
+    if remaining <= 0:
+        return
+
+    # ======================================================
+    # 1. PURCHASE STOCK
+    # ======================================================
+
     purchases = (
-        db.query(store_models.StoreStockEntry)
+        db.query(
+            store_models.StoreStockEntry
+        )
         .filter(
-            store_models.StoreStockEntry.business_id == business_id,
-            store_models.StoreStockEntry.item_id == item_id,
-            store_models.StoreStockEntry.quantity > 0,
+            store_models.StoreStockEntry.business_id
+            == business_id,
+
+            store_models.StoreStockEntry.item_id
+            == item_id,
+
+            store_models.StoreStockEntry.quantity
+            > 0,
         )
         .order_by(
             store_models.StoreStockEntry.purchase_date.asc(),
@@ -132,28 +201,57 @@ def deduct_fifo_stock(
         if remaining <= 0:
             break
 
-        deduct = min(float(purchase.quantity), remaining)
+        available = float(
+            purchase.quantity or 0
+        )
+
+        if available <= 0:
+            continue
+
+        deduct = min(
+            available,
+            remaining,
+        )
 
         purchase.quantity -= deduct
+
+        if purchase.quantity < 0:
+            purchase.quantity = 0
+
         remaining -= deduct
 
         db.add(purchase)
 
+    # ======================================================
+    # 2. NEGATIVE ADJUSTMENT STOCK
+    #
+    # Example:
+    #
+    # quantity_adjusted = -20
+    #
+    # means 20 units were added to stock.
+    #
+    # remaining_quantity = unused portion of those 20.
+    # ======================================================
 
-
-
-
-    # ---------------------------------------------------
-    # 2. Deduct Adjustment Stock (FIFO)
-    # ---------------------------------------------------
     if remaining > 0:
 
         adjustments = (
-            db.query(store_models.StoreInventoryAdjustment)
+            db.query(
+                store_models.StoreInventoryAdjustment
+            )
             .filter(
-                store_models.StoreInventoryAdjustment.business_id == business_id,
-                store_models.StoreInventoryAdjustment.item_id == item_id,
-                store_models.StoreInventoryAdjustment.remaining_quantity > 0,
+                store_models.StoreInventoryAdjustment.business_id
+                == business_id,
+
+                store_models.StoreInventoryAdjustment.item_id
+                == item_id,
+
+                store_models.StoreInventoryAdjustment.quantity_adjusted
+                < 0,
+
+                store_models.StoreInventoryAdjustment.remaining_quantity
+                > 0,
             )
             .order_by(
                 store_models.StoreInventoryAdjustment.adjusted_at.asc(),
@@ -162,31 +260,58 @@ def deduct_fifo_stock(
             .all()
         )
 
-        for adj in adjustments:
+        for adjustment in adjustments:
 
             if remaining <= 0:
                 break
 
-            deduct = min(float(adj.remaining_quantity), remaining)
+            available = float(
+                adjustment.remaining_quantity or 0
+            )
 
-            adj.remaining_quantity -= deduct
+            if available <= 0:
+                continue
+
+            deduct = min(
+                available,
+                remaining,
+            )
+
+            adjustment.remaining_quantity -= deduct
+
+            if (
+                adjustment.remaining_quantity
+                < 0
+            ):
+                adjustment.remaining_quantity = 0
+
             remaining -= deduct
 
-            db.add(adj)
+            db.add(adjustment)
 
-    # ---------------------------------------------------
-    # 3. Deduct Opening Stock
-    # ---------------------------------------------------
+    # ======================================================
+    # 3. OPENING STOCK
+    # ======================================================
+
     if remaining > 0:
 
         openings = (
-            db.query(store_models.StoreInventory)
-            .filter(
-                store_models.StoreInventory.business_id == business_id,
-                store_models.StoreInventory.item_id == item_id,
-                store_models.StoreInventory.quantity > 0,
+            db.query(
+                store_models.StoreInventory
             )
-            .order_by(store_models.StoreInventory.id.asc())
+            .filter(
+                store_models.StoreInventory.business_id
+                == business_id,
+
+                store_models.StoreInventory.item_id
+                == item_id,
+
+                store_models.StoreInventory.quantity
+                > 0,
+            )
+            .order_by(
+                store_models.StoreInventory.id.asc()
+            )
             .all()
         )
 
@@ -195,24 +320,39 @@ def deduct_fifo_stock(
             if remaining <= 0:
                 break
 
-            deduct = min(float(opening.quantity), remaining)
+            available = float(
+                opening.quantity or 0
+            )
+
+            if available <= 0:
+                continue
+
+            deduct = min(
+                available,
+                remaining,
+            )
 
             opening.quantity -= deduct
+
+            if opening.quantity < 0:
+                opening.quantity = 0
+
             remaining -= deduct
 
             db.add(opening)
 
+    # ======================================================
+    # FINAL SAFETY CHECK
+    # ======================================================
 
-    
-
-    # ---------------------------------------------------
-    # Safety Check
-    # ---------------------------------------------------
     if remaining > 0:
+
         raise ValueError(
             f"Unable to deduct {quantity}. "
             f"{remaining} units could not be deducted."
         )
+
+    
 
         
 def restore_fifo_stock(
@@ -369,25 +509,31 @@ def reset_opening_inventory(
         inv.quantity = inv.opening_quantity
 
 
+# ==========================================================
+# REPLAY STORE ADJUSTMENTS
+# ==========================================================
+
 def replay_store_adjustments(
     db: Session,
     business_id: int,
 ):
     """
-    Replay every stock adjustment.
+    Replay all stock adjustments chronologically.
 
-    Positive adjustment (+)
-        -> Remove stock using FIFO.
+    Positive adjustment:
+        Removes stock.
 
-    Negative adjustment (-)
-        -> Restore the adjustment's own remaining quantity.
-        It is NOT converted into a purchase.
+    Negative adjustment:
+        Adds stock and becomes available FIFO stock.
     """
 
     adjustments = (
-        db.query(store_models.StoreInventoryAdjustment)
+        db.query(
+            store_models.StoreInventoryAdjustment
+        )
         .filter(
-            store_models.StoreInventoryAdjustment.business_id == business_id
+            store_models.StoreInventoryAdjustment.business_id
+            == business_id
         )
         .order_by(
             store_models.StoreInventoryAdjustment.adjusted_at.asc(),
@@ -396,65 +542,162 @@ def replay_store_adjustments(
         .all()
     )
 
-    for adj in adjustments:
+    for adjustment in adjustments:
 
-        qty = adj.quantity_adjusted
+        quantity = float(
+            adjustment.quantity_adjusted or 0
+        )
 
-        # -------------------------
-        # REMOVE STOCK
-        # -------------------------
-        if qty > 0:
+        # --------------------------------------------------
+        # POSITIVE = REMOVE STOCK
+        # --------------------------------------------------
+
+        if quantity > 0:
 
             deduct_fifo_stock(
                 db=db,
                 business_id=business_id,
-                item_id=adj.item_id,
-                quantity=qty,
+                item_id=adjustment.item_id,
+                quantity=quantity,
             )
 
-            adj.remaining_quantity = 0
+            adjustment.remaining_quantity = 0
 
-        # -------------------------
-        # ADD STOCK
-        # -------------------------
-        elif qty < 0:
+        # --------------------------------------------------
+        # NEGATIVE = ADD STOCK
+        #
+        # The stock was already reset by
+        # reset_adjustment_inventory().
+        # --------------------------------------------------
 
-            adj.remaining_quantity = abs(qty)
+        elif quantity < 0:
+
+            adjustment.remaining_quantity = abs(
+                quantity
+            )
+
+        # --------------------------------------------------
+        # ZERO
+        # --------------------------------------------------
 
         else:
 
-            adj.remaining_quantity = 0
+            adjustment.remaining_quantity = 0
+
+        db.add(adjustment)
+
+        db.flush()
 
 
 
 
+# ==========================================================
+# RESET STOCK ADJUSTMENTS
+# ==========================================================
+
+def reset_adjustment_inventory(
+    db: Session,
+    business_id: int,
+):
+    """
+    Reset adjustment stock before rebuilding inventory.
+
+    Positive adjustment:
+        +20 = remove 20 stock
+        remaining stock = 0
+
+    Negative adjustment:
+        -20 = add 20 stock
+        remaining stock = 20
+    """
+
+    adjustments = (
+        db.query(
+            store_models.StoreInventoryAdjustment
+        )
+        .filter(
+            store_models.StoreInventoryAdjustment.business_id
+            == business_id
+        )
+        .all()
+    )
+
+    for adjustment in adjustments:
+
+        quantity_adjusted = float(
+            adjustment.quantity_adjusted or 0
+        )
+
+        if quantity_adjusted < 0:
+
+            adjustment.remaining_quantity = abs(
+                quantity_adjusted
+            )
+
+        else:
+
+            adjustment.remaining_quantity = 0
+
+        db.add(adjustment)
+
+    db.flush()
+
+
+
+# ==========================================================
+# REPLAY STORE ISSUES
+# ==========================================================
 
 def replay_store_issues(
     db: Session,
     business_id: int,
 ):
     """
-    Replay every issue in chronological order.
+    Replay every store issue chronologically.
 
-    This reproduces the exact stock balances as if
-    every issue happened again.
+    The database is queried fresh so the edited issue and
+    its newly-created issue items are used.
     """
 
     issues = (
-        db.query(store_models.StoreIssue)
+        db.query(
+            store_models.StoreIssue
+        )
         .filter(
-            store_models.StoreIssue.business_id == business_id
+            store_models.StoreIssue.business_id
+            == business_id
         )
         .order_by(
             store_models.StoreIssue.issue_date.asc(),
-            store_models.StoreIssue.id.asc()
+            store_models.StoreIssue.id.asc(),
         )
         .all()
     )
 
     for issue in issues:
 
-        for issue_item in issue.issue_items:
+        # ----------------------------------------------
+        # Ensure issue items are loaded from DB
+        # ----------------------------------------------
+
+        issue_items = (
+            db.query(
+                store_models.StoreIssueItem
+            )
+            .filter(
+                store_models.StoreIssueItem.issue_id
+                == issue.id,
+
+                store_models.StoreIssueItem.business_id
+                == business_id,
+            )
+            .order_by(
+                store_models.StoreIssueItem.id.asc()
+            )
+            .all()
+        )
+
+        for issue_item in issue_items:
 
             deduct_fifo_stock(
                 db=db,
@@ -463,45 +706,86 @@ def replay_store_issues(
                 quantity=issue_item.quantity,
             )
 
+        db.flush()
 
 
+
+
+# ==========================================================
+# REBUILD STORE INVENTORY
+# ==========================================================
 
 def rebuild_store_inventory(
     db: Session,
     business_id: int,
 ):
     """
-    Completely rebuild store inventory.
+    Completely rebuild store inventory from the original
+    stock sources.
 
-    Order matters:
+    Rebuild order:
 
-    1. Restore purchases.
-    2. Restore opening stock.
-    3. Replay stock adjustments.
-    4. Replay issues (FIFO).
+        1. Restore purchases
+        2. Restore opening stock
+        3. Reset adjustment stock
+        4. Replay adjustments
+        5. Replay all issues
+
+    This makes UPDATE and DELETE operations safe because
+    the inventory is reconstructed from the transaction
+    history instead of trying to manually reverse FIFO.
     """
 
+    # ======================================================
+    # 1. RESTORE PURCHASES
+    # ======================================================
+
     reset_purchase_inventory(
-        db,
-        business_id,
+        db=db,
+        business_id=business_id,
     )
+
+    # ======================================================
+    # 2. RESTORE OPENING STOCK
+    # ======================================================
 
     reset_opening_inventory(
-        db,
-        business_id,
+        db=db,
+        business_id=business_id,
     )
+
+    # ======================================================
+    # 3. RESET ADJUSTMENTS
+    #
+    # THIS WAS MISSING FROM YOUR CURRENT REBUILD.
+    # ======================================================
+
+    reset_adjustment_inventory(
+        db=db,
+        business_id=business_id,
+    )
+
+    # ======================================================
+    # 4. REPLAY ADJUSTMENTS
+    # ======================================================
 
     replay_store_adjustments(
-        db,
-        business_id,
+        db=db,
+        business_id=business_id,
     )
+
+    # ======================================================
+    # 5. REPLAY ISSUES
+    # ======================================================
 
     replay_store_issues(
-        db,
-        business_id,
+        db=db,
+        business_id=business_id,
     )
 
+    db.flush()
 
+    
 
 
 

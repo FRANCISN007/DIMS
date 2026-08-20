@@ -84,6 +84,7 @@ from app.store.inventory_service import (
     deduct_fifo_stock,
     restore_fifo_stock,
     rebuild_everything,
+    rebuild_store_inventory,
 )
 
 
@@ -1314,12 +1315,6 @@ def now_wat() -> datetime:
 
 
 
-
-
-
-
-
-
     
 
 @router.post(
@@ -2239,542 +2234,733 @@ def update_location_issue(
         role_required(["store", "camp_boss", "manager"])
     ),
 ):
-    # ==========================================================
-    # 1. NORMALIZE USER ROLES
-    # ==========================================================
+    try:
 
-    roles = []
+        # ==========================================================
+        # 1. NORMALIZE USER ROLES
+        # ==========================================================
 
-    for role in current_user.roles or []:
+        roles = []
 
-        # Role is already a string
-        if isinstance(role, str):
-            roles.append(role.lower())
-            continue
+        for role in current_user.roles or []:
 
-        # RoleSimple / Pydantic object
-        role_name = getattr(role, "name", None)
-        role_code = getattr(role, "code", None)
-
-        if role_name:
-            roles.append(str(role_name).lower())
-
-        if role_code:
-            roles.append(str(role_code).lower())
-
-    # ==========================================================
-    # 2. FETCH ISSUE
-    # ==========================================================
-
-    issue = (
-        db.query(store_models.StoreIssue)
-        .filter(
-            store_models.StoreIssue.id == issue_id
-        )
-        .first()
-    )
-
-    if not issue:
-        raise HTTPException(
-            status_code=404,
-            detail="Issue not found"
-        )
-
-    # ==========================================================
-    # 3. MAKE SURE IT IS A LOCATION ISSUE
-    # ==========================================================
-
-    if (
-        not issue.issue_to
-        or issue.issue_to.lower() != "location"
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="Only location issues can be updated"
-        )
-
-    # ==========================================================
-    # 4. RESOLVE BUSINESS
-    # ==========================================================
-
-    if "super_admin" in roles:
-
-        effective_business_id = (
-            business_id
-            if business_id is not None
-            else issue.business_id
-        )
-
-    else:
-
-        effective_business_id = (
-            current_user.business_id
-        )
-
-    if effective_business_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Business could not be determined"
-        )
-
-    # ==========================================================
-    # 5. PREVENT CROSS-TENANT ACCESS
-    # ==========================================================
-
-    if issue.business_id != effective_business_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not allowed to update this issue"
-        )
-
-    # ==========================================================
-    # 6. VALIDATE LOCATION
-    # ==========================================================
-
-    location_obj = (
-        db.query(location_models.Location)
-        .filter(
-            location_models.Location.id
-            == update_data.issued_to_id,
-
-            location_models.Location.business_id
-            == effective_business_id,
-
-            location_models.Location.status
-            == "active",
-        )
-        .first()
-    )
-
-    if not location_obj:
-        raise HTTPException(
-            status_code=404,
-            detail="Location not found or inactive"
-        )
-
-    # ==========================================================
-    # 7. VALIDATE ISSUE TYPE
-    # ==========================================================
-
-    if update_data.issue_to != "location":
-        raise HTTPException(
-            status_code=400,
-            detail="Issue destination must be location"
-        )
-
-    # ==========================================================
-    # 8. VALIDATE ISSUE ITEMS
-    # ==========================================================
-
-    if not update_data.issue_items:
-        raise HTTPException(
-            status_code=400,
-            detail="At least one item is required"
-        )
-
-    item_cache = {}
-
-    for item in update_data.issue_items:
-
-        if item.quantity <= 0:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Quantity for item {item.item_id} "
-                    f"must be greater than zero"
+            if isinstance(role, str):
+                roles.append(
+                    role.lower()
                 )
+                continue
+
+            role_name = getattr(
+                role,
+                "name",
+                None
             )
 
-        item_obj = (
-            db.query(store_models.StoreItem)
-            .filter(
-                store_models.StoreItem.id
-                == item.item_id,
+            role_code = getattr(
+                role,
+                "code",
+                None
+            )
 
-                store_models.StoreItem.business_id
-                == effective_business_id,
+            if role_name:
+                roles.append(
+                    str(role_name).lower()
+                )
+
+            if role_code:
+                roles.append(
+                    str(role_code).lower()
+                )
+
+        # ==========================================================
+        # 2. FETCH ISSUE
+        # ==========================================================
+
+        issue = (
+            db.query(
+                store_models.StoreIssue
+            )
+            .filter(
+                store_models.StoreIssue.id
+                == issue_id
             )
             .first()
         )
 
-        if not item_obj:
+        if not issue:
+
             raise HTTPException(
                 status_code=404,
-                detail=(
-                    f"Item {item.item_id} not found"
-                )
+                detail="Issue not found"
             )
 
-        item_cache[item.item_id] = item_obj
+        # ==========================================================
+        # 3. MAKE SURE IT IS A LOCATION ISSUE
+        # ==========================================================
 
-    # ==========================================================
-    # 9. DETERMINE OLD QUANTITIES
-    # ==========================================================
-
-    old_quantities = {}
-
-    for old_item in issue.issue_items:
-
-        old_quantities[old_item.item_id] = (
-            old_quantities.get(
-                old_item.item_id,
-                0
-            )
-            + old_item.quantity
-        )
-
-    # ==========================================================
-    # 10. CHECK CENTRAL STORE STOCK
-    #
-    # Add the quantities from the existing issue back to the
-    # available stock calculation because we are replacing
-    # the old issue.
-    # ==========================================================
-
-    requested_quantities = {}
-
-    for item in update_data.issue_items:
-
-        requested_quantities[item.item_id] = (
-            requested_quantities.get(
-                item.item_id,
-                0
-            )
-            + item.quantity
-        )
-
-    for item_id, requested_quantity in (
-        requested_quantities.items()
-    ):
-
-        available = calculate_available_stock(
-            db=db,
-            business_id=effective_business_id,
-            item_id=item_id,
-        )
-
-        old_quantity = old_quantities.get(
-            item_id,
-            0
-        )
-
-        allowed = (
-            available
-            + old_quantity
-        )
-
-        if requested_quantity > allowed:
-
-            item_obj = item_cache[item_id]
+        if (
+            not issue.issue_to
+            or issue.issue_to.lower()
+            != "location"
+        ):
 
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"Not enough inventory for item "
-                    f"{item_obj.name}. "
-                    f"Available: {allowed}"
+                    "Only location issues "
+                    "can be updated"
                 )
             )
 
-    # ==========================================================
-    # 11. RESTORE OLD LOCATION INVENTORY
-    #
-    # Remove the old issue quantity from the old location.
-    # ==========================================================
+        # ==========================================================
+        # 4. RESOLVE BUSINESS
+        # ==========================================================
 
-    for old_item in issue.issue_items:
+        if "super_admin" in roles:
 
-        location_inventory = (
-            db.query(
-                location_models.LocationInventory
+            effective_business_id = (
+                business_id
+                if business_id is not None
+                else issue.business_id
             )
-            .filter(
-                location_models.LocationInventory.location_id
-                == issue.location_id,
-
-                location_models.LocationInventory.item_id
-                == old_item.item_id,
-
-                location_models.LocationInventory.business_id
-                == effective_business_id,
-            )
-            .first()
-        )
-
-        if location_inventory:
-
-            location_inventory.quantity -= (
-                old_item.quantity
-            )
-
-            if location_inventory.quantity < 0:
-                location_inventory.quantity = 0
-
-            db.add(location_inventory)
-
-    # ==========================================================
-    # 12. REMOVE EXISTING ISSUE ITEMS
-    # ==========================================================
-
-    db.query(
-        store_models.StoreIssueItem
-    ).filter(
-        store_models.StoreIssueItem.issue_id
-        == issue.id
-    ).delete(
-        synchronize_session=False
-    )
-
-    db.flush()
-
-    # ==========================================================
-    # 13. UPDATE ISSUE HEADER
-    # ==========================================================
-
-    issue.issue_to = "location"
-
-    issue.location_id = (
-        update_data.issued_to_id
-    )
-
-
-    issue.ref = update_data.ref
-
-    issue.issue_date = (
-        update_data.issue_date
-        or datetime.now(timezone.utc)
-    )
-
-    if issue.issue_date.tzinfo is None:
-
-        issue.issue_date = (
-            issue.issue_date.replace(
-                tzinfo=timezone.utc
-            )
-        )
-
-    issue.issue_date = to_wat(
-        issue.issue_date
-    )
-
-    issue.issued_by_id = current_user.id
-
-    # ==========================================================
-    # 14. CREATE NEW ISSUE ITEMS
-    # ==========================================================
-
-    issue_items_display = []
-
-    for item in update_data.issue_items:
-
-        item_obj = item_cache[
-            item.item_id
-        ]
-
-        # ------------------------------------------------------
-        # CREATE ISSUE ITEM
-        # ------------------------------------------------------
-
-        issue_item = (
-            store_models.StoreIssueItem(
-                business_id=effective_business_id,
-
-                issue_id=issue.id,
-
-                item_id=item.item_id,
-
-                quantity=item.quantity,
-            )
-        )
-
-        db.add(issue_item)
-        db.flush()
-
-        # ------------------------------------------------------
-        # DEDUCT FROM CENTRAL STORE USING FIFO
-        # ------------------------------------------------------
-
-        deduct_fifo_stock(
-            db=db,
-            business_id=effective_business_id,
-            item_id=item.item_id,
-            quantity=item.quantity,
-        )
-
-        # ------------------------------------------------------
-        # FIND LOCATION INVENTORY
-        # ------------------------------------------------------
-
-        location_inventory = (
-            db.query(
-                location_models.LocationInventory
-            )
-            .filter(
-                location_models.LocationInventory.location_id
-                == issue.location_id,
-
-                location_models.LocationInventory.item_id
-                == item.item_id,
-
-                location_models.LocationInventory.business_id
-                == effective_business_id,
-            )
-            .first()
-        )
-
-        # ------------------------------------------------------
-        # ADD TO EXISTING LOCATION INVENTORY
-        # ------------------------------------------------------
-
-        if location_inventory:
-
-            location_inventory.quantity += (
-                item.quantity
-            )
-
-            if (
-                location_inventory.unit_price
-                is None
-            ):
-
-                location_inventory.unit_price = (
-                    item_obj.unit_price
-                )
-
-        # ------------------------------------------------------
-        # CREATE NEW LOCATION INVENTORY
-        # ------------------------------------------------------
 
         else:
 
-            location_inventory = (
-                location_models.LocationInventory(
+            effective_business_id = (
+                current_user.business_id
+            )
 
+        if effective_business_id is None:
+
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Business could not be determined"
+                )
+            )
+
+        # ==========================================================
+        # 5. PREVENT CROSS-TENANT ACCESS
+        # ==========================================================
+
+        if (
+            issue.business_id
+            != effective_business_id
+        ):
+
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Not allowed to update this issue"
+                )
+            )
+
+        # ==========================================================
+        # 6. VALIDATE LOCATION
+        # ==========================================================
+
+        location_obj = (
+            db.query(
+                location_models.Location
+            )
+            .filter(
+                location_models.Location.id
+                == update_data.issued_to_id,
+
+                location_models.Location.business_id
+                == effective_business_id,
+
+                location_models.Location.status
+                == "active",
+            )
+            .first()
+        )
+
+        if not location_obj:
+
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "Location not found or inactive"
+                )
+            )
+
+        # ==========================================================
+        # 7. VALIDATE ISSUE TYPE
+        # ==========================================================
+
+        if (
+            update_data.issue_to
+            != "location"
+        ):
+
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Issue destination "
+                    "must be location"
+                )
+            )
+
+        # ==========================================================
+        # 8. VALIDATE ISSUE ITEMS
+        # ==========================================================
+
+        if not update_data.issue_items:
+
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "At least one item is required"
+                )
+            )
+
+        item_cache = {}
+
+        requested_quantities = {}
+
+        for item in update_data.issue_items:
+
+            # ------------------------------------------------------
+            # QUANTITY
+            # ------------------------------------------------------
+
+            if item.quantity <= 0:
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Quantity for item "
+                        f"{item.item_id} "
+                        f"must be greater than zero"
+                    )
+                )
+
+            # ------------------------------------------------------
+            # GET ITEM
+            # ------------------------------------------------------
+
+            item_obj = (
+                db.query(
+                    store_models.StoreItem
+                )
+                .filter(
+                    store_models.StoreItem.id
+                    == item.item_id,
+
+                    store_models.StoreItem.business_id
+                    == effective_business_id,
+                )
+                .first()
+            )
+
+            if not item_obj:
+
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        f"Item {item.item_id} "
+                        f"not found"
+                    )
+                )
+
+            item_cache[
+                item.item_id
+            ] = item_obj
+
+            # ------------------------------------------------------
+            # COMBINE DUPLICATE ITEMS
+            # ------------------------------------------------------
+
+            requested_quantities[
+                item.item_id
+            ] = (
+                requested_quantities.get(
+                    item.item_id,
+                    0
+                )
+                + item.quantity
+            )
+
+        # ==========================================================
+        # 9. DETERMINE OLD QUANTITIES
+        #
+        # We need these only for the availability check.
+        # ==========================================================
+
+        old_quantities = {}
+
+        for old_item in issue.issue_items:
+
+            old_quantities[
+                old_item.item_id
+            ] = (
+                old_quantities.get(
+                    old_item.item_id,
+                    0
+                )
+                + old_item.quantity
+            )
+
+        # ==========================================================
+        # 10. CHECK CENTRAL STORE STOCK
+        #
+        # The old issue quantity is added back temporarily
+        # because this update is replacing the old issue.
+        # ==========================================================
+
+        for (
+            item_id,
+            requested_quantity
+        ) in requested_quantities.items():
+
+            available = calculate_available_stock(
+                db=db,
+                business_id=effective_business_id,
+                item_id=item_id,
+            )
+
+            old_quantity = old_quantities.get(
+                item_id,
+                0
+            )
+
+            allowed = (
+                available
+                + old_quantity
+            )
+
+            if requested_quantity > allowed:
+
+                item_obj = item_cache[
+                    item_id
+                ]
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Not enough inventory "
+                        f"for item "
+                        f"{item_obj.name}. "
+                        f"Available: {allowed}"
+                    )
+                )
+
+        # ==========================================================
+        # 11. SAVE OLD LOCATION ID
+        # ==========================================================
+
+        old_location_id = (
+            issue.location_id
+        )
+
+        # ==========================================================
+        # 12. RESTORE OLD LOCATION INVENTORY
+        #
+        # Remove the quantities belonging to the old issue.
+        # ==========================================================
+
+        for old_item in issue.issue_items:
+
+            location_inventory = (
+                db.query(
+                    location_models.LocationInventory
+                )
+                .filter(
+                    location_models.LocationInventory.location_id
+                    == old_location_id,
+
+                    location_models.LocationInventory.item_id
+                    == old_item.item_id,
+
+                    location_models.LocationInventory.business_id
+                    == effective_business_id,
+                )
+                .first()
+            )
+
+            if location_inventory:
+
+                location_inventory.quantity -= (
+                    old_item.quantity
+                )
+
+                if (
+                    location_inventory.quantity
+                    < 0
+                ):
+                    location_inventory.quantity = 0
+
+                db.add(
+                    location_inventory
+                )
+
+        # ==========================================================
+        # 13. REMOVE OLD ISSUE ITEMS
+        # ==========================================================
+
+        db.query(
+            store_models.StoreIssueItem
+        ).filter(
+            store_models.StoreIssueItem.issue_id
+            == issue.id
+        ).delete(
+            synchronize_session=False
+        )
+
+        db.flush()
+
+        # ==========================================================
+        # 14. UPDATE ISSUE HEADER
+        # ==========================================================
+
+        issue.issue_to = "location"
+
+        issue.location_id = (
+            update_data.issued_to_id
+        )
+
+        issue.ref = (
+            update_data.ref
+        )
+
+        issue.issue_date = (
+            update_data.issue_date
+            or datetime.now(timezone.utc)
+        )
+
+        if (
+            issue.issue_date.tzinfo
+            is None
+        ):
+
+            issue.issue_date = (
+                issue.issue_date.replace(
+                    tzinfo=timezone.utc
+                )
+            )
+
+        issue.issue_date = to_wat(
+            issue.issue_date
+        )
+
+        issue.issued_by_id = (
+            current_user.id
+        )
+
+        # ==========================================================
+        # 15. CREATE NEW ISSUE ITEMS
+        #
+        # IMPORTANT:
+        # We DO NOT call deduct_fifo_stock() here.
+        #
+        # The complete store inventory will be rebuilt after
+        # the issue has been replaced.
+        # ==========================================================
+
+        for item in update_data.issue_items:
+
+            db.add(
+                store_models.StoreIssueItem(
                     business_id=
                         effective_business_id,
 
-                    location_id=
-                        issue.location_id,
+                    issue_id=
+                        issue.id,
 
                     item_id=
                         item.item_id,
 
                     quantity=
                         item.quantity,
-
-                    unit_price=
-                        item_obj.unit_price,
-
-                    received_at=
-                        issue.issue_date,
-
-                    note=(
-                        f"Issued from store "
-                        f"through issue #{issue.id}"
-                    ),
                 )
             )
 
-            db.add(
-                location_inventory
-            )
+        db.flush()
 
-        # ------------------------------------------------------
-        # CATEGORY
-        # ------------------------------------------------------
+        # ==========================================================
+        # 16. EXPIRE SQLALCHEMY RELATIONSHIPS
+        #
+        # The old issue_items were deleted using a bulk delete.
+        # Expiring the session forces SQLAlchemy to reload the
+        # new issue_items when rebuild_store_inventory() reads
+        # the issues.
+        # ==========================================================
 
-        category_display = None
+        db.expire_all()
 
-        if item_obj.category:
+        # ==========================================================
+        # 17. REBUILD STORE INVENTORY
+        #
+        # This is the important part.
+        #
+        # It will:
+        #
+        # 1. Restore purchase quantities.
+        # 2. Restore opening stock.
+        # 3. Replay adjustments.
+        # 4. Replay ALL store issues chronologically.
+        #
+        # Therefore the edited issue is deducted using the
+        # correct FIFO sequence instead of deducting the new
+        # quantity on top of the old quantity.
+        # ==========================================================
 
-            category_display = (
-                store_schemas.StoreCategoryDisplay(
-                    id=item_obj.category.id,
+        rebuild_store_inventory(
+            db=db,
+            business_id=effective_business_id,
+        )
 
-                    name=item_obj.category.name,
+        db.flush()
 
-                    created_at=
-                        item_obj.category.created_at,
+        # ==========================================================
+        # 18. ADD NEW QUANTITY TO LOCATION INVENTORY
+        # ==========================================================
+
+        for item in update_data.issue_items:
+
+            item_obj = item_cache[
+                item.item_id
+            ]
+
+            location_inventory = (
+                db.query(
+                    location_models.LocationInventory
                 )
+                .filter(
+                    location_models.LocationInventory.location_id
+                    == update_data.issued_to_id,
+
+                    location_models.LocationInventory.item_id
+                    == item.item_id,
+
+                    location_models.LocationInventory.business_id
+                    == effective_business_id,
+                )
+                .first()
             )
 
-        # ------------------------------------------------------
-        # RESPONSE ITEM
-        # ------------------------------------------------------
+            if location_inventory:
 
-        issue_items_display.append(
+                location_inventory.quantity += (
+                    item.quantity
+                )
 
-            store_schemas.IssueItemDisplay(
+                if (
+                    location_inventory.unit_price
+                    is None
+                ):
 
-                id=issue_item.id,
+                    location_inventory.unit_price = (
+                        item_obj.unit_price
+                    )
 
-                item=(
-                    store_schemas.StoreItemDisplay(
+                db.add(
+                    location_inventory
+                )
 
-                        id=item_obj.id,
+            else:
 
+                location_inventory = (
+                    location_models.LocationInventory(
 
-                        name=item_obj.name,
+                        business_id=
+                            effective_business_id,
 
-                        unit=item_obj.unit,
+                        location_id=
+                            update_data.issued_to_id,
 
-                        category=
-                            category_display,
+                        item_id=
+                            item.item_id,
 
-                        # IMPORTANT
-                        # Include item type
-                        item_type=
-                            item_obj.item_type,
+                        quantity=
+                            item.quantity,
 
                         unit_price=
                             item_obj.unit_price,
 
-                        selling_price=
-                            item_obj.selling_price,
+                        received_at=
+                            issue.issue_date,
+
+                        note=(
+                            f"Issued from store "
+                            f"through issue "
+                            f"#{issue.id}"
+                        ),
+                    )
+                )
+
+                db.add(
+                    location_inventory
+                )
+
+        # ==========================================================
+        # 19. COMMIT
+        # ==========================================================
+
+        db.commit()
+
+        # ==========================================================
+        # 20. REFRESH ISSUE
+        # ==========================================================
+
+        db.refresh(issue)
+
+        # ==========================================================
+        # 21. BUILD RESPONSE
+        # ==========================================================
+
+        issue_items_display = []
+
+        # Reload issue items after commit
+        db.refresh(issue)
+
+        for issue_item in issue.issue_items:
+
+            item_obj = item_cache.get(
+                issue_item.item_id
+            )
+
+            if item_obj is None:
+
+                item_obj = (
+                    db.query(
+                        store_models.StoreItem
+                    )
+                    .filter(
+                        store_models.StoreItem.id
+                        == issue_item.item_id,
+
+                        store_models.StoreItem.business_id
+                        == effective_business_id,
+                    )
+                    .first()
+                )
+
+            if not item_obj:
+                continue
+
+            # ------------------------------------------------------
+            # CATEGORY
+            # ------------------------------------------------------
+
+            category_display = None
+
+            if item_obj.category:
+
+                category_display = (
+                    store_schemas.StoreCategoryDisplay(
+                        id=
+                            item_obj.category.id,
+
+                        name=
+                            item_obj.category.name,
 
                         created_at=
-                            item_obj.created_at,
+                            item_obj.category.created_at,
                     )
+                )
+
+            # ------------------------------------------------------
+            # RESPONSE ITEM
+            # ------------------------------------------------------
+
+            issue_items_display.append(
+
+                store_schemas.IssueItemDisplay(
+
+                    id=
+                        issue_item.id,
+
+                    item=(
+                        store_schemas.StoreItemDisplay(
+
+                            id=
+                                item_obj.id,
+
+                            name=
+                                item_obj.name,
+
+                            unit=
+                                item_obj.unit,
+
+                            category=
+                                category_display,
+
+                            item_type=
+                                item_obj.item_type,
+
+                            unit_price=
+                                item_obj.unit_price,
+
+                            selling_price=
+                                item_obj.selling_price,
+
+                            created_at=
+                                item_obj.created_at,
+                        )
+                    ),
+
+                    quantity=
+                        issue_item.quantity,
+                )
+            )
+
+        # ==========================================================
+        # 22. RETURN UPDATED ISSUE
+        # ==========================================================
+
+        return store_schemas.IssueDisplay(
+
+            id=
+                issue.id,
+
+            ref=
+                issue.ref,
+
+            issue_to=
+                "location",
+
+            issued_to_id=
+                issue.location_id,
+
+            issued_to=
+                location_obj,
+
+            issue_date=
+                to_wat(
+                    issue.issue_date
                 ),
 
-                quantity=item.quantity,
-            )
+            issue_items=
+                issue_items_display,
         )
 
     # ==========================================================
-    # 15. COMMIT
+    # HTTP EXCEPTION
     # ==========================================================
 
-    db.commit()
+    except HTTPException:
 
-    db.refresh(issue)
+        db.rollback()
+
+        raise
 
     # ==========================================================
-    # 16. RETURN UPDATED ISSUE
+    # INVENTORY / DATABASE ERROR
     # ==========================================================
 
-    return store_schemas.IssueDisplay(
+    except Exception as e:
 
-        id=issue.id,
+        db.rollback()
 
-        ref=issue.ref,
-
-        issue_to="location",
-
-        issued_to_id=
-            issue.location_id,
-
-        issued_to=
-            location_obj,
-
-        issue_date=
-            to_wat(
-                issue.issue_date
-            ),
-
-        issue_items=
-            issue_items_display,
-    )
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Failed to update location issue: "
+                f"{str(e)}"
+            )
+        )
 
 
 
