@@ -770,26 +770,99 @@ const ListUsage = () => {
     });
   };
 
-  // ==========================================================
-  // REMOVE ITEM
-  // ==========================================================
+    // ==========================================================
+    // REMOVE ITEM
+    // ==========================================================
 
-  const handleRemoveEditItem = (
-    index
-  ) => {
-    setEditForm((prev) => {
-      const newItems = [
-        ...prev.items,
-      ];
+    const handleRemoveEditItem = (
+      index
+    ) => {
+      setEditForm((prev) => {
+        const newItems = [
+          ...prev.items,
+        ];
 
-      newItems.splice(index, 1);
+        newItems.splice(index, 1);
 
-      return {
+        return {
+          ...prev,
+          items: newItems,
+        };
+      });
+    };
+
+
+    // ==========================================================
+    // ADD ITEM TO EDIT USAGE
+    // ==========================================================
+
+    const handleAddEditItem = () => {
+      setEditForm((prev) => ({
         ...prev,
-        items: newItems,
-      };
-    });
-  };
+
+        items: [
+          ...prev.items,
+
+          {
+            item_id: "",
+            item_name: "",
+            quantity_used: "",
+            unit_price: 0,
+            total_amount: 0,
+            isNew: true,
+          },
+        ],
+      }));
+    };
+
+    // ==========================================================
+    // CHANGE EDIT ITEM
+    // ==========================================================
+
+    const handleEditItemChange = (
+      index,
+      itemId
+    ) => {
+      const selectedItem =
+        items.find(
+          (item) =>
+            Number(item.id) ===
+            Number(itemId)
+        );
+
+      setEditForm((prev) => {
+        const newItems = [
+          ...prev.items,
+        ];
+
+        newItems[index] = {
+          ...newItems[index],
+
+          item_id:
+            itemId
+              ? Number(itemId)
+              : "",
+
+          item_name:
+            selectedItem?.name ||
+            "",
+
+          unit_price:
+            Number(
+              selectedItem?.unit_price ||
+              selectedItem?.cost_price ||
+              0
+            ),
+
+          total_amount: 0,
+        };
+
+        return {
+          ...prev,
+          items: newItems,
+        };
+      });
+    };
 
   // ==========================================================
   // SAVE EDIT
@@ -831,23 +904,51 @@ const ListUsage = () => {
       return;
     }
 
-    const invalidItem =
-      editForm.items.find(
-        (item) =>
-          !item.quantity_used ||
-          Number(
-            item.quantity_used
-          ) <= 0
-      );
+        // ======================================================
+        // VALIDATE ITEMS
+        // ======================================================
 
-    if (invalidItem) {
-      showMessage(
-        "All item quantities must be greater than zero.",
-        "error"
-      );
+        const invalidItem =
+          editForm.items.find(
+            (item) =>
+              !item.item_id ||
+              !item.quantity_used ||
+              Number(
+                item.quantity_used
+              ) <= 0
+          );
 
-      return;
-    }
+        if (invalidItem) {
+          showMessage(
+            "Every item must be selected and have a quantity greater than zero.",
+            "error"
+          );
+
+          return;
+        }
+
+        // ======================================================
+        // PREVENT DUPLICATE ITEMS
+        // ======================================================
+
+        const itemIds =
+          editForm.items.map(
+            (item) =>
+              Number(item.item_id)
+          );
+
+        const hasDuplicateItems =
+          new Set(itemIds).size !==
+          itemIds.length;
+
+        if (hasDuplicateItems) {
+          showMessage(
+            "The same item cannot be added more than once.",
+            "error"
+          );
+
+          return;
+        }
 
     try {
       setSaving(true);
@@ -1418,7 +1519,11 @@ const ListUsage = () => {
             <thead>
 
               <tr>
-                <th>#</th>
+                
+
+                <th>
+                  ID
+                </th>
 
                 <th>
                   Usage Date
@@ -1511,11 +1616,10 @@ const ListUsage = () => {
                         }
                       >
 
-                        <td className="usage-number">
-                          {
-                            index +
-                            1
-                          }
+                        
+
+                        <td className="usage-id-cell">
+                          {usage.id}
                         </td>
 
                         <td className="usage-date-cell">
@@ -1523,6 +1627,9 @@ const ListUsage = () => {
                             usage.usage_date
                           )}
                         </td>
+
+
+                        
 
                         <td>
 
@@ -2130,29 +2237,40 @@ const ListUsage = () => {
                       </h4>
 
                       <span>
-                        Review and adjust
-                        quantities
+                        Review, adjust quantities,
+                        remove or add items
                       </span>
 
                     </div>
 
-                    <strong>
-                      {
-                        editForm.items
-                          .length
-                      }{" "}
-                      item
-                      {
-                        editForm.items
-                          .length !==
-                        1
-                          ? "s"
-                          : ""
-                      }
-                    </strong>
+                    <div className="edit-items-title-actions">
+
+                      <strong>
+                        {
+                          editForm.items.length
+                        }{" "}
+                        item
+                        {
+                          editForm.items.length !== 1
+                            ? "s"
+                            : ""
+                        }
+                      </strong>
+
+                      <button
+                        type="button"
+                        className="edit-add-item-btn"
+                        onClick={
+                          handleAddEditItem
+                        }
+                        disabled={saving}
+                      >
+                        + Add Item
+                      </button>
+
+                    </div>
 
                   </div>
-
                   <div className="edit-items-table-wrapper">
 
                     <table>
@@ -2190,23 +2308,103 @@ const ListUsage = () => {
                             <tr
                               key={
                                 item.item_id
+                                  ? `item-${item.item_id}`
+                                  : `new-item-${index}`
                               }
                             >
 
+                              {/* NUMBER */}
+
                               <td>
                                 {
-                                  index +
-                                  1
+                                  index + 1
                                 }
                               </td>
 
+                              {/* ITEM */}
+
                               <td>
-                                <strong>
-                                  {
-                                    item.item_name
-                                  }
-                                </strong>
+
+                                {item.isNew ? (
+
+                                  <select
+                                    value={
+                                      item.item_id || ""
+                                    }
+                                    onChange={(e) =>
+                                      handleEditItemChange(
+                                        index,
+                                        e.target.value
+                                      )
+                                    }
+                                    disabled={
+                                      saving
+                                    }
+                                  >
+
+                                    <option value="">
+                                      Select Item
+                                    </option>
+
+                                    {items
+                                      .filter(
+                                        (availableItem) => {
+
+                                          const alreadyUsed =
+                                            editForm.items.some(
+                                              (
+                                                existingItem,
+                                                existingIndex
+                                              ) =>
+                                                existingIndex !==
+                                                  index &&
+                                                Number(
+                                                  existingItem.item_id
+                                                ) ===
+                                                  Number(
+                                                    availableItem.id
+                                                  )
+                                            );
+
+                                          return !alreadyUsed;
+                                        }
+                                      )
+                                      .map(
+                                        (
+                                          availableItem
+                                        ) => (
+
+                                          <option
+                                            key={
+                                              availableItem.id
+                                            }
+                                            value={
+                                              availableItem.id
+                                            }
+                                          >
+                                            {
+                                              availableItem.name
+                                            }
+                                          </option>
+
+                                        )
+                                      )}
+
+                                  </select>
+
+                                ) : (
+
+                                  <strong>
+                                    {
+                                      item.item_name
+                                    }
+                                  </strong>
+
+                                )}
+
                               </td>
+
+                              {/* QUANTITY */}
 
                               <td>
 
@@ -2217,19 +2415,20 @@ const ListUsage = () => {
                                   value={
                                     item.quantity_used
                                   }
-                                  onChange={(
-                                    e
-                                  ) =>
+                                  onChange={(e) =>
                                     handleEditQuantity(
                                       index,
-                                      e
-                                        .target
-                                        .value
+                                      e.target.value
                                     )
+                                  }
+                                  disabled={
+                                    saving
                                   }
                                 />
 
                               </td>
+
+                              {/* ACTION */}
 
                               <td>
 

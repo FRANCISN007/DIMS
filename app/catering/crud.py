@@ -1822,6 +1822,7 @@ def void_catering_usage(
     usage_id: int,
     reason: str | None,
     current_user,
+    business_id: int,
 ):
     """
     Void a catering usage entry.
@@ -1851,21 +1852,7 @@ def void_catering_usage(
     for audit purposes.
     """
 
-    # ======================================================
-    # 1. BUSINESS
-    # ======================================================
-
-    business_id = current_user.business_id
-
-    if business_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Super Admin must operate against a "
-                "specific business."
-            ),
-        )
-
+    
     # ======================================================
     # 2. CHECK CAMP BOSS LOCATION
     # ======================================================

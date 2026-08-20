@@ -1535,6 +1535,71 @@
 
 
 /* ==========================================================
+   EDIT ITEMS TITLE ACTIONS
+   ========================================================== */
+
+.edit-items-title-actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+}
+
+
+/* ==========================================================
+   ADD ITEM BUTTON
+   ========================================================== */
+
+.edit-add-item-btn {
+  height: 27px;
+
+  padding: 0 10px;
+
+  border: 1px solid #245f9f;
+
+  border-radius: 8px;
+
+  background: #3c913c;
+
+  color: #ffffff;
+
+  font-size: 12px;
+
+  font-weight: 750;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.edit-add-item-btn:hover:not(
+  :disabled
+) {
+  background: #1e5188;
+
+  border-color: #1e5188;
+}
+
+.edit-add-item-btn:active:not(
+  :disabled
+) {
+  transform: translateY(1px);
+}
+
+.edit-add-item-btn:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+}
+
+
+/* ==========================================================
    SMALL SCREEN
    ========================================================== */
 
