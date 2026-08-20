@@ -20,9 +20,11 @@ const ListUsage = () => {
     const today = new Date();
 
     const year = today.getFullYear();
+
     const month = String(
       today.getMonth() + 1
     ).padStart(2, "0");
+
     const day = String(
       today.getDate()
     ).padStart(2, "0");
@@ -37,12 +39,20 @@ const ListUsage = () => {
   // ==========================================================
 
   const [usages, setUsages] = useState([]);
+
   const [locations, setLocations] = useState([]);
+
+  const [items, setItems] = useState([]);
+
+  const [total, setTotal] = useState(null);
 
   const [loading, setLoading] =
     useState(true);
 
   const [loadingLocations, setLoadingLocations] =
+    useState(false);
+
+  const [loadingItems, setLoadingItems] =
     useState(false);
 
   const [message, setMessage] =
@@ -55,6 +65,9 @@ const ListUsage = () => {
     useState("");
 
   const [locationFilter, setLocationFilter] =
+    useState("");
+
+  const [itemFilter, setItemFilter] =
     useState("");
 
   const [statusFilter, setStatusFilter] =
@@ -150,11 +163,53 @@ const ListUsage = () => {
       );
 
       showMessage(
-        "Failed to load locations.",
+        error.response?.data?.detail ||
+          "Failed to load locations.",
         "error"
       );
     } finally {
       setLoadingLocations(false);
+    }
+  };
+
+  // ==========================================================
+  // FETCH ITEMS
+  //
+  // This supplies the Item filter dropdown.
+  //
+  // IMPORTANT:
+  // If your actual simple item endpoint is different,
+  // change only the URL below.
+  // ==========================================================
+
+  const fetchItems = async () => {
+    try {
+      setLoadingItems(true);
+
+      const response =
+        await axios.get(
+          "/store/items/simple-search",
+        );
+
+      const data =
+        Array.isArray(response.data)
+          ? response.data
+          : [];
+
+      setItems(data);
+    } catch (error) {
+      console.error(
+        "Error loading items:",
+        error
+      );
+
+      showMessage(
+        error.response?.data?.detail ||
+          "Failed to load catering items.",
+        "error"
+      );
+    } finally {
+      setLoadingItems(false);
     }
   };
 
@@ -166,9 +221,13 @@ const ListUsage = () => {
     try {
       setLoading(true);
 
-      const params = new URLSearchParams();
+      const params =
+        new URLSearchParams();
 
+      // ------------------------------------------------------
       // LOCATION
+      // ------------------------------------------------------
+
       if (locationFilter) {
         params.append(
           "location_id",
@@ -176,7 +235,21 @@ const ListUsage = () => {
         );
       }
 
+      // ------------------------------------------------------
+      // ITEM
+      // ------------------------------------------------------
+
+      if (itemFilter) {
+        params.append(
+          "item_id",
+          itemFilter
+        );
+      }
+
+      // ------------------------------------------------------
       // START DATE
+      // ------------------------------------------------------
+
       if (dateFrom) {
         params.append(
           "start_date",
@@ -184,7 +257,10 @@ const ListUsage = () => {
         );
       }
 
+      // ------------------------------------------------------
       // END DATE
+      // ------------------------------------------------------
+
       if (dateTo) {
         params.append(
           "end_date",
@@ -202,16 +278,37 @@ const ListUsage = () => {
       const response =
         await axios.get(url);
 
+      // ======================================================
+      // NEW BACKEND RESPONSE
+      //
+      // {
+      //   "usages": [...],
+      //   "total": {...}
+      // }
+      // ======================================================
+
+      const responseData =
+        response.data || {};
+
       setUsages(
-        Array.isArray(response.data)
-          ? response.data
+        Array.isArray(
+          responseData.usages
+        )
+          ? responseData.usages
           : []
+      );
+
+      setTotal(
+        responseData.total || null
       );
     } catch (error) {
       console.error(
         "Error loading catering usages:",
         error
       );
+
+      setUsages([]);
+      setTotal(null);
 
       showMessage(
         error.response?.data?.detail ||
@@ -229,16 +326,18 @@ const ListUsage = () => {
 
   useEffect(() => {
     fetchLocations();
+    fetchItems();
   }, []);
 
   // ==========================================================
-  // FETCH WHEN FILTER CHANGES
+  // FETCH WHEN SERVER FILTER CHANGES
   // ==========================================================
 
   useEffect(() => {
     fetchUsages();
   }, [
     locationFilter,
+    itemFilter,
     dateFrom,
     dateTo,
   ]);
@@ -247,7 +346,9 @@ const ListUsage = () => {
   // HELPERS
   // ==========================================================
 
-  const getLocationName = (usage) => {
+  const getLocationName = (
+    usage
+  ) => {
     if (usage?.location?.name) {
       return usage.location.name;
     }
@@ -268,7 +369,13 @@ const ListUsage = () => {
     return location?.name || "-";
   };
 
-  const getItemName = (item) => {
+  // ==========================================================
+  // ITEM NAME
+  // ==========================================================
+
+  const getItemName = (
+    item
+  ) => {
     return (
       item?.item?.name ||
       item?.item_name ||
@@ -279,7 +386,13 @@ const ListUsage = () => {
     );
   };
 
-  const getItems = (usage) => {
+  // ==========================================================
+  // ITEMS
+  // ==========================================================
+
+  const getItems = (
+    usage
+  ) => {
     return Array.isArray(
       usage?.items
     )
@@ -287,12 +400,22 @@ const ListUsage = () => {
       : [];
   };
 
+  // ==========================================================
+  // TOTAL QUANTITY
+  //
+  // When item filter is active, the backend already returns
+  // only the selected item inside usage.items.
+  // ==========================================================
+
   const getTotalQuantity = (
     usage
   ) => {
     return getItems(usage).reduce(
-      (total, item) =>
-        total +
+      (
+        totalValue,
+        item
+      ) =>
+        totalValue +
         Number(
           item?.quantity_used || 0
         ),
@@ -300,18 +423,29 @@ const ListUsage = () => {
     );
   };
 
+  // ==========================================================
+  // TOTAL AMOUNT
+  // ==========================================================
+
   const getTotalAmount = (
     usage
   ) => {
     return getItems(usage).reduce(
-      (total, item) =>
-        total +
+      (
+        totalValue,
+        item
+      ) =>
+        totalValue +
         Number(
           item?.total_amount || 0
         ),
       0
     );
   };
+
+  // ==========================================================
+  // FORMAT DATE
+  // ==========================================================
 
   const formatDate = (
     date
@@ -338,6 +472,10 @@ const ListUsage = () => {
       }
     );
   };
+
+  // ==========================================================
+  // FORMAT DATE TIME
+  // ==========================================================
 
   const formatDateTime = (
     date
@@ -367,6 +505,10 @@ const ListUsage = () => {
     );
   };
 
+  // ==========================================================
+  // FORMAT NUMBER
+  // ==========================================================
+
   const formatNumber = (
     value
   ) => {
@@ -381,7 +523,44 @@ const ListUsage = () => {
   };
 
   // ==========================================================
+  // GET SELECTED ITEM NAME
+  // ==========================================================
+
+  const selectedItemName =
+    useMemo(() => {
+      if (!itemFilter) {
+        return null;
+      }
+
+      if (
+        total?.item_name
+      ) {
+        return total.item_name;
+      }
+
+      const selected =
+        items.find(
+          (item) =>
+            Number(item.id) ===
+            Number(itemFilter)
+        );
+
+      return (
+        selected?.name ||
+        `Item #${itemFilter}`
+      );
+    }, [
+      itemFilter,
+      total,
+      items,
+    ]);
+
+  // ==========================================================
   // SEARCH + STATUS FILTER
+  //
+  // Search is still performed locally.
+  //
+  // Location and item filtering are performed by the backend.
   // ==========================================================
 
   const filteredUsages =
@@ -393,15 +572,16 @@ const ListUsage = () => {
 
       return usages.filter(
         (usage) => {
-          const items =
+          const usageItems =
             getItems(usage);
 
           const itemText =
-            items
-              .map((item) =>
-                getItemName(
-                  item
-                )
+            usageItems
+              .map(
+                (item) =>
+                  getItemName(
+                    item
+                  )
               )
               .join(" ");
 
@@ -462,7 +642,9 @@ const ListUsage = () => {
         response.data
       );
 
-      setShowViewModal(true);
+      setShowViewModal(
+        true
+      );
     } catch (error) {
       console.error(error);
 
@@ -568,12 +750,12 @@ const ListUsage = () => {
     value
   ) => {
     setEditForm((prev) => {
-      const items = [
+      const newItems = [
         ...prev.items,
       ];
 
-      items[index] = {
-        ...items[index],
+      newItems[index] = {
+        ...newItems[index],
 
         quantity_used:
           value === ""
@@ -583,7 +765,7 @@ const ListUsage = () => {
 
       return {
         ...prev,
-        items,
+        items: newItems,
       };
     });
   };
@@ -596,15 +778,15 @@ const ListUsage = () => {
     index
   ) => {
     setEditForm((prev) => {
-      const items = [
+      const newItems = [
         ...prev.items,
       ];
 
-      items.splice(index, 1);
+      newItems.splice(index, 1);
 
       return {
         ...prev,
-        items,
+        items: newItems,
       };
     });
   };
@@ -627,6 +809,7 @@ const ListUsage = () => {
         "Please select a location.",
         "error"
       );
+
       return;
     }
 
@@ -635,6 +818,7 @@ const ListUsage = () => {
         "Please select the usage date.",
         "error"
       );
+
       return;
     }
 
@@ -643,6 +827,7 @@ const ListUsage = () => {
         "At least one item is required.",
         "error"
       );
+
       return;
     }
 
@@ -660,6 +845,7 @@ const ListUsage = () => {
         "All item quantities must be greater than zero.",
         "error"
       );
+
       return;
     }
 
@@ -731,7 +917,7 @@ const ListUsage = () => {
   };
 
   // ==========================================================
-  // OPEN VOID
+  // OPEN VOID MODAL
   // ==========================================================
 
   const openVoidModal = (
@@ -816,7 +1002,7 @@ const ListUsage = () => {
   };
 
   // ==========================================================
-  // CLOSE MODALS
+  // CLOSE VIEW MODAL
   // ==========================================================
 
   const closeViewModal = () => {
@@ -829,8 +1015,14 @@ const ListUsage = () => {
     );
   };
 
+  // ==========================================================
+  // CLOSE EDIT MODAL
+  // ==========================================================
+
   const closeEditModal = () => {
-    if (saving) return;
+    if (saving) {
+      return;
+    }
 
     setShowEditModal(
       false
@@ -841,8 +1033,14 @@ const ListUsage = () => {
     );
   };
 
+  // ==========================================================
+  // CLOSE VOID MODAL
+  // ==========================================================
+
   const closeVoidModal = () => {
-    if (saving) return;
+    if (saving) {
+      return;
+    }
 
     setShowVoidModal(
       false
@@ -858,15 +1056,20 @@ const ListUsage = () => {
   // ==========================================================
   // CLEAR FILTERS
   //
-  // IMPORTANT:
-  // Clear resets dates to TODAY, not blank.
+  // Reset dates to TODAY.
   // ==========================================================
 
   const clearFilters = () => {
     setSearch("");
+
     setLocationFilter("");
+
+    setItemFilter("");
+
     setDateFrom(today);
+
     setDateTo(today);
+
     setStatusFilter("");
   };
 
@@ -983,6 +1186,7 @@ const ListUsage = () => {
               loadingLocations
             }
           >
+
             <option value="">
               All Locations
             </option>
@@ -1003,6 +1207,54 @@ const ListUsage = () => {
                 </option>
               )
             )}
+
+          </select>
+
+        </div>
+
+        {/* ITEM */}
+
+        <div className="usage-filter-group">
+
+          <label>
+            Item
+          </label>
+
+          <select
+            value={
+              itemFilter
+            }
+            onChange={(e) =>
+              setItemFilter(
+                e.target.value
+              )
+            }
+            disabled={
+              loadingItems
+            }
+          >
+
+            <option value="">
+              All Items
+            </option>
+
+            {items.map(
+              (item) => (
+                <option
+                  key={
+                    item.id
+                  }
+                  value={
+                    item.id
+                  }
+                >
+                  {
+                    item.name
+                  }
+                </option>
+              )
+            )}
+
           </select>
 
         </div>
@@ -1017,7 +1269,9 @@ const ListUsage = () => {
 
           <input
             type="date"
-            value={dateFrom}
+            value={
+              dateFrom
+            }
             onChange={(e) =>
               setDateFrom(
                 e.target.value
@@ -1037,7 +1291,9 @@ const ListUsage = () => {
 
           <input
             type="date"
-            value={dateTo}
+            value={
+              dateTo
+            }
             min={
               dateFrom ||
               undefined
@@ -1069,6 +1325,7 @@ const ListUsage = () => {
               )
             }
           >
+
             <option value="">
               All Status
             </option>
@@ -1080,6 +1337,7 @@ const ListUsage = () => {
             <option value="voided">
               Voided
             </option>
+
           </select>
 
         </div>
@@ -1099,8 +1357,56 @@ const ListUsage = () => {
       </div>
 
       {/* ====================================================
+          SELECTED ITEM TOTAL
+          ==================================================== */}
+
+      {itemFilter &&
+        total && (
+          <div className="usage-selected-item-total">
+
+            <div>
+              <span>
+                Selected Item
+              </span>
+
+              <strong>
+                {
+                  selectedItemName ||
+                  "-"
+                }
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Unit
+              </span>
+
+              <strong>
+                {
+                  total.unit ||
+                  "-"
+                }
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Total Quantity Used
+              </span>
+
+              <strong>
+                {formatNumber(
+                  total.total_quantity
+                )}
+              </strong>
+            </div>
+
+          </div>
+        )}
+
+      {/* ====================================================
           TABLE
-          THIS IS THE IMPORTANT SCROLL CONTAINER
       ==================================================== */}
 
       <div className="usage-list-card">
@@ -1110,23 +1416,50 @@ const ListUsage = () => {
           <table className="usage-list-table">
 
             <thead>
+
               <tr>
                 <th>#</th>
-                <th>Usage Date</th>
-                <th>Location</th>
-                <th>Items Used</th>
-                <th>Total Qty</th>
-                <th>Total Amount</th>
-                <th>Status</th>
-                <th>Note</th>
-                <th>Actions</th>
+
+                <th>
+                  Usage Date
+                </th>
+
+                <th>
+                  Location
+                </th>
+
+                <th>
+                  Items Used
+                </th>
+
+                <th>
+                  Total Qty
+                </th>
+
+                <th>
+                  Total Amount
+                </th>
+
+                <th>
+                  Status
+                </th>
+
+                <th>
+                  Note
+                </th>
+
+                <th>
+                  Actions
+                </th>
               </tr>
+
             </thead>
 
             <tbody>
 
               {loading ? (
                 <tr>
+
                   <td
                     colSpan="9"
                     className="usage-table-loading"
@@ -1134,27 +1467,33 @@ const ListUsage = () => {
                     Loading catering
                     usage...
                   </td>
+
                 </tr>
               ) : filteredUsages.length ===
                 0 ? (
+
                 <tr>
+
                   <td
                     colSpan="9"
                     className="usage-table-empty"
                   >
                     No catering usage
                     found for the
-                    selected date.
+                    selected filters.
                   </td>
+
                 </tr>
+
               ) : (
+
                 filteredUsages.map(
                   (
                     usage,
                     index
                   ) => {
 
-                    const items =
+                    const usageItems =
                       getItems(
                         usage
                       );
@@ -1173,7 +1512,10 @@ const ListUsage = () => {
                       >
 
                         <td className="usage-number">
-                          {index + 1}
+                          {
+                            index +
+                            1
+                          }
                         </td>
 
                         <td className="usage-date-cell">
@@ -1183,22 +1525,25 @@ const ListUsage = () => {
                         </td>
 
                         <td>
+
                           <strong>
                             {getLocationName(
                               usage
                             )}
                           </strong>
+
                         </td>
 
                         <td className="usage-items-cell">
 
-                          {items.length ===
+                          {usageItems.length ===
                           0 ? (
                             "-"
                           ) : (
+
                             <div className="usage-item-preview">
 
-                              {items
+                              {usageItems
                                 .slice(
                                   0,
                                   2
@@ -1208,54 +1553,68 @@ const ListUsage = () => {
                                     item,
                                     itemIndex
                                   ) => (
+
                                     <span
                                       key={
                                         itemIndex
                                       }
                                     >
-                                      {getItemName(
-                                        item
-                                      )}
+                                      {
+                                        getItemName(
+                                          item
+                                        )
+                                      }
+
                                       {" × "}
+
                                       {
                                         item.quantity_used
                                       }
+
                                     </span>
+
                                   )
                                 )}
 
-                              {items.length >
+                              {usageItems.length >
                                 2 && (
+
                                 <small>
                                   +
                                   {
-                                    items.length -
+                                    usageItems.length -
                                       2
                                   }{" "}
                                   more
                                 </small>
+
                               )}
 
                             </div>
+
                           )}
 
                         </td>
 
                         <td>
+
                           {formatNumber(
                             getTotalQuantity(
                               usage
                             )
                           )}
+
                         </td>
 
                         <td>
+
                           ₦
                           {formatNumber(
                             getTotalAmount(
                               usage
                             )
                           )}
+
                         </td>
 
                         <td>
@@ -1277,10 +1636,12 @@ const ListUsage = () => {
                         </td>
 
                         <td className="usage-note-cell">
+
                           {
                             usage.note ||
                             "-"
                           }
+
                         </td>
 
                         <td>
@@ -1339,6 +1700,7 @@ const ListUsage = () => {
                     );
                   }
                 )
+
               )}
 
             </tbody>
@@ -1355,6 +1717,7 @@ const ListUsage = () => {
 
       {showViewModal &&
         selectedUsage && (
+
           <div className="usage-modal-overlay">
 
             <div className="usage-modal usage-view-modal">
@@ -1362,6 +1725,7 @@ const ListUsage = () => {
               <div className="usage-modal-header">
 
                 <div>
+
                   <h3>
                     Catering Usage #
                     {
@@ -1372,6 +1736,7 @@ const ListUsage = () => {
                   <span>
                     Usage details
                   </span>
+
                 </div>
 
                 <button
@@ -1389,6 +1754,7 @@ const ListUsage = () => {
               <div className="usage-view-info">
 
                 <div>
+
                   <label>
                     Usage Date
                   </label>
@@ -1398,9 +1764,11 @@ const ListUsage = () => {
                       selectedUsage.usage_date
                     )}
                   </strong>
+
                 </div>
 
                 <div>
+
                   <label>
                     Location
                   </label>
@@ -1410,9 +1778,11 @@ const ListUsage = () => {
                       selectedUsage
                     )}
                   </strong>
+
                 </div>
 
                 <div>
+
                   <label>
                     Status
                   </label>
@@ -1429,9 +1799,11 @@ const ListUsage = () => {
                       selectedUsage.status
                     }
                   </span>
+
                 </div>
 
                 <div>
+
                   <label>
                     Note
                   </label>
@@ -1442,6 +1814,7 @@ const ListUsage = () => {
                       "-"
                     }
                   </strong>
+
                 </div>
 
               </div>
@@ -1457,6 +1830,7 @@ const ListUsage = () => {
                   <table>
 
                     <thead>
+
                       <tr>
                         <th>#</th>
                         <th>Item</th>
@@ -1464,6 +1838,7 @@ const ListUsage = () => {
                         <th>Unit Price</th>
                         <th>Total</th>
                       </tr>
+
                     </thead>
 
                     <tbody>
@@ -1475,14 +1850,19 @@ const ListUsage = () => {
                           item,
                           index
                         ) => (
+
                           <tr
                             key={
+                              item.id ||
                               index
                             }
                           >
+
                             <td>
-                              {index +
-                                1}
+                              {
+                                index +
+                                1
+                              }
                             </td>
 
                             <td>
@@ -1510,7 +1890,9 @@ const ListUsage = () => {
                                 item.total_amount
                               )}
                             </td>
+
                           </tr>
+
                         )
                       )}
 
@@ -1524,6 +1906,7 @@ const ListUsage = () => {
 
               {selectedUsage.status ===
                 "voided" && (
+
                 <div className="void-details">
 
                   <strong>
@@ -1560,6 +1943,7 @@ const ListUsage = () => {
                   </p>
 
                 </div>
+
               )}
 
               <div className="usage-modal-footer">
@@ -1579,6 +1963,7 @@ const ListUsage = () => {
             </div>
 
           </div>
+
         )}
 
       {/* ====================================================
@@ -1587,6 +1972,7 @@ const ListUsage = () => {
 
       {showEditModal &&
         selectedUsage && (
+
           <div className="usage-modal-overlay">
 
             <div className="usage-modal usage-edit-modal">
@@ -1594,6 +1980,7 @@ const ListUsage = () => {
               <div className="usage-modal-header">
 
                 <div>
+
                   <h3>
                     Edit Catering
                     Usage #
@@ -1605,6 +1992,7 @@ const ListUsage = () => {
                   <span>
                     Modify usage details
                   </span>
+
                 </div>
 
                 <button
@@ -1648,6 +2036,7 @@ const ListUsage = () => {
                         )
                       }
                     >
+
                       <option value="">
                         Select Location
                       </option>
@@ -1656,6 +2045,7 @@ const ListUsage = () => {
                         (
                           location
                         ) => (
+
                           <option
                             key={
                               location.id
@@ -1668,8 +2058,10 @@ const ListUsage = () => {
                               location.name
                             }
                           </option>
+
                         )
                       )}
+
                     </select>
 
                   </div>
@@ -1732,6 +2124,7 @@ const ListUsage = () => {
                   <div className="edit-items-title">
 
                     <div>
+
                       <h4>
                         Items Used
                       </h4>
@@ -1740,6 +2133,7 @@ const ListUsage = () => {
                         Review and adjust
                         quantities
                       </span>
+
                     </div>
 
                     <strong>
@@ -1748,11 +2142,13 @@ const ListUsage = () => {
                           .length
                       }{" "}
                       item
-                      {editForm.items
-                        .length !==
-                      1
-                        ? "s"
-                        : ""}
+                      {
+                        editForm.items
+                          .length !==
+                        1
+                          ? "s"
+                          : ""
+                      }
                     </strong>
 
                   </div>
@@ -1762,20 +2158,25 @@ const ListUsage = () => {
                     <table>
 
                       <thead>
+
                         <tr>
                           <th>
                             #
                           </th>
+
                           <th>
                             Item
                           </th>
+
                           <th>
                             Quantity Used
                           </th>
+
                           <th>
                             Action
                           </th>
                         </tr>
+
                       </thead>
 
                       <tbody>
@@ -1785,6 +2186,7 @@ const ListUsage = () => {
                             item,
                             index
                           ) => (
+
                             <tr
                               key={
                                 item.item_id
@@ -1849,6 +2251,7 @@ const ListUsage = () => {
                               </td>
 
                             </tr>
+
                           )
                         )}
 
@@ -1894,6 +2297,7 @@ const ListUsage = () => {
             </div>
 
           </div>
+
         )}
 
       {/* ====================================================
@@ -1902,6 +2306,7 @@ const ListUsage = () => {
 
       {showVoidModal &&
         selectedUsage && (
+
           <div className="usage-modal-overlay">
 
             <div className="usage-modal usage-void-modal">
@@ -1909,6 +2314,7 @@ const ListUsage = () => {
               <div className="usage-modal-header">
 
                 <div>
+
                   <h3>
                     Void Catering
                     Usage
@@ -1920,6 +2326,7 @@ const ListUsage = () => {
                       selectedUsage.id
                     }
                   </span>
+
                 </div>
 
                 <button
@@ -1968,6 +2375,7 @@ const ListUsage = () => {
               <div className="void-usage-summary">
 
                 <div>
+
                   <span>
                     Location
                   </span>
@@ -1977,9 +2385,11 @@ const ListUsage = () => {
                       selectedUsage
                     )}
                   </strong>
+
                 </div>
 
                 <div>
+
                   <span>
                     Total Items
                   </span>
@@ -1991,9 +2401,11 @@ const ListUsage = () => {
                       ).length
                     }
                   </strong>
+
                 </div>
 
                 <div>
+
                   <span>
                     Total Quantity
                   </span>
@@ -2005,6 +2417,7 @@ const ListUsage = () => {
                       )
                     )}
                   </strong>
+
                 </div>
 
               </div>
@@ -2065,6 +2478,7 @@ const ListUsage = () => {
             </div>
 
           </div>
+
         )}
 
     </div>

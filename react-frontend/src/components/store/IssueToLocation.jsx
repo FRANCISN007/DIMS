@@ -5,11 +5,20 @@ import axiosWithAuth from "../../utils/axiosWithAuth";
 import "./IssueToLocation.css";
 
 const IssueToLocation = () => {
+  // ==========================================================
+  // BASIC FORM STATE
+  // ==========================================================
+
   const [locations, setLocations] = useState([]);
   const [issuedTo, setIssuedTo] = useState("");
+  const [ref, setRef] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ==========================================================
+  // ISSUE ITEMS
+  // ==========================================================
 
   const [rows, setRows] = useState([
     {
@@ -96,21 +105,31 @@ const IssueToLocation = () => {
     }
 
     try {
-      const res = await axios.get("/store/items/simple-search", {
-        params: {
-          search: searchText,
-          limit: 50,
-        },
-      });
+      const res = await axios.get(
+        "/store/items/simple-search",
+        {
+          params: {
+            search: searchText,
+            limit: 50,
+          },
+        }
+      );
 
       return (res.data || []).map((item) => ({
         id: item.item_id ?? item.id,
         name: item.item_name ?? item.name,
-        price: item.unit_price ?? item.selling_price ?? 0,
+        price:
+          item.unit_price ??
+          item.selling_price ??
+          0,
         unit: item.unit,
       }));
     } catch (error) {
-      console.error("Error searching store items:", error);
+      console.error(
+        "Error searching store items:",
+        error
+      );
+
       return [];
     }
   };
@@ -123,6 +142,10 @@ const IssueToLocation = () => {
     setRows((prevRows) => {
       const updatedRows = [...prevRows];
 
+      // ------------------------------------------------------
+      // ITEM SEARCH
+      // ------------------------------------------------------
+
       if (field === "search") {
         updatedRows[index] = {
           ...updatedRows[index],
@@ -133,6 +156,10 @@ const IssueToLocation = () => {
         };
       }
 
+      // ------------------------------------------------------
+      // SELECT ITEM
+      // ------------------------------------------------------
+
       if (field === "select_item") {
         updatedRows[index] = {
           ...updatedRows[index],
@@ -142,6 +169,10 @@ const IssueToLocation = () => {
           suggestions: [],
         };
       }
+
+      // ------------------------------------------------------
+      // QUANTITY
+      // ------------------------------------------------------
 
       if (field === "quantity") {
         updatedRows[index] = {
@@ -227,18 +258,18 @@ const IssueToLocation = () => {
 
     setMessage("");
 
-    // --------------------------------------------------------
+    // ========================================================
     // LOCATION
-    // --------------------------------------------------------
+    // ========================================================
 
     if (!issuedTo) {
       setMessage("⚠ Please select a location.");
       return;
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // ITEMS
-    // --------------------------------------------------------
+    // ========================================================
 
     const validRows = rows.filter(
       (row) =>
@@ -248,13 +279,15 @@ const IssueToLocation = () => {
     );
 
     if (validRows.length === 0) {
-      setMessage("⚠ Please add at least one valid item.");
+      setMessage(
+        "⚠ Please add at least one valid item."
+      );
       return;
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // PAYLOAD
-    // --------------------------------------------------------
+    // ========================================================
 
     const payload = {
       issue_to: "location",
@@ -271,16 +304,36 @@ const IssueToLocation = () => {
         : null,
     };
 
+    // ========================================================
+    // OPTIONAL REFERENCE
+    // ========================================================
+    // Only send ref when the user actually entered one.
+    // This keeps the field optional.
+
+    if (ref.trim()) {
+      payload.ref = ref.trim();
+    }
+
+    // ========================================================
+    // SUBMIT
+    // ========================================================
+
     setIsSubmitting(true);
 
     try {
-      await axios.post("/store/location", payload);
+      await axios.post(
+        "/store/location",
+        payload
+      );
 
       setMessage(
         "✅ Items successfully issued to location."
       );
 
-      // Reset form
+      // ======================================================
+      // RESET FORM
+      // ======================================================
+
       setRows([
         {
           itemId: "",
@@ -292,8 +345,8 @@ const IssueToLocation = () => {
       ]);
 
       setIssuedTo("");
+      setRef("");
       setIssueDate(getToday());
-
     } catch (error) {
       console.error(
         "Error issuing items to location:",
@@ -337,7 +390,9 @@ const IssueToLocation = () => {
 
         <select
           value={issuedTo}
-          onChange={(e) => setIssuedTo(e.target.value)}
+          onChange={(e) =>
+            setIssuedTo(e.target.value)
+          }
           required
         >
           <option value="">
@@ -353,6 +408,33 @@ const IssueToLocation = () => {
             </option>
           ))}
         </select>
+
+        {/* ====================================================
+            REFERENCE
+        ==================================================== */}
+
+        <label>
+          Reference
+          <span
+            style={{
+              fontWeight: "normal",
+              color: "#777",
+              marginLeft: "5px",
+            }}
+          >
+            (Optional)
+          </span>
+        </label>
+
+        <input
+          type="text"
+          value={ref}
+          onChange={(e) =>
+            setRef(e.target.value)
+          }
+          placeholder="Enter reference..."
+          maxLength={255}
+        />
 
         {/* ====================================================
             ISSUE DATE
@@ -387,7 +469,9 @@ const IssueToLocation = () => {
             {rows.map((row, index) => (
               <tr key={index}>
 
-                {/* ITEM SEARCH */}
+                {/* ==================================================
+                    ITEM SEARCH
+                ================================================== */}
 
                 <td>
                   <div className="autocomplete">
@@ -408,32 +492,34 @@ const IssueToLocation = () => {
                     {row.suggestions.length > 0 && (
                       <ul className="suggestions-list">
 
-                        {row.suggestions.map((item) => (
-                          <li
-                            key={item.id}
-                            onClick={() =>
-                              handleRowChange(
-                                index,
-                                "select_item",
-                                item
-                              )
-                            }
-                          >
-                            {item.name}
+                        {row.suggestions.map(
+                          (item) => (
+                            <li
+                              key={item.id}
+                              onClick={() =>
+                                handleRowChange(
+                                  index,
+                                  "select_item",
+                                  item
+                                )
+                              }
+                            >
+                              {item.name}
 
-                            {item.unit
-                              ? ` (${item.unit})`
-                              : ""}
+                              {item.unit
+                                ? ` (${item.unit})`
+                                : ""}
 
-                            {item.price
-                              ? ` - ₦${Number(
-                                  item.price
-                                ).toLocaleString(
-                                  "en-NG"
-                                )}`
-                              : ""}
-                          </li>
-                        ))}
+                              {item.price
+                                ? ` - ₦${Number(
+                                    item.price
+                                  ).toLocaleString(
+                                    "en-NG"
+                                  )}`
+                                : ""}
+                            </li>
+                          )
+                        )}
 
                       </ul>
                     )}
@@ -441,9 +527,12 @@ const IssueToLocation = () => {
                   </div>
                 </td>
 
-                {/* QUANTITY */}
+                {/* ==================================================
+                    QUANTITY
+                ================================================== */}
 
                 <td>
+
                   <input
                     type="number"
                     min="1"
@@ -458,9 +547,12 @@ const IssueToLocation = () => {
                     }
                     required
                   />
+
                 </td>
 
-                {/* REMOVE */}
+                {/* ==================================================
+                    REMOVE
+                ================================================== */}
 
                 <td>
 

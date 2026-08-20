@@ -15,7 +15,10 @@ from app.store import models as store_models
 
 from app.store import schemas as store_schemas
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
+
+
+
 
 
 from app.locations import models as location_models
@@ -1444,6 +1447,7 @@ def issue_to_location(
 
     issue = store_models.StoreIssue(
         business_id=effective_business_id,
+        ref=issue_data.ref,
         issue_to="location",
         issued_by_id=current_user.id,
         location_id=issue_data.issued_to_id,
@@ -1642,6 +1646,8 @@ def issue_to_location(
 
     return store_schemas.IssueDisplay(
         id=issue.id,
+        
+        ref=issue.ref,
 
         issue_to="location",
 
@@ -1658,15 +1664,32 @@ def issue_to_location(
 
 
 
+
+
 @router.get(
     "/location",
-    response_model=List[store_schemas.IssueDisplay]
+    response_model=store_schemas.LocationIssuesResponse
 )
 def list_issues_to_location(
     location_id: Optional[int] = None,
+
+    # ==========================================================
+    # ITEM FILTER
+    # ==========================================================
+
+    item_id: Optional[int] = Query(
+        None,
+        description="Filter issues by store item"
+    ),
+
     start_date: Optional[date] = None,
+
     end_date: Optional[date] = None,
-    business_id: Optional[int] = Query(None),
+
+    business_id: Optional[int] = Query(
+        None,
+        description="Super admin can optionally specify business"
+    ),
 
     db: Session = Depends(get_db),
 
@@ -1677,7 +1700,7 @@ def list_issues_to_location(
     try:
 
         # ==========================================================
-        # 1. Resolve Business
+        # 1. RESOLVE BUSINESS
         # ==========================================================
 
         effective_business_id = resolve_business_id(
@@ -1686,49 +1709,153 @@ def list_issues_to_location(
         )
 
         # ==========================================================
-        # 2. Base Query
+        # 2. VALIDATE LOCATION
+        # ==========================================================
+
+        if location_id is not None:
+
+            location_exists = (
+                db.query(
+                    location_models.Location
+                )
+                .filter(
+                    location_models.Location.id
+                    == location_id,
+
+                    location_models.Location.business_id
+                    == effective_business_id,
+                )
+                .first()
+            )
+
+            if not location_exists:
+
+                raise HTTPException(
+                    status_code=404,
+                    detail="Location not found"
+                )
+
+        # ==========================================================
+        # 3. VALIDATE ITEM
+        # ==========================================================
+
+        selected_item = None
+
+        if item_id is not None:
+
+            selected_item = (
+                db.query(
+                    store_models.StoreItem
+                )
+                .filter(
+                    store_models.StoreItem.id
+                    == item_id,
+
+                    store_models.StoreItem.business_id
+                    == effective_business_id,
+                )
+                .first()
+            )
+
+            if not selected_item:
+
+                raise HTTPException(
+                    status_code=404,
+                    detail="Item not found"
+                )
+
+        # ==========================================================
+        # 4. BASE QUERY
         # ==========================================================
 
         query = (
-            db.query(store_models.StoreIssue)
+            db.query(
+                store_models.StoreIssue
+            )
             .filter(
-                store_models.StoreIssue.issue_to == "location",
+                store_models.StoreIssue.issue_to
+                == "location",
 
                 store_models.StoreIssue.business_id
                 == effective_business_id,
 
-                store_models.StoreIssue.location_id.isnot(None),
+                store_models.StoreIssue.location_id
+                .isnot(None),
             )
         )
 
         # ==========================================================
-        # 3. Location Filter
+        # 5. LOCATION FILTER
         # ==========================================================
 
-        if location_id:
+        if location_id is not None:
+
             query = query.filter(
                 store_models.StoreIssue.location_id
                 == location_id
             )
 
         # ==========================================================
-        # 4. Date Filters
+        # 6. ITEM FILTER
+        #
+        # Only issues containing the selected item are returned.
         # ==========================================================
 
-        if start_date:
-            query = query.filter(
-                store_models.StoreIssue.issue_date
-                >= start_date
-            )
+        if item_id is not None:
 
-        if end_date:
-            query = query.filter(
-                store_models.StoreIssue.issue_date
-                <= end_date
+            query = (
+                query
+                .join(
+                    store_models.StoreIssueItem,
+                    store_models.StoreIssueItem.issue_id
+                    == store_models.StoreIssue.id
+                )
+                .filter(
+                    store_models.StoreIssueItem.item_id
+                    == item_id,
+
+                    store_models.StoreIssueItem.business_id
+                    == effective_business_id,
+                )
+                .distinct()
             )
 
         # ==========================================================
-        # 5. Get Issues
+        # 7. START DATE
+        # ==========================================================
+
+        if start_date is not None:
+
+            start_datetime = datetime.combine(
+                start_date,
+                time.min
+            )
+
+            query = query.filter(
+                store_models.StoreIssue.issue_date
+                >= start_datetime
+            )
+
+        # ==========================================================
+        # 8. END DATE
+        #
+        # Include the complete end date.
+        # ==========================================================
+
+        if end_date is not None:
+
+            end_datetime = datetime.combine(
+                end_date + timedelta(days=1),
+                time.min
+            )
+
+            query = query.filter(
+                store_models.StoreIssue.issue_date
+                < end_datetime
+            )
+
+        # ==========================================================
+        # 9. GET ISSUES
         # ==========================================================
 
         issues = (
@@ -1739,23 +1866,45 @@ def list_issues_to_location(
             .all()
         )
 
-        result = []
+        # ==========================================================
+        # 10. TOTAL SELECTED ITEM QUANTITY
+        # ==========================================================
+
+        total_item_quantity = 0
+
+        if item_id is not None:
+
+            for issue in issues:
+
+                for issue_item in issue.issue_items:
+
+                    if issue_item.item_id == item_id:
+
+                        total_item_quantity += (
+                            int(
+                                issue_item.quantity or 0
+                            )
+                        )
 
         # ==========================================================
-        # 6. Build Response
+        # 11. BUILD RESPONSE
         # ==========================================================
+
+        result = []
 
         for issue in issues:
 
-            # ------------------------------------------------------
-            # Validate Location
-            # ------------------------------------------------------
+            # ======================================================
+            # LOCATION
+            # ======================================================
 
             if not issue.location_id:
                 continue
 
             location_obj = (
-                db.query(location_models.Location)
+                db.query(
+                    location_models.Location
+                )
                 .filter(
                     location_models.Location.id
                     == issue.location_id,
@@ -1769,16 +1918,33 @@ def list_issues_to_location(
             if not location_obj:
                 continue
 
-            # ------------------------------------------------------
-            # Issue Items
-            # ------------------------------------------------------
+            # ======================================================
+            # ISSUE ITEMS
+            # ======================================================
 
             issue_items_display = []
 
             for issue_item in issue.issue_items:
 
+                # ==================================================
+                # WHEN ITEM FILTER IS ACTIVE
+                # ONLY RETURN THE SELECTED ITEM
+                # ==================================================
+
+                if (
+                    item_id is not None
+                    and issue_item.item_id != item_id
+                ):
+                    continue
+
+                # ==================================================
+                # GET ITEM
+                # ==================================================
+
                 item_obj = (
-                    db.query(store_models.StoreItem)
+                    db.query(
+                        store_models.StoreItem
+                    )
                     .filter(
                         store_models.StoreItem.id
                         == issue_item.item_id,
@@ -1792,9 +1958,9 @@ def list_issues_to_location(
                 if not item_obj:
                     continue
 
-                # --------------------------------------------------
-                # Category
-                # --------------------------------------------------
+                # ==================================================
+                # CATEGORY
+                # ==================================================
 
                 category_display = None
 
@@ -1803,76 +1969,151 @@ def list_issues_to_location(
                     category_display = (
                         store_schemas.StoreCategoryDisplay(
                             id=item_obj.category.id,
+
                             name=item_obj.category.name,
-                            created_at=item_obj.category.created_at,
+
+                            created_at=
+                                item_obj.category.created_at,
                         )
                     )
 
-                # --------------------------------------------------
-                # Item Display
-                # --------------------------------------------------
+                # ==================================================
+                # ITEM DISPLAY
+                # ==================================================
 
                 issue_items_display.append(
+
                     store_schemas.IssueItemDisplay(
 
                         id=issue_item.id,
 
-                        item=store_schemas.StoreItemDisplay(
-                            id=item_obj.id,
-                            name=item_obj.name,
-                            unit=item_obj.unit,
+                        item=(
+                            store_schemas.StoreItemDisplay(
 
-                            category=category_display,
-                            item_type=item_obj.item_type,
+                                id=item_obj.id,
 
-                            unit_price=item_obj.unit_price,
-                            selling_price=item_obj.selling_price,
+                                name=item_obj.name,
 
-                            created_at=item_obj.created_at,
+                                unit=item_obj.unit,
+
+                                category=
+                                    category_display,
+
+                                item_type=
+                                    item_obj.item_type,
+
+                                unit_price=
+                                    item_obj.unit_price,
+
+                                selling_price=
+                                    item_obj.selling_price,
+
+                                created_at=
+                                    item_obj.created_at,
+                            )
                         ),
 
-                        quantity=issue_item.quantity,
+                        quantity=
+                            issue_item.quantity,
                     )
                 )
 
-            # ------------------------------------------------------
-            # Issue Display
-            # ------------------------------------------------------
+            # ======================================================
+            # SAFETY
+            # ======================================================
+
+            if (
+                item_id is not None
+                and not issue_items_display
+            ):
+                continue
+
+            # ======================================================
+            # ISSUE DISPLAY
+            # ======================================================
 
             result.append(
+
                 store_schemas.IssueDisplay(
 
                     id=issue.id,
 
+                    ref=issue.ref,
+
                     issue_to="location",
 
-                    issued_to_id=issue.location_id,
+                    issued_to_id=
+                        issue.location_id,
 
-                    issued_to=location_obj,
+                    issued_to=
+                        location_obj,
 
-                    issue_date=to_wat(
-                        issue.issue_date
-                    ),
+                    issue_date=
+                        to_wat(
+                            issue.issue_date
+                        ),
 
-                    issue_items=issue_items_display,
+                    issue_items=
+                        issue_items_display,
                 )
             )
 
-        return result
+        # ==========================================================
+        # 12. RETURN
+        # ==========================================================
+
+        return store_schemas.LocationIssuesResponse(
+
+            issues=result,
+
+            total_item_quantity=(
+                total_item_quantity
+                if item_id is not None
+                else 0
+            ),
+
+            selected_item_id=(
+                selected_item.id
+                if selected_item
+                else None
+            ),
+
+            selected_item_name=(
+                selected_item.name
+                if selected_item
+                else None
+            ),
+
+            selected_item_unit=(
+                selected_item.unit
+                if selected_item
+                else None
+            ),
+        )
+
+    # ==========================================================
+    # HTTP EXCEPTION
+    # ==========================================================
 
     except HTTPException:
         raise
+
+    # ==========================================================
+    # UNEXPECTED ERROR
+    # ==========================================================
 
     except Exception as e:
 
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve location issues: {str(e)}"
+            detail=(
+                "Failed to retrieve location issues: "
+                f"{str(e)}"
+            )
         )
 
 
-
-                                            
+                                                    
 
 @router.get("/stock/{item_id}")
 def get_item_stock(
@@ -2296,6 +2537,9 @@ def update_location_issue(
         update_data.issued_to_id
     )
 
+
+    issue.ref = update_data.ref
+
     issue.issue_date = (
         update_data.issue_date
         or datetime.now(timezone.utc)
@@ -2469,6 +2713,7 @@ def update_location_issue(
 
                         id=item_obj.id,
 
+
                         name=item_obj.name,
 
                         unit=item_obj.unit,
@@ -2511,6 +2756,8 @@ def update_location_issue(
     return store_schemas.IssueDisplay(
 
         id=issue.id,
+
+        ref=issue.ref,
 
         issue_to="location",
 

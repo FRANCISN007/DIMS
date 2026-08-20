@@ -218,10 +218,16 @@ class IssueItemCreate(BaseModel):
 
 
 class IssueCreate(BaseModel):
+    ref: Optional[str] = None
     issue_to: Literal["location"]
+
     issued_to_id: int
+
     issue_items: List[IssueItemCreate]
-    issue_date: datetime = Field(default_factory=datetime.utcnow)
+
+    issue_date: datetime = Field(
+        default_factory=datetime.utcnow
+    )
 
 
 class IssueItemDisplay(BaseModel):
@@ -235,6 +241,7 @@ class IssueItemDisplay(BaseModel):
 
 class IssueDisplay(BaseModel):
     id: int
+    ref: Optional[str] = None
     issue_to: str
     issued_to_id: int
 
@@ -257,6 +264,14 @@ class IssueDisplayOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class LocationIssuesResponse(BaseModel):
+    issues: List[IssueDisplay]
+    total_item_quantity: int = 0
+    selected_item_id: Optional[int] = None
+    selected_item_name: Optional[str] = None
+    selected_item_unit: Optional[str] = None
 
 
 

@@ -54,6 +54,7 @@ class CateringUsageUpdate(BaseModel):
     ] = None
 
 
+
 # ==========================================================
 # CATERING USAGE VOID
 # ==========================================================
@@ -135,6 +136,36 @@ class CateringUsageDisplay(BaseModel):
         from_attributes=True
     )
 
+# ==========================================================
+# CATERING USAGE TOTAL
+# ==========================================================
+
+class CateringUsageTotalDisplay(BaseModel):
+
+    item_id: int
+
+    item_name: Optional[str] = None
+
+    unit: Optional[str] = None
+
+    total_quantity: float = 0
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+# ==========================================================
+# CATERING USAGE LIST RESPONSE
+# ==========================================================
+
+class CateringUsageListResponse(BaseModel):
+
+    usages: list[CateringUsageDisplay]
+
+    total: Optional[CateringUsageTotalDisplay] = None
+
+    
 
 
 # ==========================================================

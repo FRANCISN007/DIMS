@@ -10,6 +10,11 @@ from app.catering.models import (
     CateringUsageAudit,
 )
 
+from sqlalchemy.orm import (
+    joinedload,
+    contains_eager,
+)
+
 from app.catering import models as catering_models
 
 from app.catering.schemas import (
@@ -617,39 +622,24 @@ def get_catering_usages(
     current_user,
     business_id,
     location_id=None,
+    item_id=None,
     start_date=None,
     end_date=None,
 ):
     """
     Return catering usage history for the current business.
 
-    Location security:
+    Supports:
 
-    Camp Boss:
-        - Can ONLY see usage belonging to their assigned location.
-        - Any location_id supplied by the frontend is ignored.
+    - Location filtering
+    - Item filtering
+    - Start date filtering
+    - End date filtering
+    - Camp Boss location restriction
+    - Business isolation
 
-    Other authorized users:
-        - Can see usage within the effective business.
-        - Can optionally filter by location_id.
-
-    Business security:
-
-    Business users:
-        - Can only access their own business.
-
-    Super Admin:
-        - Must provide a specific business_id.
-
-    Date filtering:
-
-        start_date
-            Includes records from the beginning of that day.
-
-        end_date
-            Includes records through the end of that day by
-            using the beginning of the following day as the
-            exclusive upper boundary.
+    When item_id is supplied, only the selected item is
+    loaded into the usage.items collection.
     """
 
     # ======================================================
@@ -668,9 +658,6 @@ def get_catering_usages(
 
     # ------------------------------------------------------
     # Business users cannot access another business.
-    #
-    # Super Admin has business_id == None and can operate
-    # against the business supplied to this function.
     # ------------------------------------------------------
 
     if current_user.business_id is not None:
@@ -691,18 +678,6 @@ def get_catering_usages(
 
     query = (
         db.query(CateringUsage)
-        .options(
-
-            joinedload(
-                CateringUsage.location
-            ),
-
-            joinedload(
-                CateringUsage.items
-            ).joinedload(
-                CateringUsageItem.item
-            ),
-        )
         .filter(
             CateringUsage.business_id
             == business_id
@@ -710,18 +685,70 @@ def get_catering_usages(
     )
 
     # ======================================================
-    # 3. LOCATION ACCESS
+    # 3. LOAD USAGE ITEMS
     # ======================================================
     #
-    # Camp Boss:
+    # IMPORTANT:
     #
-    #     ALWAYS use current_user.location_id.
+    # If item_id is supplied, we JOIN the matching item and
+    # use contains_eager() so SQLAlchemy puts ONLY the
+    # filtered item into usage.items.
     #
-    #     Never trust location_id from the frontend.
-    #
-    # Other roles:
-    #
-    #     Use location_id only when supplied.
+    # Without this, joinedload() loads every item belonging
+    # to the usage, even though the parent usage was filtered.
+    # ======================================================
+
+    if item_id is not None:
+
+        query = (
+            query
+            .join(
+                CateringUsageItem,
+                CateringUsageItem.usage_id
+                == CateringUsage.id,
+            )
+            .join(
+                StoreItem,
+                StoreItem.id
+                == CateringUsageItem.item_id,
+            )
+            .filter(
+                CateringUsageItem.item_id
+                == item_id,
+                StoreItem.business_id
+                == business_id,
+            )
+            .options(
+                contains_eager(
+                    CateringUsage.items
+                ).joinedload(
+                    CateringUsageItem.item
+                ),
+                joinedload(
+                    CateringUsage.location
+                ),
+            )
+            .distinct()
+        )
+
+    else:
+
+        query = (
+            query
+            .options(
+                joinedload(
+                    CateringUsage.location
+                ),
+                joinedload(
+                    CateringUsage.items
+                ).joinedload(
+                    CateringUsageItem.item
+                ),
+            )
+        )
+
+    # ======================================================
+    # 4. LOCATION ACCESS
     # ======================================================
 
     if is_camp_boss(current_user):
@@ -753,7 +780,7 @@ def get_catering_usages(
         )
 
     # ======================================================
-    # 4. START DATE FILTER
+    # 5. START DATE FILTER
     # ======================================================
 
     if start_date is not None:
@@ -769,7 +796,7 @@ def get_catering_usages(
         )
 
     # ======================================================
-    # 5. END DATE FILTER
+    # 6. END DATE FILTER
     # ======================================================
 
     if end_date is not None:
@@ -785,7 +812,7 @@ def get_catering_usages(
         )
 
     # ======================================================
-    # 6. ORDER
+    # 7. ORDER
     # ======================================================
 
     return (
@@ -796,6 +823,8 @@ def get_catering_usages(
         )
         .all()
     )
+
+
 
 
 # ==========================================================

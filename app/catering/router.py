@@ -258,13 +258,20 @@ def create_usage(
 
 @router.get(
     "/usage",
-    response_model=list[
-        schemas.CateringUsageDisplay
-    ],
+    response_model=schemas.CateringUsageListResponse,
 )
 def list_usage(
     location_id: Optional[int] = Query(
         default=None
+    ),
+
+    # ======================================================
+    # ITEM FILTER
+    # ======================================================
+
+    item_id: Optional[int] = Query(
+        default=None,
+        description="Filter catering usage by item"
     ),
 
     start_date: Optional[date] = Query(
@@ -281,9 +288,6 @@ def list_usage(
         role_required(USER_MANAGEMENT_ROLES1)
     ),
 ):
-
-
-
 
     # ======================================================
     # RESOLVE BUSINESS
@@ -315,27 +319,107 @@ def list_usage(
             business_id=business_id,
         )
 
+    # ======================================================
+    # VALIDATE ITEM
+    # ======================================================
+
+    selected_item = None
+
+    if item_id is not None:
+
+        selected_item = (
+            db.query(StoreItem)
+            .filter(
+                StoreItem.id == item_id,
+
+                StoreItem.business_id
+                == business_id,
+            )
+            .first()
+        )
+
+        if not selected_item:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Item not found"
+            )
 
     # ======================================================
     # GET USAGE
     # ======================================================
 
     usages = get_catering_usages(
-    db=db,
-    current_user=current_user,
-    business_id=business_id,
-    location_id=location_id,
-    start_date=start_date,
-    end_date=end_date,
-)
+        db=db,
+        current_user=current_user,
+        business_id=business_id,
+        location_id=location_id,
+        item_id=item_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
-    return [
+    # ======================================================
+    # CONVERT USAGE TO RESPONSE
+    # ======================================================
+
+    usage_responses = [
         usage_to_response(
             usage,
             db,
         )
         for usage in usages
     ]
+
+    # ======================================================
+    # TOTAL ITEM QUANTITY
+    # ======================================================
+
+    total_response = None
+
+    if item_id is not None:
+
+        total_quantity = 0
+
+        for usage in usages:
+
+            for usage_item in usage.items:
+
+                if usage_item.item_id == item_id:
+
+                    total_quantity += float(
+                        usage_item.quantity_used or 0
+                    )
+
+        total_response = (
+            schemas.CateringUsageTotalDisplay(
+                item_id=item_id,
+
+                item_name=(
+                    selected_item.name
+                    if selected_item
+                    else None
+                ),
+
+                unit=(
+                    selected_item.unit
+                    if selected_item
+                    else None
+                ),
+
+                total_quantity=total_quantity,
+            )
+        )
+
+    # ======================================================
+    # RESPONSE
+    # ======================================================
+
+    return schemas.CateringUsageListResponse(
+        usages=usage_responses,
+        total=total_response,
+    )
+
 
 
 # ==========================================================

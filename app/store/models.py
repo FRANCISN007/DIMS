@@ -120,6 +120,12 @@ class StoreIssue(Base, BusinessMixin):
         index=True
     )
 
+    ref = Column(
+        String,
+        nullable=True,
+        index=True
+    )
+
     issue_to = Column(
         String,
         nullable=False,
@@ -145,10 +151,6 @@ class StoreIssue(Base, BusinessMixin):
         default=now_wat
     )
 
-    # -----------------------------------------
-    # Relationships
-    # -----------------------------------------
-
     issue_items = relationship(
         "StoreIssueItem",
         back_populates="issue",
@@ -160,7 +162,6 @@ class StoreIssue(Base, BusinessMixin):
         "Location",
         back_populates="issues"
     )
-
 
     
 
