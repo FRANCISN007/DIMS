@@ -145,10 +145,7 @@ def register_user(
     existing_user = (
         db.query(user_models.User)
         .filter(
-            user_models.User.business_id == business_id,
-            func.lower(
-                user_models.User.username
-            ) == username,
+            func.lower(user_models.User.username) == username
         )
         .first()
     )
@@ -156,7 +153,11 @@ def register_user(
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Username already exists.",
+            detail=(
+                f"Username '{username}' is already in use. "
+                "Please choose another username, add number or symbol "
+                f"'{username}01' or '{username}_a'."
+            ),
         )
 
     # ==========================================================

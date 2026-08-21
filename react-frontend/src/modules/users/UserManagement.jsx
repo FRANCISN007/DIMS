@@ -14,6 +14,7 @@ const API_BASE_URL = getBaseUrl();
 const SUPER_ADMIN_ROLE = "super_admin";
 const ADMIN_ROLE = "admin";
 
+
 /* =========================================================
    HELPERS
 ========================================================= */
@@ -202,6 +203,7 @@ const UserManagement = () => {
     isSuperAdmin ||
     currentRoles.includes(
       ADMIN_ROLE
+      
     );
 
   /* =======================================================
@@ -329,7 +331,7 @@ const UserManagement = () => {
 
       setTimeout(() => {
         setPopupMsg("");
-      }, 3000);
+      }, 4000);
     },
     []
   );

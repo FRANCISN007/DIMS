@@ -54,9 +54,8 @@ class User(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "business_id",
             "username",
-            name="uq_user_business_username",
+            name="uq_user_username",
         ),
 
         Index(
@@ -67,11 +66,6 @@ class User(Base):
         Index(
             "idx_user_location",
             "location_id",
-        ),
-
-        Index(
-            "idx_user_username",
-            "username",
         ),
 
         Index(
@@ -97,7 +91,7 @@ class User(Base):
     username = Column(
         String(50),
         nullable=False,
-        index=True,
+        #index=True,
     )
 
     # ------------------------------------------------------

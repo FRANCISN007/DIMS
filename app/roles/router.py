@@ -239,7 +239,7 @@ def list_simple_roles(
     db: Session = Depends(get_db),
 
     current_user: UserDisplaySchema = Depends(
-        get_current_user
+        role_required(USER_MANAGEMENT_ROLES)
     ),
 ):
     """
